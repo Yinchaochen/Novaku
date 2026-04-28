@@ -1,0 +1,30 @@
+env: load .env
+env: export EXPO_PUBLIC_API_URL
+Starting project at F:\Yolu\novaku-app
+Starting Metro Bundler
+warning: Bundler cache is empty, rebuilding (this may take a minute)
+Waiting on http://localhost:8081
+Logs for your project will appear below.
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web .\index.ts ░░░░░░░░░░░░░░░░  1.0% (1/1)
+Web .\index.ts ▓▓▓░░░░░░░░░░░░░ 20.7% ( 5/11)
+Web .\index.ts ▓▓▓▓░░░░░░░░░░░░ 29.8% ( 6/11)
+Web .\index.ts ▓▓▓▓░░░░░░░░░░░░ 30.9% ( 60/165)
+Web .\index.ts ▓▓▓▓░░░░░░░░░░░░ 30.9% (159/389)
+Web .\index.ts ▓▓▓▓░░░░░░░░░░░░ 30.9% (315/661)
+Web .\index.ts ▓▓▓▓▓▓░░░░░░░░░░ 41.3% (486/756)
+Web .\index.ts ▓▓▓▓▓▓▓▓▓▓░░░░░░ 68.5% (718/877)
+Web .\index.ts ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 87.1% (920/986)
+Web .\index.ts ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 90.9% (1052/1112)
+Web Bundled 44392ms index.ts (1148 modules)
+ LOG  [web] Logs will appear in the browser console
+Web lib\api.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 48ms lib\api.ts (1 module)
+Android .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android .\index.ts ▓▓░░░░░░░░░░░░░░ 13.6% (16/79)
+Android .\index.ts ▓▓▓▓░░░░░░░░░░░░ 25.9% (128/335)
+Android .\index.ts ▓▓▓▓▓▓▓░░░░░░░░░ 45.8% (435/647)
+Android .\index.ts ▓▓▓▓▓▓▓▓▓▓░░░░░░ 65.4% ( 840/1057)
+Android .\index.ts ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 84.1% (1211/1349)
+Android .\index.ts ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 88.8% (1466/1556)
+Android Bundled 23823ms index.ts (1730 modules)

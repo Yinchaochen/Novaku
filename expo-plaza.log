@@ -1,0 +1,37 @@
+env: load .env
+env: export EXPO_PUBLIC_API_URL
+Starting project at F:\Yolu\novaku-app
+Starting Metro Bundler
+warning: Bundler cache is empty, rebuilding (this may take a minute)
+Waiting on http://localhost:8081
+Logs for your project will appear below.
+Android .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android .\index.ts ░░░░░░░░░░░░░░░░  1.0% (1/1)
+Android .\index.ts ▓▓▓░░░░░░░░░░░░░ 20.7% (17/78)
+Android .\index.ts ▓▓▓░░░░░░░░░░░░░ 20.7% ( 52/148)
+Android .\index.ts ▓▓▓▓░░░░░░░░░░░░ 25.7% (115/227)
+Android .\index.ts ▓▓▓▓▓░░░░░░░░░░░ 34.3% (150/313)
+Android .\index.ts ▓▓▓▓▓░░░░░░░░░░░ 37.2% (247/405)
+Android .\index.ts ▓▓▓▓▓▓░░░░░░░░░░ 40.8% (320/516)
+Android .\index.ts ▓▓▓▓▓▓▓░░░░░░░░░ 47.3% (410/601)
+Android .\index.ts ▓▓▓▓▓▓▓░░░░░░░░░ 49.6% (490/696)
+Android .\index.ts ▓▓▓▓▓▓▓▓░░░░░░░░ 51.5% (550/774)
+Android .\index.ts ▓▓▓▓▓▓▓▓░░░░░░░░ 53.3% (613/875)
+Android .\index.ts ▓▓▓▓▓▓▓▓▓▓░░░░░░ 62.6% (750/962)
+Android .\index.ts ▓▓▓▓▓▓▓▓▓▓░░░░░░ 65.0% ( 835/1066)
+Android .\index.ts ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 72.4% ( 957/1125)
+Android .\index.ts ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 74.3% (1011/1219)
+Android .\index.ts ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 79.9% (1162/1301)
+Android .\index.ts ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 89.0% (1289/1418)
+Android .\index.ts ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 89.0% (1417/1521)
+Android .\index.ts ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 91.5% (1527/1616)
+Android .\index.ts ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.2% (1704/1711)
+Android Bundled 106950ms index.ts (1720 modules)
+Android lib\api.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 881ms lib\api.ts (955 modules)
+ WARN  SafeAreaView has been deprecated and will be removed in a future release. Please use 'react-native-safe-area-context' instead. See https://github.com/th3rdwave/react-native-safe-area-context
+Android .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 77ms index.ts (1 module)
+Android lib\api.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 49ms lib\api.ts (1 module)
+ WARN  [expo-image-picker] `ImagePicker.MediaTypeOptions` have been deprecated. Use `ImagePicker.MediaType` or an array of `ImagePicker.MediaType` instead.
