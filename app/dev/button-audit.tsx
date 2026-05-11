@@ -113,8 +113,8 @@ const SCENARIOS: AuditScenario[] = [
     text: (t) => t.plaza.publish_note,
   },
   {
-    id: 'plaza-add-to-tasks',
-    label: 'Plaza add-to-tasks button',
+    id: 'plaza-add-to-odyssey',
+    label: 'Plaza add-to-odyssey button',
     width: 154,
     horizontalPadding: 32,
     font: '600 14px Arial',

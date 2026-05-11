@@ -1,9 +1,12 @@
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
+import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { PageHeader } from '../../components/PageHeader';
+import { ChalkIcon } from '../../components/ChalkIcon';
+import { SettingsHeader } from '../../components/SettingsRow';
 import { useLanguage } from '../../context/LanguageContext';
 import { DocumentChatSection } from '../../features/documents/DocumentChatSection';
 import { DocumentRecord, useDocuments, useUploadDocument } from '../../features/documents/useDocuments';
@@ -14,14 +17,13 @@ function getErrorMessage(error: unknown, fallback: string) {
     const message = response?.data?.error?.message;
     if (message) return message;
   }
-
   if (error instanceof Error) return error.message;
-
   return fallback;
 }
 
-export default function DocumentsScreen() {
+export default function ScribeLegacyScreen() {
   const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
   const { data: docs, isLoading, isError, isFetching, refetch } = useDocuments();
   const upload = useUploadDocument();
   const documents = docs ?? [];
@@ -70,35 +72,43 @@ export default function DocumentsScreen() {
   };
 
   return (
-    <View className="flex-1 bg-surface">
-      <View className="flex-row items-center justify-between pr-5">
-        <View className="flex-1">
-          <PageHeader title={t.documents.title} />
-        </View>
+    <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
+      <SettingsHeader title={t.labs.scribe_label} onBack={() => router.back()} />
+
+      <View className="flex-row justify-end px-5 pb-2">
         <Pressable
-          className="bg-primary rounded-2xl px-4 py-2 items-center justify-center"
           onPress={pickAndUpload}
           disabled={upload.isPending}
+          accessibilityRole="button"
+          accessibilityLabel={t.documents.upload}
+          style={{
+            width: 46,
+            height: 46,
+            borderRadius: 23,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#F0EEFF',
+            borderWidth: 1,
+            borderColor: '#DED9FF',
+          }}
         >
-          {upload.isPending
-            ? <ActivityIndicator size="small" color="#fff" />
-            : <Text className="text-white font-bold text-sm text-center">{t.documents.upload}</Text>}
+          {upload.isPending ? (
+            <ActivityIndicator size="small" color="#FF9F6E" />
+          ) : (
+            <ChalkIcon name="upload" size={28} color="#FF9F6E" />
+          )}
         </Pressable>
       </View>
 
       <ScrollView
         contentContainerClassName="px-5 pb-32 gap-3"
         refreshControl={
-          <RefreshControl refreshing={isFetching && !upload.isPending} onRefresh={refetch} tintColor="#5B67CA" />
+          <RefreshControl refreshing={isFetching && !upload.isPending} onRefresh={refetch} tintColor="#FF9F6E" />
         }
       >
-        {isLoading && <ActivityIndicator color="#5B67CA" />}
-        {uploadError && (
-          <Text className="text-danger text-center">{uploadError}</Text>
-        )}
-        {isError && !documents.length && (
-          <Text className="text-danger text-center">{t.common.error}</Text>
-        )}
+        {isLoading && <ActivityIndicator color="#FF9F6E" />}
+        {uploadError && <Text className="text-danger text-center">{uploadError}</Text>}
+        {isError && !documents.length && <Text className="text-danger text-center">{t.common.error}</Text>}
         {documents.map((doc) => (
           <DocumentCard key={doc.id} doc={doc} />
         ))}
@@ -111,26 +121,58 @@ export default function DocumentsScreen() {
 
       <View
         pointerEvents="box-none"
-        className="absolute left-0 right-0 bottom-24 items-center"
+        className="absolute left-0 right-0 items-center"
+        style={{ bottom: Platform.OS === 'ios' ? 48 + insets.bottom : 48 }}
       >
         <Pressable
           onPress={captureAndUpload}
           disabled={upload.isPending || cameraBusy}
+          accessibilityRole="button"
           accessibilityLabel={t.documents.scan}
-          style={{ elevation: 6 }}
-          className="bg-primary rounded-full w-20 h-20 items-center justify-center shadow-lg active:opacity-80"
+          style={{
+            width: 80,
+            height: 80,
+            borderRadius: 40,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#6269D9',
+            shadowColor: '#000',
+            shadowOpacity: 0.18,
+            shadowRadius: 12,
+            shadowOffset: { width: 0, height: 6 },
+            elevation: 6,
+          }}
         >
-          {cameraBusy
-            ? <ActivityIndicator size="large" color="#fff" />
-            : <Text className="text-3xl">📷</Text>}
+          {cameraBusy ? (
+            <ActivityIndicator size="large" color="#FFFFFF" />
+          ) : (
+            <ChalkIcon name="camera" size={52} color="#FFFFFF" />
+          )}
         </Pressable>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 function DocumentCard({ doc }: { doc: DocumentRecord }) {
   const { t, langCode } = useLanguage();
+
+  const documentTitle = useMemo(() => {
+    if (doc.analysis_summary) {
+      try {
+        const parsed = JSON.parse(doc.analysis_summary) as {
+          document_type?: string;
+          summary?: Record<string, string>;
+        };
+        if (parsed.document_type && parsed.document_type !== 'unreadable') {
+          return parsed.document_type;
+        }
+      } catch {
+        // fall through
+      }
+    }
+    return doc.file_name ?? t.documents.untitled;
+  }, [doc.analysis_summary, doc.file_name, t.documents.untitled]);
 
   const summary = useMemo(() => {
     if (!doc.analysis_summary) return null;
@@ -154,22 +196,22 @@ function DocumentCard({ doc }: { doc: DocumentRecord }) {
     <View className="bg-white rounded-3xl p-4 shadow-sm">
       <View className="flex-row items-center justify-between mb-2">
         <Text className="font-bold text-gray-900 flex-1 pr-3" numberOfLines={1}>
-          {doc.file_name ?? t.documents.untitled}
+          {documentTitle}
         </Text>
-        <Text className="text-xs text-gray-400">
-          {t.documents.status[doc.processing_status]}
-        </Text>
+        <Text className="text-xs text-gray-400">{t.documents.status[doc.processing_status]}</Text>
       </View>
 
       {summary && <Text className="text-gray-600 text-sm">{summary}</Text>}
 
       {doc.processing_status === 'failed' && doc.error_detail && (
-        <Text className="mt-3 text-sm text-danger" numberOfLines={3}>{doc.error_detail}</Text>
+        <Text className="mt-3 text-sm text-danger" numberOfLines={3}>
+          {doc.error_detail}
+        </Text>
       )}
 
       {processingLabel && (
         <View className="mt-3 flex-row items-center gap-2">
-          <ActivityIndicator size="small" color="#5B67CA" />
+          <ActivityIndicator size="small" color="#FF9F6E" />
           <Text className="text-sm text-primary">{processingLabel}</Text>
         </View>
       )}

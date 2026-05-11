@@ -1,9 +1,12 @@
 import * as ExpoSecureStore from 'expo-secure-store';
 
-const webFallbackStore = new Map<string, string>();
-
 function canUseWebStorage() {
-  return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+  if (typeof window === 'undefined') return false;
+  try {
+    return typeof window.localStorage !== 'undefined';
+  } catch {
+    return false;
+  }
 }
 
 export async function getItemAsync(key: string): Promise<string | null> {
@@ -11,7 +14,7 @@ export async function getItemAsync(key: string): Promise<string | null> {
     try {
       return window.localStorage.getItem(key);
     } catch {
-      return webFallbackStore.get(key) ?? null;
+      return null;
     }
   }
 
@@ -24,13 +27,8 @@ export async function getItemAsync(key: string): Promise<string | null> {
 
 export async function setItemAsync(key: string, value: string): Promise<void> {
   if (canUseWebStorage()) {
-    try {
-      window.localStorage.setItem(key, value);
-      return;
-    } catch {
-      webFallbackStore.set(key, value);
-      return;
-    }
+    window.localStorage.setItem(key, value);
+    return;
   }
 
   await ExpoSecureStore.setItemAsync(key, value);
@@ -41,7 +39,7 @@ export async function deleteItemAsync(key: string): Promise<void> {
     try {
       window.localStorage.removeItem(key);
     } catch {
-      webFallbackStore.delete(key);
+      // best-effort delete
     }
     return;
   }

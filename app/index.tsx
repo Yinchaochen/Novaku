@@ -1,8 +1,7 @@
 import { Redirect } from 'expo-router';
 
-import { useAuthStore } from '../store/authStore';
-
+// Always show the welcome / brand-reveal screen first. Welcome.tsx runs a
+// 1-second timer then redirects auth-aware: authenticated → plaza, else login.
 export default function Index() {
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  return <Redirect href={isAuthenticated ? '/(tabs)/tasks' : '/(auth)/login'} />;
+  return <Redirect href="/(auth)/welcome" />;
 }

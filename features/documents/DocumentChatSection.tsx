@@ -67,7 +67,7 @@ export function DocumentChatSection({ doc }: { doc: DocumentRecord }) {
         <View className="mt-4">
           {chat.isLoading ? (
             <View className="py-4">
-              <ActivityIndicator size="small" color="#5B67CA" />
+              <ActivityIndicator size="small" color="#FF9F6E" />
             </View>
           ) : chat.data?.length ? (
             <View className="gap-3">

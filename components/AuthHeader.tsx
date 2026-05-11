@@ -13,7 +13,7 @@ export function AuthHeader() {
 
   return (
     <View className="absolute top-12 right-5" style={{ zIndex: 10 }}>
-      <View style={{ backgroundColor: '#5B67CA', borderRadius: 12, overflow: 'hidden' }}>
+      <View style={{ backgroundColor: '#FF9F6E', borderRadius: 12, overflow: 'hidden' }}>
         <LanguagePicker currentCode={langCode} onSelect={handleSelect} />
       </View>
     </View>

@@ -1,3 +1,28 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Postervia warm cream design tokens (2026-05 redesign).
+   These mirror tailwind.config.js — NativeWind uses tailwind tokens for RN
+   className resolution, but having CSS variables here gives the web target a
+   single source of truth and makes the palette discoverable from one file. */
+:root {
+  --bg-cream: #FFF8F1;
+  --surface: #FFFFFF;
+  --surface-warm: #FFF1E4;
+
+  --primary: #FF9F6E;
+  --primary-soft: #FFD2B8;
+  --primary-light: #FFE8D9;
+
+  --accent-apricot: #FFC98B;
+  --accent-butter: #FFE6A7;
+  --accent-sage: #CFE3C1;
+
+  --text-main: #3B2A22;
+  --text-secondary: #8B7468;
+  --border-warm: #F2DCCB;
+
+  --success: #8FBC7A;
+  --danger-soft: #F47C7C;
+}

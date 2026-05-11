@@ -1,17 +1,17 @@
 {
   "expo": {
-    "name": "Novaku",
+    "name": "Postervia",
     "slug": "novaku-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "scheme": "novaku",
+    "scheme": "postervia",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#FFF8F1"
     },
     "ios": {
       "supportsTablet": false,
@@ -20,7 +20,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#FFF8F1"
       },
       "edgeToEdgeEnabled": true,
       "package": "app.novaku.mobile"
@@ -35,17 +35,24 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow Novaku to access your camera to scan documents."
+          "cameraPermission": "Allow Postervia to access your camera to scan documents."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Novaku to access your photos to upload documents."
+          "photosPermission": "Allow Postervia to access your photos to upload documents."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Postervia to access your location so it can detect your city and tailor your tasks and Plaza feed."
         }
       ],
       "expo-apple-authentication",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true

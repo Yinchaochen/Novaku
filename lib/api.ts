@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 
 import { hydrateCurrentLocale } from './locale';
 import * as secureStore from './secureStore';
@@ -18,69 +18,54 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
-let isRefreshing = false;
-let failedQueue: Array<{ resolve: (token: string) => void; reject: (err: unknown) => void }> = [];
+let refreshInFlight: Promise<string> | null = null;
 
-const processQueue = (error: unknown, token: string | null = null) => {
-  failedQueue.forEach((p) => {
-    if (error) p.reject(error);
-    else p.resolve(token!);
-  });
-  failedQueue = [];
-};
+async function refreshAccessToken(): Promise<string> {
+  const refreshToken = await secureStore.getItemAsync('refresh_token');
+  if (!refreshToken) throw new Error('no_refresh_token');
+
+  const res = await api.post('/auth/refresh', { refresh_token: refreshToken });
+  const { access_token, refresh_token: newRefresh } = res.data.data as {
+    access_token: string;
+    refresh_token: string;
+  };
+  await secureStore.setItemAsync('access_token', access_token);
+  await secureStore.setItemAsync('refresh_token', newRefresh);
+  return access_token;
+}
 
 api.interceptors.response.use(
   (res) => res,
-  async (error) => {
-    const original = error.config as typeof error.config & { _retry?: boolean };
+  async (error: AxiosError) => {
+    const original = error.config as (AxiosRequestConfig & { _retry?: boolean }) | undefined;
 
-    if (error.response?.status !== 401 || original._retry) {
+    if (!original || error.response?.status !== 401 || original._retry) {
       return Promise.reject(error);
     }
 
-    // Refresh endpoint itself failed — clear session
     if (original.url?.includes('/auth/refresh')) {
       await secureStore.deleteItemAsync('access_token');
       await secureStore.deleteItemAsync('refresh_token');
       return Promise.reject(error);
     }
 
-    if (isRefreshing) {
-      return new Promise<string>((resolve, reject) => {
-        failedQueue.push({ resolve, reject });
-      }).then((token) => {
-        original.headers.Authorization = `Bearer ${token}`;
-        return api(original);
+    original._retry = true;
+
+    if (!refreshInFlight) {
+      refreshInFlight = refreshAccessToken().finally(() => {
+        refreshInFlight = null;
       });
     }
 
-    original._retry = true;
-    isRefreshing = true;
-
-    const refreshToken = await secureStore.getItemAsync('refresh_token');
-    if (!refreshToken) {
-      isRefreshing = false;
-      return Promise.reject(error);
-    }
-
     try {
-      const res = await api.post('/auth/refresh', { refresh_token: refreshToken });
-      const { access_token, refresh_token: newRefresh } = res.data.data as {
-        access_token: string;
-        refresh_token: string;
-      };
-      await secureStore.setItemAsync('access_token', access_token);
-      await secureStore.setItemAsync('refresh_token', newRefresh);
-      processQueue(null, access_token);
-      original.headers.Authorization = `Bearer ${access_token}`;
+      const token = await refreshInFlight;
+      original.headers = original.headers ?? {};
+      (original.headers as Record<string, string>).Authorization = `Bearer ${token}`;
       return api(original);
     } catch (err) {
-      processQueue(err, null);
       await secureStore.deleteItemAsync('access_token');
       await secureStore.deleteItemAsync('refresh_token');
       return Promise.reject(err);
-    } finally {
-      isRefreshing = false;
     }
   }
 );

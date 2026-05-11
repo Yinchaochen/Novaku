@@ -54,7 +54,7 @@ export function useGoogleLogin() {
       ),
     onSuccess: async (user) => {
       await setLangCode(user.locale);
-      await queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      await queryClient.invalidateQueries({ queryKey: ['odyssey'] });
       router.replace('/(tabs)/tasks');
     },
   });
@@ -92,7 +92,7 @@ export function useAppleLogin() {
     },
     onSuccess: async (user) => {
       await setLangCode(user.locale);
-      await queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      await queryClient.invalidateQueries({ queryKey: ['odyssey'] });
       router.replace('/(tabs)/tasks');
     },
   });
