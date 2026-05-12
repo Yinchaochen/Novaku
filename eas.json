@@ -31,5 +31,15 @@
         "EXPO_PUBLIC_API_URL": "https://api.postervia.app/v1"
       }
     }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "track": "internal",
+        "releaseStatus": "draft",
+        "changesNotSentForReview": false
+      },
+      "ios": {}
+    }
   }
 }
