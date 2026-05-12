@@ -158,13 +158,18 @@ export default function BuddyComposeScreen() {
       });
       router.back();
     } catch (err) {
-      const code = (err as { response?: { data?: { error?: { code?: string } } } }).response?.data?.error?.code;
-      const message =
-        code === 'buddy.duplicate_post'
-          ? t.buddy.errors.duplicate_post
-          : code === 'buddy.publish_banned'
-            ? t.buddy.errors.publish_banned
-            : (err as Error).message ?? '';
+      const errBody = (err as { response?: { data?: { error?: { code?: string; message?: string } }; status?: number } }).response;
+      const status = errBody?.status;
+      const code = errBody?.data?.error?.code;
+      const detail = errBody?.data?.error?.message;
+      console.log('[buddy.create] error', { status, code, detail, raw: err });
+      let message: string;
+      if (code === 'buddy.duplicate_post') message = t.buddy.errors.duplicate_post;
+      else if (code === 'buddy.publish_banned') message = t.buddy.errors.publish_banned;
+      else if (code === 'buddy.moderation_rejected') message = t.buddy.errors.moderation_rejected;
+      else if (status === undefined) message = t.common.network_error;
+      else if (status >= 500) message = t.common.server_error;
+      else message = t.common.error;
       Alert.alert(t.common.error, message);
     }
   };

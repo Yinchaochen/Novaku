@@ -177,8 +177,6 @@
     "composer_add_location": "添加地点",
     "composer_location_row": "标记地点",
     "composer_location_empty": "未选择",
-    "composer_save_as_odyssey_title": "保存为 Odyssey 任务",
-    "composer_save_as_odyssey_hint": "每个标记的地点会变成你 Odyssey 标签页里的一张卡片。",
     "location_picker_title": "选择地点",
     "location_picker_prompt": "选择一个要标记的地点",
     "location_picker_hint": "搜索店铺、咖啡馆、活动场地或地标，把一个或多个真实地点附加到这篇帖子里。",
@@ -202,6 +200,8 @@
     "report_post": "举报",
     "report_confirm_body": "要将这条帖子标记为误导、垃圾信息或不安全吗？",
     "moderation_review": "审核中",
+    "moderation_rejected_post": "这条帖子未通过审核，似乎包含不允许发布的内容（例如色情、暴力、仇恨言论，或倒卖 Deutschlandticket / Semesterticket 等个人车票）。请修改后再试。",
+    "moderation_rejected_comment": "这条评论未通过审核，似乎包含不允许发布的内容。请修改后再试。",
     "personal_task_badge": "来自广场",
     "type_experience": "经验",
     "type_question": "提问",
@@ -414,7 +414,8 @@
       "duplicate_post": "你最近发过太多类似的 post 了，换个写法再试试。",
       "publish_banned": "你的发布权限已被暂停。",
       "gender_required": "请先在 Profile 设置性别后再发布",
-      "post_not_found": "这条 post 已不存在或已过期"
+      "post_not_found": "这条 post 已不存在或已过期",
+      "moderation_rejected": "这条 post 未通过审核，似乎包含不允许发布的内容（例如色情、暴力、仇恨言论，或倒卖 Deutschlandticket / Semesterticket 等个人车票）。请修改后再试。"
     }
   },
   "labs": {
@@ -587,6 +588,8 @@
   "common": {
     "loading": "加载中...",
     "error": "出错了",
+    "server_error": "服务器开小差了，请稍后再试",
+    "network_error": "网络连接失败，检查一下 WiFi 或流量",
     "retry": "重试",
     "save": "保存",
     "cancel": "取消",

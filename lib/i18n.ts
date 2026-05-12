@@ -183,8 +183,6 @@ export type Translations = {
     composer_add_location: string;
     composer_location_row: string;
     composer_location_empty: string;
-    composer_save_as_odyssey_title: string;
-    composer_save_as_odyssey_hint: string;
     location_picker_title: string;
     location_picker_prompt: string;
     location_picker_hint: string;
@@ -208,6 +206,8 @@ export type Translations = {
     report_post: string;
     report_confirm_body: string;
     moderation_review: string;
+    moderation_rejected_post: string;
+    moderation_rejected_comment: string;
     personal_task_badge: string;
     type_experience: string;
     type_question: string;
@@ -421,6 +421,7 @@ export type Translations = {
       publish_banned: string;
       gender_required: string;
       post_not_found: string;
+      moderation_rejected: string;
     };
   };
   labs: {
@@ -919,6 +920,8 @@ export type Translations = {
   common: {
     loading: string;
     error: string;
+    server_error: string;
+    network_error: string;
     retry: string;
     save: string;
     cancel: string;

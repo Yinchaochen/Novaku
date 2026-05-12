@@ -177,8 +177,6 @@
     "composer_add_location": "Add location",
     "composer_location_row": "Tag location",
     "composer_location_empty": "Not selected",
-    "composer_save_as_odyssey_title": "Save as Odyssey task",
-    "composer_save_as_odyssey_hint": "Each tagged location becomes a card in your Odyssey tab.",
     "location_picker_title": "Select a location",
     "location_picker_prompt": "Choose a location to tag",
     "location_picker_hint": "Search a shop, cafe, venue, or landmark and attach one or more real locations to this post.",
@@ -202,6 +200,8 @@
     "report_post": "Report",
     "report_confirm_body": "Report this post as misleading, spammy, or unsafe?",
     "moderation_review": "Under review",
+    "moderation_rejected_post": "This post was rejected because it appears to contain content that's not allowed (e.g. sexual, violent, hateful, or reselling personal tickets). Please revise and try again.",
+    "moderation_rejected_comment": "This comment was rejected because it appears to contain content that's not allowed. Please revise and try again.",
     "personal_task_badge": "From Plaza",
     "type_experience": "Experience",
     "type_question": "Question",
@@ -414,7 +414,8 @@
       "duplicate_post": "Too many similar posts recently — try a different wording.",
       "publish_banned": "Your publishing access has been suspended.",
       "gender_required": "Please set gender in your profile before posting",
-      "post_not_found": "This post no longer exists or has expired"
+      "post_not_found": "This post no longer exists or has expired",
+      "moderation_rejected": "This post was rejected because it appears to contain content that's not allowed (e.g. sexual, violent, hateful, or reselling personal tickets like Deutschlandticket / Semesterticket). Please revise and try again."
     }
   },
   "labs": {
@@ -732,6 +733,8 @@
   "common": {
     "loading": "Loading...",
     "error": "Something went wrong",
+    "server_error": "Our server is having a moment. Please try again in a bit.",
+    "network_error": "Couldn't reach the server. Check your WiFi or mobile data.",
     "retry": "Retry",
     "save": "Save",
     "cancel": "Cancel",

@@ -527,6 +527,18 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
     setComposerVisible(true);
   };
 
+  const commentErrorMessage = (err: unknown, scope: 'create' | 'edit'): string => {
+    const errBody = (err as { response?: { data?: { error?: { code?: string; message?: string } }; status?: number } })?.response;
+    const status = errBody?.status;
+    const code = errBody?.data?.error?.code;
+    const detail = errBody?.data?.error?.message;
+    console.log(`[comment.${scope}] error`, { status, code, detail, raw: err });
+    if (code === 'comment.moderation_rejected') return t.plaza.moderation_rejected_comment;
+    if (status === undefined) return t.common.network_error;
+    if (status >= 500) return t.common.server_error;
+    return t.common.error;
+  };
+
   const handleComposerEditSubmit = (input: { commentId: string; body: string }) => {
     editComment.mutate(input, {
       onSuccess: () => {
@@ -534,7 +546,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
         setEditTarget(null);
         showToast(t.comments.comment_updated, 1800);
       },
-      onError: () => Alert.alert(t.common.error, t.common.error),
+      onError: (err) => Alert.alert(t.common.error, commentErrorMessage(err, 'edit')),
     });
   };
 
@@ -554,9 +566,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
           setTimeout(() => scrollToComments(), 80);
         }
       },
-      onError: () => {
-        Alert.alert(t.common.error, t.common.error);
-      },
+      onError: (err) => Alert.alert(t.common.error, commentErrorMessage(err, 'create')),
     });
   };
 

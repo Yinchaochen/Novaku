@@ -164,10 +164,6 @@ export default function PlazaScreen() {
   const [composerVisible, setComposerVisible] = useState(false);
   const [selectedPost, setSelectedPost] = useState<CommunityPost | null>(null);
   const [selectedPlaces, setSelectedPlaces] = useState<CommunitySelectedPlaceInput[]>([]);
-  // "Save tagged places as Odyssey tasks" composer toggle. Default true so
-  // the auto-task creation feels like a built-in benefit of tagging a
-  // location, but the user can opt out before posting.
-  const [savePlacesAsOdysseys, setSavePlacesAsOdysseys] = useState(true);
   const [locationPickerVisible, setLocationPickerVisible] = useState(false);
   const impressionKeysRef = useRef<Set<string>>(new Set());
 
@@ -319,6 +315,24 @@ export default function PlazaScreen() {
     setSelectedPlaces((current) => current.filter((place) => place.source_url !== sourceUrl));
   };
 
+  const plazaErrorMessage = (err: unknown, scope: 'create' | 'update'): string => {
+    const errBody = (err as { response?: { data?: { error?: { code?: string; message?: string } }; status?: number } })?.response;
+    const status = errBody?.status;
+    const code = errBody?.data?.error?.code;
+    const detail = errBody?.data?.error?.message;
+    console.log(`[plaza.${scope}] error`, { status, code, detail, raw: err });
+    if (code === 'post.moderation_rejected') {
+      return t.plaza.moderation_rejected_post;
+    }
+    if (status === undefined) {
+      return t.common.network_error;
+    }
+    if (status >= 500) {
+      return t.common.server_error;
+    }
+    return t.common.error;
+  };
+
   const onSubmit = (form: FormData) => {
     setComposerMessage(null);
     const payload = {
@@ -327,10 +341,7 @@ export default function PlazaScreen() {
       body: form.body,
       source_url: selectedPlaces[0]?.source_url || undefined,
       selected_places: selectedPlaces,
-      // Only send the auto-odyssey flag when actually tagging at least one
-      // place. The backend ignores it if selected_places is empty, but
-      // sending it true unconditionally would confuse audit logs.
-      save_places_as_odysseys: selectedPlaces.length > 0 && savePlacesAsOdysseys,
+      save_places_as_odysseys: false,
       city: editingPost?.city ?? user?.city,
       identity_scope: editingPost?.identity_scope ?? user?.identity ?? 'all',
       media_items: mediaItems.map((item) => ({
@@ -350,6 +361,9 @@ export default function PlazaScreen() {
           setComposerVisible(false);
           setSelectedPost(post);
         },
+        onError: (err) => {
+          setComposerMessage(plazaErrorMessage(err, 'update'));
+        },
       });
       return;
     }
@@ -366,6 +380,9 @@ export default function PlazaScreen() {
           message: post.moderation_status === 'review' ? t.plaza.review_notice : t.plaza.publish_success,
         });
         setComposerVisible(false);
+      },
+      onError: (err) => {
+        setComposerMessage(plazaErrorMessage(err, 'create'));
       },
     });
   };
@@ -805,50 +822,6 @@ export default function PlazaScreen() {
                   )}
                 </View>
 
-                {/* "Save as Odyssey" toggle. Only shown when the user has at
-                    least one place tagged — without a place there's nothing
-                    to materialise. */}
-                {selectedPlaces.length > 0 ? (
-                  <Pressable
-                    onPress={() => setSavePlacesAsOdysseys((v) => !v)}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 12,
-                      paddingVertical: 12,
-                      paddingHorizontal: 4,
-                    }}
-                  >
-                    <View
-                      style={{
-                        width: 22,
-                        height: 22,
-                        borderRadius: 6,
-                        borderWidth: 2,
-                        borderColor: savePlacesAsOdysseys
-                          ? colors.brandCoral
-                          : '#C9C2BC',
-                        backgroundColor: savePlacesAsOdysseys
-                          ? colors.brandCoral
-                          : 'transparent',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      {savePlacesAsOdysseys ? (
-                        <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-                      ) : null}
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 14, fontWeight: '600', color: '#242424' }}>
-                        {t.plaza.composer_save_as_odyssey_title}
-                      </Text>
-                      <Text style={{ marginTop: 2, fontSize: 12, color: '#6E665F', lineHeight: 16 }}>
-                        {t.plaza.composer_save_as_odyssey_hint}
-                      </Text>
-                    </View>
-                  </Pressable>
-                ) : null}
               </View>
 
               <View className="min-h-[58px] flex-row items-center justify-between border-t border-neutral-100">

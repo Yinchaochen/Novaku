@@ -177,8 +177,6 @@
     "composer_add_location": "Ort hinzufügen",
     "composer_location_row": "Ort markieren",
     "composer_location_empty": "Nicht ausgewählt",
-    "composer_save_as_odyssey_title": "Als Odyssey-Aufgabe speichern",
-    "composer_save_as_odyssey_hint": "Jeder markierte Ort wird zu einer Karte im Odyssey-Tab.",
     "location_picker_title": "Ort auswählen",
     "location_picker_prompt": "Wähle einen Ort zum Markieren",
     "location_picker_hint": "Suche nach einem Laden, Café, Veranstaltungsort oder Wahrzeichen und hänge einen oder mehrere echte Orte an diesen Beitrag an.",
@@ -202,6 +200,8 @@
     "report_post": "Melden",
     "report_confirm_body": "Möchtest du diesen Beitrag als irreführend, Spam oder unsicher melden?",
     "moderation_review": "In Prüfung",
+    "moderation_rejected_post": "Dieser Beitrag wurde abgelehnt, da er nicht erlaubte Inhalte enthält (z. B. sexuelle, gewalttätige oder hasserfüllte Inhalte oder den Weiterverkauf persönlicher Tickets wie Deutschlandticket / Semesterticket). Bitte bearbeite ihn und versuche es erneut.",
+    "moderation_rejected_comment": "Dieser Kommentar wurde abgelehnt, da er nicht erlaubte Inhalte enthält. Bitte bearbeite ihn und versuche es erneut.",
     "personal_task_badge": "Aus dem Plaza",
     "type_experience": "Erfahrung",
     "type_question": "Frage",
@@ -414,7 +414,8 @@
       "duplicate_post": "Zu viele ähnliche Beiträge in letzter Zeit — bitte anders formulieren.",
       "publish_banned": "Deine Veröffentlichungsberechtigung wurde ausgesetzt.",
       "gender_required": "Bitte zuerst Geschlecht im Profil festlegen",
-      "post_not_found": "Dieser Beitrag existiert nicht mehr oder ist abgelaufen"
+      "post_not_found": "Dieser Beitrag existiert nicht mehr oder ist abgelaufen",
+      "moderation_rejected": "Dieser Beitrag wurde abgelehnt, da er nicht erlaubte Inhalte enthält (z. B. sexuelle, gewalttätige oder hasserfüllte Inhalte oder den Weiterverkauf persönlicher Tickets wie Deutschlandticket / Semesterticket). Bitte bearbeite ihn und versuche es erneut."
     }
   },
   "labs": {
@@ -587,6 +588,8 @@
   "common": {
     "loading": "Lädt...",
     "error": "Etwas ist schiefgelaufen",
+    "server_error": "Unser Server hat gerade Probleme. Bitte versuche es gleich noch einmal.",
+    "network_error": "Verbindung zum Server fehlgeschlagen. Prüfe dein WLAN oder Mobilfunknetz.",
     "retry": "Erneut versuchen",
     "save": "Speichern",
     "cancel": "Abbrechen",
