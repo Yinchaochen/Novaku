@@ -177,6 +177,8 @@
     "composer_add_location": "添加地点",
     "composer_location_row": "标记地点",
     "composer_location_empty": "未选择",
+    "composer_save_as_odyssey_title": "保存为 Odyssey 任务",
+    "composer_save_as_odyssey_hint": "每个标记的地点会变成你 Odyssey 标签页里的一张卡片。",
     "location_picker_title": "选择地点",
     "location_picker_prompt": "选择一个要标记的地点",
     "location_picker_hint": "搜索店铺、咖啡馆、活动场地或地标，把一个或多个真实地点附加到这篇帖子里。",

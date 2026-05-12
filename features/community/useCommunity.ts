@@ -188,6 +188,10 @@ export interface CommunityPostCreateInput {
   odyssey_slug?: string | null;
   source_url?: string | null;
   selected_places?: CommunitySelectedPlaceInput[];
+  // When true and `selected_places` non-empty, the server creates one
+  // UserPersonalOdyssey row per tagged place in the author's odyssey list.
+  // Composer toggle: "Save these locations as Odyssey tasks".
+  save_places_as_odysseys?: boolean;
   media_items?: Array<Pick<CommunityPostMedia, 'media_url' | 'mime_type'>>;
   visibility?: 'public' | 'private';
 }

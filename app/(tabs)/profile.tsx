@@ -23,6 +23,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppBackground } from '../../components/AppBackground';
+import { AvatarCropper } from '../../components/AvatarCropper';
 import { ChalkIcon } from '../../components/ChalkIcon';
 import { GlassCard } from '../../components/GlassCard';
 import { LanguagePicker } from '../../components/LanguagePicker';
@@ -496,6 +497,16 @@ export default function ProfileScreen() {
     mimeType: string;
     fileName: string;
   } | null>(null);
+  // Raw image picked from the gallery, queued for the custom crop UI. We
+  // bypass ImagePicker's built-in `allowsEditing` cropper because (a) it
+  // forces a square frame even though our avatar is rendered as a circle
+  // everywhere and (b) the Done button is invisible on some Android skins.
+  const [cropperAsset, setCropperAsset] = useState<{
+    uri: string;
+    width: number;
+    height: number;
+    fileName: string | null;
+  } | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ProfileTab>('notes');
   const [notesSubTab, setNotesSubTab] = useState<'public' | 'private'>('public');
@@ -553,22 +564,50 @@ export default function ProfileScreen() {
     setDraftGender(user?.gender ?? null);
   }, [user?.display_name, user?.origin_city, user?.gender]);
 
-  const handleAvatarSelection = async (
-    asset: ImagePicker.ImagePickerAsset,
-    closeViewerOnSuccess = true,
-  ) => {
-    const nextAvatar = toAvatarPayload(asset);
-    setAvatarPreview(nextAvatar);
+  // Picked image hands off to AvatarCropper, which does the in-app circular
+  // crop and immediately uploads on Confirm.
+  const openCropperWith = (asset: ImagePicker.ImagePickerAsset) => {
     setFeedback(null);
+    setCropperAsset({
+      uri: asset.uri,
+      width: asset.width ?? 1024,
+      height: asset.height ?? 1024,
+      fileName: asset.fileName ?? null,
+    });
+  };
+
+  const handleCropperConfirm = async (croppedUri: string) => {
+    // Confirm = Save in one step (matches user expectation of "tap confirm,
+    // avatar is saved"). Upload runs while the cropper modal stays open with
+    // its own Confirm-button spinner; on success we close both modals and the
+    // profile picture refreshes via the `me` query invalidation in
+    // useUploadAvatar.
+    const fileName = cropperAsset?.fileName ?? `avatar-${Date.now()}.jpg`;
     try {
-      await uploadAvatar.mutateAsync(nextAvatar);
-      setAvatarPreview(null);
+      await uploadAvatar.mutateAsync({
+        uri: croppedUri,
+        mimeType: 'image/jpeg', // ImageManipulator always emits JPEG here
+        fileName,
+      });
+      setCropperAsset(null);
+      setShowAvatarViewer(false);
       setFeedback(t.profile.save_success);
-      if (closeViewerOnSuccess) {
-        setShowAvatarViewer(false);
-      }
-    } catch {
+    } catch (err) {
       setFeedback(t.common.error);
+      // Re-throw so the cropper resets its Confirm spinner and the user can
+      // either retry or hit Cancel.
+      throw err;
+    }
+  };
+
+  const handleCropperCancel = () => {
+    setCropperAsset(null);
+  };
+
+  const closeAvatarViewer = () => {
+    if (!isUploadingAvatar) {
+      setAvatarPreview(null);
+      setShowAvatarViewer(false);
     }
   };
 
@@ -581,8 +620,11 @@ export default function ProfileScreen() {
         return;
       }
 
+      // Android may have suspended Expo Go for the photo permission prompt
+      // between pick and crop. When we resume, open the viewer + cropper so
+      // the user picks up exactly where they left off.
       setShowAvatarViewer(true);
-      await handleAvatarSelection(result.assets[0], true);
+      openCropperWith(result.assets[0]);
     };
 
     void restorePendingAvatar();
@@ -605,19 +647,21 @@ export default function ProfileScreen() {
   const handlePickAvatar = async () => {
     setFeedback(null);
     try {
+      // `allowsEditing: false` — we render our own circular cropper instead
+      // of the OS one (which only does square frames and has an inconsistent
+      // Done-button position across Android skins).
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
+        allowsEditing: false,
         allowsMultipleSelection: false,
-        quality: 0.9,
+        quality: 0.92,
       });
 
       if (result.canceled || !result.assets?.[0]) {
         return;
       }
 
-      await handleAvatarSelection(result.assets[0]);
+      openCropperWith(result.assets[0]);
     } catch {
       setFeedback(t.common.error);
     }
@@ -1523,10 +1567,10 @@ export default function ProfileScreen() {
         </View>
       </Modal>
 
-      <Modal visible={showAvatarViewer} animationType="slide" onRequestClose={() => setShowAvatarViewer(false)}>
+      <Modal visible={showAvatarViewer} animationType="slide" onRequestClose={closeAvatarViewer}>
         <SafeAreaView className="flex-1 bg-[#05070D]">
           <View className="flex-row items-center justify-between px-5 py-4">
-            <Pressable onPress={() => setShowAvatarViewer(false)} disabled={isUploadingAvatar}>
+            <Pressable onPress={closeAvatarViewer} disabled={isUploadingAvatar}>
               <Ionicons name="arrow-back" size={28} color="#FFFFFF" />
             </Pressable>
             <Text className="text-2xl font-semibold text-white">{t.profile.change_avatar}</Text>
@@ -1548,13 +1592,26 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          <View className="flex-1 items-center justify-center px-6 pb-10">
+          <View className="flex-1 items-center justify-center px-6">
             {viewerAvatarUri ? (
-              <Image
-                source={viewerAvatarUri}
-                contentFit="contain"
-                style={{ width: '100%', height: '78%' }}
-              />
+              // Match the circular shape the avatar takes everywhere else in
+              // the app (header tile, comments, social search etc.) so the
+              // viewer is an honest preview, not a square crop.
+              <View
+                style={{
+                  width: '78%',
+                  aspectRatio: 1,
+                  borderRadius: 9999,
+                  overflow: 'hidden',
+                  backgroundColor: '#11151E',
+                }}
+              >
+                <Image
+                  source={viewerAvatarUri}
+                  contentFit="cover"
+                  style={{ width: '100%', height: '100%' }}
+                />
+              </View>
             ) : (
               <View
                 className="items-center justify-center rounded-full bg-primary/10"
@@ -1565,16 +1622,27 @@ export default function ProfileScreen() {
                 </Text>
               </View>
             )}
-
-            {isUploadingAvatar ? (
-              <View className="absolute inset-x-0 bottom-16 items-center">
-                <View className="rounded-full bg-black/60 px-4 py-3">
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                </View>
-              </View>
-            ) : null}
           </View>
         </SafeAreaView>
+      </Modal>
+
+      {/* Custom circular cropper. Renders on top of the viewer modal once the
+          user picks an image; Confirm = save in one step (handleCropperConfirm
+          uploads and closes both modals on success). */}
+      <Modal
+        visible={!!cropperAsset}
+        animationType="slide"
+        onRequestClose={handleCropperCancel}
+      >
+        {cropperAsset ? (
+          <AvatarCropper
+            uri={cropperAsset.uri}
+            imageWidth={cropperAsset.width}
+            imageHeight={cropperAsset.height}
+            onConfirm={handleCropperConfirm}
+            onCancel={handleCropperCancel}
+          />
+        ) : null}
       </Modal>
 
       <CommunityPostDetailModal

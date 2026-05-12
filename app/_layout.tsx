@@ -14,6 +14,8 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
 import { LanguageProvider, useLanguage } from '../context/LanguageContext';
 import { PendingDeletionBanner } from '../components/PendingDeletionBanner';
 import { queryClient } from '../lib/queryClient';
@@ -38,11 +40,15 @@ function withStartupTimeout<T>(promise: Promise<T>, fallback: T): Promise<T> {
 
 export default function RootLayout() {
   return (
-    <SafeAreaProvider>
-      <LanguageProvider>
-        <AppBody />
-      </LanguageProvider>
-    </SafeAreaProvider>
+    // GestureHandlerRootView is required so pan / pinch handlers (currently
+    // used by AvatarCropper) actually receive events on Android.
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <LanguageProvider>
+          <AppBody />
+        </LanguageProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 

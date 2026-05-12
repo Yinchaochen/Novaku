@@ -177,6 +177,8 @@
     "composer_add_location": "Ort hinzufügen",
     "composer_location_row": "Ort markieren",
     "composer_location_empty": "Nicht ausgewählt",
+    "composer_save_as_odyssey_title": "Als Odyssey-Aufgabe speichern",
+    "composer_save_as_odyssey_hint": "Jeder markierte Ort wird zu einer Karte im Odyssey-Tab.",
     "location_picker_title": "Ort auswählen",
     "location_picker_prompt": "Wähle einen Ort zum Markieren",
     "location_picker_hint": "Suche nach einem Laden, Café, Veranstaltungsort oder Wahrzeichen und hänge einen oder mehrere echte Orte an diesen Beitrag an.",

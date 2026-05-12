@@ -4,7 +4,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
-import { useDeferredValue, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+// Lazy-load the map-based picker so Expo Go doesn't try to mount
+// react-native-maps until the user actually opens it. In Expo Go the map
+// itself can't render (native module missing), but we don't even need to
+// pay the import cost on app launch — the picker only mounts when
+// `locationPickerVisible` flips to true inside <Suspense>.
+const LocationPickerLazy = lazy(() => import('../../components/LocationPicker'));
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -32,13 +38,11 @@ import { CommunityPostCard } from '../../features/community/CommunityPostCard';
 import { CommunityPostDetailModal } from '../../features/community/CommunityPostDetailModal';
 import {
   CommunityPost,
-  CommunityPlaceSuggestion,
   CommunitySelectedPlaceInput,
   CommunityPostMedia,
   getCommunitySessionId,
   useCommunityFeed,
   useCreateCommunityPost,
-  usePlaceSuggestions,
   useRefillFeedSnapshot,
   useTrackCommunityEvents,
   useUpdateCommunityPost,
@@ -95,19 +99,6 @@ function splitIntoColumns(posts: CommunityPost[]) {
 
 async function noopRefetch() {
   return undefined;
-}
-
-function mapSuggestionToSelectedPlace(place: CommunityPlaceSuggestion): CommunitySelectedPlaceInput {
-  return {
-    name: place.name,
-    subtitle: place.subtitle,
-    source_url: place.source_url,
-    latitude: place.latitude,
-    longitude: place.longitude,
-    short_description: place.short_description ?? null,
-    image_url: place.image_url ?? null,
-    reference_url: place.reference_url ?? null,
-  };
 }
 
 function deriveTaggedPlacesFromPost(post: CommunityPost): CommunitySelectedPlaceInput[] {
@@ -173,8 +164,11 @@ export default function PlazaScreen() {
   const [composerVisible, setComposerVisible] = useState(false);
   const [selectedPost, setSelectedPost] = useState<CommunityPost | null>(null);
   const [selectedPlaces, setSelectedPlaces] = useState<CommunitySelectedPlaceInput[]>([]);
+  // "Save tagged places as Odyssey tasks" composer toggle. Default true so
+  // the auto-task creation feels like a built-in benefit of tagging a
+  // location, but the user can opt out before posting.
+  const [savePlacesAsOdysseys, setSavePlacesAsOdysseys] = useState(true);
   const [locationPickerVisible, setLocationPickerVisible] = useState(false);
-  const [locationQuery, setLocationQuery] = useState('');
   const impressionKeysRef = useRef<Set<string>>(new Set());
 
   const {
@@ -194,14 +188,9 @@ export default function PlazaScreen() {
     user?.identity === 'local'
       ? (t.plaza.composer_hint_local ?? t.plaza.composer_hint)
       : t.plaza.composer_hint;
-  const deferredPlaceShortcutQuery = useDeferredValue(locationQuery.trim());
-  const placeSuggestionsQuery = usePlaceSuggestions(
-    deferredPlaceShortcutQuery,
-    locationPickerVisible && deferredPlaceShortcutQuery.length >= 2,
-  );
-  const locationCandidates = (placeSuggestionsQuery?.data ?? []).filter(
-    (place) => !selectedPlaces.some((selectedPlace) => selectedPlace.source_url === place.source_url),
-  );
+  // Place search now happens inside <LocationPicker> via Google Places
+  // Autocomplete; the legacy Nominatim hook (usePlaceSuggestions) and the
+  // text-only candidate list have been retired along with the old modal.
   const isSubmitting = Boolean(createPost?.isPending) || Boolean(updatePost?.isPending);
 
   useEffect(() => {
@@ -267,7 +256,6 @@ export default function PlazaScreen() {
     reset(DEFAULT_FORM_VALUES);
     setMediaItems([]);
     setSelectedPlaces([]);
-    setLocationQuery('');
     setLocationPickerVisible(false);
     setEditingPost(null);
     setComposerMessage(null);
@@ -295,7 +283,6 @@ export default function PlazaScreen() {
       }))
     );
     setSelectedPlaces(deriveTaggedPlacesFromPost(post));
-    setLocationQuery('');
     setLocationPickerVisible(false);
     setComposerMessage(null);
     reset({
@@ -308,21 +295,22 @@ export default function PlazaScreen() {
 
   const openLocationPicker = () => {
     setLocationPickerVisible(true);
-    setLocationQuery('');
   };
 
   const closeLocationPicker = () => {
     setLocationPickerVisible(false);
-    setLocationQuery('');
   };
 
-  const applyPlaceSuggestion = (place: CommunityPlaceSuggestion) => {
-    const selectedPlace = mapSuggestionToSelectedPlace(place);
-    if (selectedPlaces.some((item) => item.source_url === selectedPlace.source_url)) {
-      closeLocationPicker();
-      return;
-    }
-    setSelectedPlaces((current) => [...current, selectedPlace]);
+  // LocationPicker emits the final CommunitySelectedPlaceInput directly —
+  // no need to map through CommunityPlaceSuggestion. De-dupe by source_url
+  // so the same place can't be added twice.
+  const applyMapPickerSelection = (place: CommunitySelectedPlaceInput) => {
+    setSelectedPlaces((current) => {
+      if (current.some((item) => item.source_url === place.source_url)) {
+        return current;
+      }
+      return [...current, place];
+    });
     setComposerMessage(null);
     closeLocationPicker();
   };
@@ -339,6 +327,10 @@ export default function PlazaScreen() {
       body: form.body,
       source_url: selectedPlaces[0]?.source_url || undefined,
       selected_places: selectedPlaces,
+      // Only send the auto-odyssey flag when actually tagging at least one
+      // place. The backend ignores it if selected_places is empty, but
+      // sending it true unconditionally would confuse audit logs.
+      save_places_as_odysseys: selectedPlaces.length > 0 && savePlacesAsOdysseys,
       city: editingPost?.city ?? user?.city,
       identity_scope: editingPost?.identity_scope ?? user?.identity ?? 'all',
       media_items: mediaItems.map((item) => ({
@@ -753,10 +745,20 @@ export default function PlazaScreen() {
                     <Text className="ml-3 text-[16px] text-[#242424]">{t.plaza.composer_location_row}</Text>
                   </View>
                   <Pressable
-                    className="rounded-full bg-[#F5F5F5] px-4 py-2.5"
                     onPress={openLocationPicker}
+                    style={{
+                      paddingHorizontal: 16,
+                      paddingVertical: 10,
+                      borderRadius: 999,
+                      // Match the coral pill used for the type chips above —
+                      // keeps the "actionable" affordance consistent across
+                      // the composer rather than a flat grey.
+                      backgroundColor: '#FFE8DA',
+                      borderWidth: 1,
+                      borderColor: 'rgba(246,118,115,0.30)',
+                    }}
                   >
-                    <Text className="text-sm font-semibold text-[#4B5563]">
+                    <Text style={{ color: colors.brandCoral, fontSize: 13, fontWeight: '700', letterSpacing: 0.3 }}>
                       {t.plaza.composer_add_location}
                     </Text>
                   </Pressable>
@@ -802,6 +804,51 @@ export default function PlazaScreen() {
                     </Text>
                   )}
                 </View>
+
+                {/* "Save as Odyssey" toggle. Only shown when the user has at
+                    least one place tagged — without a place there's nothing
+                    to materialise. */}
+                {selectedPlaces.length > 0 ? (
+                  <Pressable
+                    onPress={() => setSavePlacesAsOdysseys((v) => !v)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 12,
+                      paddingVertical: 12,
+                      paddingHorizontal: 4,
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: 6,
+                        borderWidth: 2,
+                        borderColor: savePlacesAsOdysseys
+                          ? colors.brandCoral
+                          : '#C9C2BC',
+                        backgroundColor: savePlacesAsOdysseys
+                          ? colors.brandCoral
+                          : 'transparent',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {savePlacesAsOdysseys ? (
+                        <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                      ) : null}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: '#242424' }}>
+                        {t.plaza.composer_save_as_odyssey_title}
+                      </Text>
+                      <Text style={{ marginTop: 2, fontSize: 12, color: '#6E665F', lineHeight: 16 }}>
+                        {t.plaza.composer_save_as_odyssey_hint}
+                      </Text>
+                    </View>
+                  </Pressable>
+                ) : null}
               </View>
 
               <View className="min-h-[58px] flex-row items-center justify-between border-t border-neutral-100">
@@ -898,80 +945,29 @@ export default function PlazaScreen() {
         </SafeAreaView>
       </Modal>
 
-      <Modal visible={locationPickerVisible} animationType="slide" onRequestClose={closeLocationPicker}>
-        <SafeAreaView className="flex-1 bg-white" edges={['top']}>
-          <View className="flex-row items-center justify-between px-5 pb-4 pt-3">
-            <Pressable onPress={closeLocationPicker} className="h-11 w-11 items-center justify-center rounded-full">
-              <Ionicons name="close" size={28} color="#111111" />
-            </Pressable>
-            <Text className="text-[18px] font-semibold text-black">{t.plaza.location_picker_title}</Text>
-            <View className="h-11 w-11" />
-          </View>
-
-          <View className="px-6 pb-4">
-            <Text className="text-center text-[28px] font-semibold text-black">
-              {t.plaza.location_picker_prompt}
-            </Text>
-            <Text className="mt-2 text-center text-[16px] leading-6 text-neutral-500">
-              {t.plaza.location_picker_hint}
-            </Text>
-          </View>
-
-          <View className="px-5 pb-3">
-            <View className="flex-row items-center rounded-[20px] bg-[#F3F4F7] px-4 py-3">
-              <Ionicons name="search-outline" size={20} color="#8B8B8B" />
-              <TextInput
-                value={locationQuery}
-                onChangeText={setLocationQuery}
-                placeholder={t.plaza.location_picker_search_placeholder}
-                placeholderTextColor="#A8A8A8"
-                className="ml-3 flex-1 text-[17px] text-black"
-                autoFocus
-              />
-              {locationQuery ? (
-                <Pressable onPress={() => setLocationQuery('')}>
-                  <Ionicons name="close" size={20} color="#9A9A9A" />
-                </Pressable>
-              ) : null}
+      <Modal
+        visible={locationPickerVisible}
+        animationType="slide"
+        onRequestClose={closeLocationPicker}
+      >
+        {/* Suspense fallback handles the brief moment between modal open
+            and the lazy-loaded LocationPicker (+ react-native-maps native
+            bridge) finishing its first import. */}
+        <Suspense
+          fallback={
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF' }}>
+              <ActivityIndicator size="large" color={colors.brandCoral} />
             </View>
-          </View>
-
-          <ScrollView className="flex-1 px-5" keyboardShouldPersistTaps="handled">
-            {(placeSuggestionsQuery?.isLoading ?? false) ? (
-              <View className="items-center py-10">
-                <ActivityIndicator size="small" color="#F47C7C" />
-                <Text className="mt-3 text-sm text-neutral-500">{t.plaza.place_helper_searching}</Text>
-              </View>
-            ) : null}
-
-            {deferredPlaceShortcutQuery.length < 2 ? (
-              <Text className="py-6 text-sm leading-6 text-neutral-400">
-                {t.plaza.location_picker_empty}
-              </Text>
-            ) : null}
-
-            {deferredPlaceShortcutQuery.length >= 2 && locationCandidates.length === 0 && !(placeSuggestionsQuery?.isLoading ?? false) ? (
-              <Text className="py-6 text-sm leading-6 text-neutral-400">
-                {t.plaza.place_helper_empty}
-              </Text>
-            ) : null}
-
-            <View className="pb-12">
-              {locationCandidates.map((place) => (
-                <Pressable
-                  key={`${place.source_url}-${place.name}`}
-                  className="border-b border-neutral-100 py-5"
-                  onPress={() => applyPlaceSuggestion(place)}
-                >
-                  <Text className="text-[18px] font-semibold text-black">{place.name}</Text>
-                  {place.subtitle ? (
-                    <Text className="mt-1 text-[15px] text-neutral-500">{place.subtitle}</Text>
-                  ) : null}
-                </Pressable>
-              ))}
-            </View>
-          </ScrollView>
-        </SafeAreaView>
+          }
+        >
+          <LocationPickerLazy
+            initialLatitude={user?.latitude ?? null}
+            initialLongitude={user?.longitude ?? null}
+            initialPlaceName={user?.city ?? null}
+            onConfirm={applyMapPickerSelection}
+            onCancel={closeLocationPicker}
+          />
+        </Suspense>
       </Modal>
 
       <CommunityPostDetailModal

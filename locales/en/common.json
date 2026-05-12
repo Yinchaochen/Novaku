@@ -177,6 +177,8 @@
     "composer_add_location": "Add location",
     "composer_location_row": "Tag location",
     "composer_location_empty": "Not selected",
+    "composer_save_as_odyssey_title": "Save as Odyssey task",
+    "composer_save_as_odyssey_hint": "Each tagged location becomes a card in your Odyssey tab.",
     "location_picker_title": "Select a location",
     "location_picker_prompt": "Choose a location to tag",
     "location_picker_hint": "Search a shop, cafe, venue, or landmark and attach one or more real locations to this post.",

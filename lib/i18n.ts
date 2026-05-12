@@ -183,6 +183,8 @@ export type Translations = {
     composer_add_location: string;
     composer_location_row: string;
     composer_location_empty: string;
+    composer_save_as_odyssey_title: string;
+    composer_save_as_odyssey_hint: string;
     location_picker_title: string;
     location_picker_prompt: string;
     location_picker_hint: string;
