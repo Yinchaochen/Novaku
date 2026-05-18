@@ -1,5 +1,4 @@
-import { Image } from 'expo-image';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '../theme/tokens';
 
@@ -23,7 +22,7 @@ export function BootDebugScreen({ phase, log }: BootDebugScreenProps) {
       <Image
         source={require('../assets/splash-icon.png')}
         style={styles.icon}
-        contentFit="contain"
+        resizeMode="contain"
       />
       <View style={styles.footer}>
         <Text style={styles.phase}>{phase}</Text>

@@ -1,4 +1,4 @@
-import * as SecureStore from 'expo-secure-store';
+import * as secureStore from './secureStore';
 
 /**
  * Persistent "remember me" — stores ONLY the email address (never the
@@ -13,7 +13,7 @@ const KEY = 'auth_remembered_email_v1';
 
 export async function getRememberedEmail(): Promise<string | null> {
   try {
-    return await SecureStore.getItemAsync(KEY);
+    return await secureStore.getItemAsync(KEY);
   } catch {
     return null;
   }
@@ -21,7 +21,7 @@ export async function getRememberedEmail(): Promise<string | null> {
 
 export async function setRememberedEmail(email: string): Promise<void> {
   try {
-    await SecureStore.setItemAsync(KEY, email);
+    await secureStore.setItemAsync(KEY, email);
   } catch {
     // SecureStore can fail on emulators / locked devices — silently ignore
     // since "remember me" is a convenience, not a critical path.
@@ -30,7 +30,7 @@ export async function setRememberedEmail(email: string): Promise<void> {
 
 export async function clearRememberedEmail(): Promise<void> {
   try {
-    await SecureStore.deleteItemAsync(KEY);
+    await secureStore.deleteItemAsync(KEY);
   } catch {
     // ignore
   }

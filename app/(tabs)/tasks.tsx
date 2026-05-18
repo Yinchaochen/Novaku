@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import * as SecureStore from 'expo-secure-store';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
@@ -14,6 +13,7 @@ import { SectionLabel } from '../../components/SectionLabel';
 import { StackedButton } from '../../components/StackedButton';
 import { useLanguage } from '../../context/LanguageContext';
 import { useMe } from '../../features/auth/useAuth';
+import * as secureStore from '../../lib/secureStore';
 import { useAuthStore } from '../../store/authStore';
 import { PersonalOdysseyCard } from '../../features/community/PersonalTaskCard';
 import { usePersonalOdysseys } from '../../features/community/useCommunity';
@@ -72,14 +72,14 @@ export default function TasksScreen() {
       setSettledBannerVisible(false);
       return;
     }
-    SecureStore.getItemAsync(`settled_banner_dismissed_${user.id}`).then((flag) => {
+    secureStore.getItemAsync(`settled_banner_dismissed_${user.id}`).then((flag) => {
       if (!flag) setSettledBannerVisible(true);
     });
   }, [user?.id, user?.arrival_stage]);
 
   const dismissSettledBanner = async () => {
     if (!user) return;
-    await SecureStore.setItemAsync(`settled_banner_dismissed_${user.id}`, '1');
+    await secureStore.setItemAsync(`settled_banner_dismissed_${user.id}`, '1');
     setSettledBannerVisible(false);
   };
 

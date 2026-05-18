@@ -1,4 +1,4 @@
-import * as ExpoSecureStore from 'expo-secure-store';
+type ExpoSecureStoreModule = typeof import('expo-secure-store');
 
 // Hard cap on every native SecureStore call. On iOS 26 with new arch + our
 // RCTTurboModule patch, certain TurboModule paths can leave promises
@@ -15,6 +15,13 @@ const SECURE_STORE_TIMEOUT_MS = 3000;
 // Value must be stable across app versions or existing keys can't be read.
 const KEYCHAIN_SERVICE = 'app.novaku.mobile';
 const SECURE_STORE_OPTIONS = { keychainService: KEYCHAIN_SERVICE };
+
+let expoSecureStorePromise: Promise<ExpoSecureStoreModule> | null = null;
+
+function loadExpoSecureStore(): Promise<ExpoSecureStoreModule> {
+  expoSecureStorePromise ??= import('expo-secure-store');
+  return expoSecureStorePromise;
+}
 
 function canUseWebStorage() {
   if (typeof window === 'undefined') return false;
@@ -45,7 +52,9 @@ export async function getItemAsync(key: string): Promise<string | null> {
 
   try {
     return await withTimeout(
-      ExpoSecureStore.getItemAsync(key, SECURE_STORE_OPTIONS),
+      loadExpoSecureStore().then((SecureStore) =>
+        SecureStore.getItemAsync(key, SECURE_STORE_OPTIONS),
+      ),
       SECURE_STORE_TIMEOUT_MS,
       `get:${key}`,
     );
@@ -62,7 +71,9 @@ export async function setItemAsync(key: string, value: string): Promise<void> {
 
   try {
     await withTimeout(
-      ExpoSecureStore.setItemAsync(key, value, SECURE_STORE_OPTIONS),
+      loadExpoSecureStore().then((SecureStore) =>
+        SecureStore.setItemAsync(key, value, SECURE_STORE_OPTIONS),
+      ),
       SECURE_STORE_TIMEOUT_MS,
       `set:${key}`,
     );
@@ -83,7 +94,9 @@ export async function deleteItemAsync(key: string): Promise<void> {
 
   try {
     await withTimeout(
-      ExpoSecureStore.deleteItemAsync(key, SECURE_STORE_OPTIONS),
+      loadExpoSecureStore().then((SecureStore) =>
+        SecureStore.deleteItemAsync(key, SECURE_STORE_OPTIONS),
+      ),
       SECURE_STORE_TIMEOUT_MS,
       `delete:${key}`,
     );

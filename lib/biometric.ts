@@ -1,5 +1,5 @@
 import * as LocalAuthentication from 'expo-local-authentication';
-import * as SecureStore from 'expo-secure-store';
+import * as secureStore from './secureStore';
 
 /**
  * Biometric (Face ID / Fingerprint / iris) login helpers.
@@ -35,7 +35,7 @@ export async function isBiometricAvailable(): Promise<boolean> {
 
 export async function isBiometricEnabled(): Promise<boolean> {
   try {
-    const flag = await SecureStore.getItemAsync(ENABLED_KEY);
+    const flag = await secureStore.getItemAsync(ENABLED_KEY);
     return flag === '1';
   } catch {
     return false;
@@ -45,9 +45,9 @@ export async function isBiometricEnabled(): Promise<boolean> {
 export async function setBiometricEnabled(on: boolean): Promise<void> {
   try {
     if (on) {
-      await SecureStore.setItemAsync(ENABLED_KEY, '1');
+      await secureStore.setItemAsync(ENABLED_KEY, '1');
     } else {
-      await SecureStore.deleteItemAsync(ENABLED_KEY);
+      await secureStore.deleteItemAsync(ENABLED_KEY);
     }
   } catch {
     // ignore
