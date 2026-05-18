@@ -443,6 +443,7 @@ function MessageBubble({
 export default function SocialScreen() {
   const { t, langCode } = useLanguage();
   const insets = useSafeAreaInsets();
+  const chatBottomInset = Math.max(insets.bottom, 8);
   const user = useAuthStore((state) => state.user);
   const socialQuery = useSocialOverview();
   const [conversationOrigin, setConversationOrigin] = useState<'social' | 'buddy_post'>('social');
@@ -1540,6 +1541,8 @@ export default function SocialScreen() {
       <Modal
         visible={isConversationVisible}
         animationType="slide"
+        presentationStyle="fullScreen"
+        supportedOrientations={['portrait']}
         onRequestClose={() => {
           setIsConversationVisible(false);
           setIsEmojiVisible(false);
@@ -1553,7 +1556,7 @@ export default function SocialScreen() {
           setToastMsg(null);
         }}
       >
-        <SafeAreaView className="flex-1" style={{ backgroundColor: '#EDEFF3' }}>
+        <SafeAreaView className="flex-1" edges={['top', 'left', 'right']} style={{ backgroundColor: '#EDEFF3' }}>
           <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             {/* Header */}
             <View
@@ -1631,6 +1634,7 @@ export default function SocialScreen() {
                 data={messages}
                 keyExtractor={(item) => item.id}
                 renderItem={renderMessage}
+                style={{ flex: 1 }}
                 contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 14, paddingBottom: 20 }}
                 keyboardShouldPersistTaps="handled"
                 onContentSizeChange={() => {
@@ -1777,7 +1781,7 @@ export default function SocialScreen() {
                   flexDirection: 'row',
                   justifyContent: 'space-around',
                   paddingTop: 12,
-                  paddingBottom: insets.bottom + 12,
+                  paddingBottom: chatBottomInset + 12,
                 }}
               >
                 {[
@@ -1827,7 +1831,7 @@ export default function SocialScreen() {
                 alignItems: 'center',
                 paddingHorizontal: 10,
                 paddingTop: 10,
-                paddingBottom: 12,
+                paddingBottom: chatBottomInset + 8,
               }}
             >
               <Pressable style={{ padding: 5 }} hitSlop={6}>
@@ -1901,7 +1905,7 @@ export default function SocialScreen() {
 
             {/* Emoji panel */}
             {isEmojiVisible ? (
-              <View style={{ backgroundColor: '#FFFFFF', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E5E7EB', paddingBottom: 8 }}>
+              <View style={{ backgroundColor: '#FFFFFF', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E5E7EB', paddingBottom: chatBottomInset + 8 }}>
                 <View style={{ flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E5E7EB' }}>
                   {(['emoji', 'stickers'] as const).map((tab) => (
                     <Pressable
@@ -1992,6 +1996,7 @@ export default function SocialScreen() {
                   borderTopWidth: StyleSheet.hairlineWidth,
                   borderTopColor: '#E5E7EB',
                   padding: 20,
+                  paddingBottom: chatBottomInset + 16,
                   flexDirection: 'row',
                   flexWrap: 'wrap',
                   gap: 16,
@@ -2070,7 +2075,7 @@ export default function SocialScreen() {
             <View
               style={{
                 position: 'absolute',
-                bottom: 80,
+                bottom: chatBottomInset + 72,
                 left: 0,
                 right: 0,
                 alignItems: 'center',
