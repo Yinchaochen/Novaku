@@ -1,5 +1,12 @@
 import * as ExpoSecureStore from 'expo-secure-store';
 
+// Hard cap on every native SecureStore call. On iOS 26 with new arch + our
+// RCTTurboModule patch, certain TurboModule paths can leave promises
+// unresolved (the patched @catch suppresses the throw but the native
+// resolve/reject never fires). Without this guard, a single hang here
+// freezes app boot indefinitely.
+const SECURE_STORE_TIMEOUT_MS = 3000;
+
 function canUseWebStorage() {
   if (typeof window === 'undefined') return false;
   try {
@@ -7,6 +14,15 @@ function canUseWebStorage() {
   } catch {
     return false;
   }
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`SecureStore_timeout:${label}`)), ms),
+    ),
+  ]);
 }
 
 export async function getItemAsync(key: string): Promise<string | null> {
@@ -19,7 +35,11 @@ export async function getItemAsync(key: string): Promise<string | null> {
   }
 
   try {
-    return await ExpoSecureStore.getItemAsync(key);
+    return await withTimeout(
+      ExpoSecureStore.getItemAsync(key),
+      SECURE_STORE_TIMEOUT_MS,
+      `get:${key}`,
+    );
   } catch {
     return null;
   }
@@ -31,7 +51,15 @@ export async function setItemAsync(key: string, value: string): Promise<void> {
     return;
   }
 
-  await ExpoSecureStore.setItemAsync(key, value);
+  try {
+    await withTimeout(
+      ExpoSecureStore.setItemAsync(key, value),
+      SECURE_STORE_TIMEOUT_MS,
+      `set:${key}`,
+    );
+  } catch {
+    // best-effort: in-memory state proceeds regardless
+  }
 }
 
 export async function deleteItemAsync(key: string): Promise<void> {
@@ -44,5 +72,13 @@ export async function deleteItemAsync(key: string): Promise<void> {
     return;
   }
 
-  await ExpoSecureStore.deleteItemAsync(key);
+  try {
+    await withTimeout(
+      ExpoSecureStore.deleteItemAsync(key),
+      SECURE_STORE_TIMEOUT_MS,
+      `delete:${key}`,
+    );
+  } catch {
+    // best-effort
+  }
 }

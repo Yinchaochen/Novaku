@@ -28,6 +28,7 @@ import { useEffect, useRef, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { BootDebugScreen } from '../components/BootDebugScreen';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { LanguageProvider, useLanguage } from '../context/LanguageContext';
 import { PendingDeletionBanner } from '../components/PendingDeletionBanner';
@@ -38,6 +39,7 @@ import {
   resetBootCounter,
   startBootWatchdog,
 } from '../lib/bootWatchdog';
+import { addSentryBreadcrumb } from '../lib/sentry';
 import { queryClient } from '../lib/queryClient';
 import { useAuthStore } from '../store/authStore';
 
@@ -58,35 +60,88 @@ function withStartupTimeout<T>(promise: Promise<T>, fallback: T): Promise<T> {
   ]);
 }
 
+// Capture an early boot event the moment JS reaches this module. If Sentry
+// is healthy this is the first signal we'll see — and its absence in the
+// dashboard is itself a strong signal that JS bundle never loaded.
+try {
+  Sentry.captureMessage('boot:module_loaded', 'info');
+} catch {
+  // Sentry may not be initialized yet (no DSN, dev mode); ignore.
+}
+
 function RootLayout() {
-  const [bootPhase, setBootPhase] = useState<'loading' | 'safe_mode' | 'normal'>('loading');
+  const [bootPhase, setBootPhase] = useState<string>('module_loaded');
+  const [debugLog, setDebugLog] = useState<string[]>(['module_loaded']);
   const [failureCount, setFailureCount] = useState(0);
+  const [inSafeMode, setInSafeMode] = useState(false);
+  const [bootReady, setBootReady] = useState(false);
+
+  const advancePhase = (phase: string) => {
+    const stamp = String(Date.now() % 1_000_000).padStart(6, '0');
+    setBootPhase(phase);
+    setDebugLog((prev) => [...prev, `${stamp} ${phase}`]);
+    addSentryBreadcrumb(`boot:${phase}`);
+    try {
+      Sentry.captureMessage(`boot:${phase}`, 'info');
+    } catch {
+      // best-effort
+    }
+  };
 
   useEffect(() => {
+    // Hide splash immediately so the debug overlay is visible if anything
+    // below hangs. On a healthy boot the user never sees the overlay long
+    // enough to register it as a distinct screen — it just looks like
+    // splash → welcome.
+    SplashScreen.hideAsync().catch(() => {});
+
     (async () => {
-      const state = await loadBootState();
-      setFailureCount(state.failureCount);
-      if (state.shouldEnterSafeMode) {
-        setBootPhase('safe_mode');
-        SplashScreen.hideAsync().catch(() => {});
-        return;
+      try {
+        advancePhase('loading_state');
+        const state = await loadBootState();
+        advancePhase(`state_loaded(fail=${state.failureCount})`);
+        setFailureCount(state.failureCount);
+
+        if (state.shouldEnterSafeMode) {
+          advancePhase('entering_safe_mode');
+          setInSafeMode(true);
+          return;
+        }
+
+        advancePhase('arming_watchdog');
+        await startBootWatchdog(state.failureCount);
+        advancePhase('watchdog_armed');
+
+        setBootReady(true);
+        advancePhase('boot_ready');
+      } catch (err) {
+        advancePhase(`error:${String(err).slice(0, 80)}`);
+        try {
+          Sentry.captureException(err);
+        } catch {
+          // best-effort
+        }
       }
-      await startBootWatchdog();
-      setBootPhase('normal');
     })();
   }, []);
 
   const handleRetry = async () => {
     await resetBootCounter();
     setFailureCount(0);
-    await startBootWatchdog();
-    setBootPhase('normal');
+    setInSafeMode(false);
+    setBootReady(false);
+    advancePhase('retry_arming_watchdog');
+    await startBootWatchdog(0);
+    setBootReady(true);
+    advancePhase('retry_boot_ready');
   };
 
-  if (bootPhase === 'loading') return null;
-
-  if (bootPhase === 'safe_mode') {
+  if (inSafeMode) {
     return <SafeModeScreen failureCount={failureCount} onRetry={handleRetry} />;
+  }
+
+  if (!bootReady) {
+    return <BootDebugScreen phase={bootPhase} log={debugLog} />;
   }
 
   return (
@@ -113,14 +168,13 @@ function AppBody() {
   const router = useRouter();
   const lastRedirect = useRef<string | null>(null);
 
-  // Once the React tree has committed we can hide the splash and tell the
-  // boot watchdog this boot succeeded. Doing it from a layout effect (not the
-  // hydrate finally block) means we only mark success after pixels are on
-  // screen — which is what we actually need to defend against white-screen
-  // failures, not just async hydrate completion.
   useEffect(() => {
     void markBootSuccess();
-    SplashScreen.hideAsync().catch(() => {});
+    try {
+      Sentry.captureMessage('boot:body_mounted', 'info');
+    } catch {
+      // best-effort
+    }
   }, []);
 
   useFonts({

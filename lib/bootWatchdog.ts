@@ -27,24 +27,32 @@ export async function loadBootState(): Promise<BootState> {
   }
 }
 
-export async function startBootWatchdog(): Promise<void> {
-  const { failureCount } = await loadBootState();
-  const nextCount = failureCount + 1;
-  try {
-    await secureStore.setItemAsync(BOOT_FAIL_KEY, String(nextCount));
-  } catch {
-    // SecureStore failures must not block the app
-  }
-  addSentryBreadcrumb('boot_watchdog_started', { failureCount: nextCount });
-
+/**
+ * Arms the boot watchdog timer FIRST, then attempts to persist the boot
+ * counter. Earlier versions did the writes first, which meant a hung
+ * SecureStore call (the iOS 26 + new arch failure mode we're chasing)
+ * would prevent the timer from ever arming and we'd get zero Sentry
+ * signal. Now even total SecureStore failure still emits a timeout event.
+ */
+export async function startBootWatchdog(failureCount: number): Promise<void> {
   if (watchdogTimer) clearTimeout(watchdogTimer);
   watchdogTimer = setTimeout(() => {
     if (bootMarked) return;
     reportToSentry(new Error('BootWatchdogTimeout'), {
       timeoutMs: BOOT_TIMEOUT_MS,
-      failureCount: nextCount,
+      failureCount,
     });
   }, BOOT_TIMEOUT_MS);
+  addSentryBreadcrumb('boot_watchdog_armed', { failureCount });
+
+  const nextCount = failureCount + 1;
+  try {
+    await secureStore.setItemAsync(BOOT_FAIL_KEY, String(nextCount));
+  } catch {
+    // SecureStore failures must not block the app. The watchdog is already
+    // armed above so we still get a Sentry signal if boot hangs.
+  }
+  addSentryBreadcrumb('boot_counter_incremented', { failureCount: nextCount });
 }
 
 export async function markBootSuccess(): Promise<void> {
