@@ -35,6 +35,15 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      "expo-splash-screen",
+      [
+        "@sentry/react-native",
+        {
+          "organization": "postervia",
+          "project": "postervia-ios",
+          "url": "https://sentry.io/"
+        }
+      ],
       [
         "expo-camera",
         {

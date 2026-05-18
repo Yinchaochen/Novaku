@@ -1,0 +1,24 @@
+diff --git a/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm b/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
+index 2a67797..0cc317c 100644
+--- a/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
++++ b/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
+@@ -435,7 +435,18 @@ void ObjCTurboModule::performVoidMethodInvocation(
+     @try {
+       [inv invokeWithTarget:strongModule];
+     } @catch (NSException *exception) {
+-      throw convertNSExceptionToJSError(runtime, exception, std::string{moduleName}, methodNameStr);
++      // PATCH (Postervia, 2026-05): suppress NSException in void methods to
++      // avoid GCD-queue std::terminate -> SIGABRT on iOS 26 with New Arch.
++      // See reactwg/react-native-new-architecture#276 and
++      // facebook/react-native#54859. The async void block runs on a GCD queue
++      // with no C++ catch handler; rethrowing convertNSExceptionToJSError as a
++      // C++ exception aborts the process. JS has already returned for void
++      // calls, so propagating the error there is meaningless — log + continue.
++      RCTLogError(
++          @"[TurboModule] Suppressed NSException in void method %s.%s: %@",
++          moduleName,
++          methodNameStr.c_str(),
++          exception);
+     } @finally {
+       [retainedObjectsForInvocation removeAllObjects];
+     }

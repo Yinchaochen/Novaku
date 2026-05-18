@@ -1,5 +1,18 @@
 import '../global.css';
 
+// Crash / error infrastructure must initialize BEFORE any other import so the
+// global handler is armed if anything below throws on module load.
+import * as SplashScreen from 'expo-splash-screen';
+
+import { initSentry, Sentry } from '../lib/sentry';
+import { installGlobalErrorHandler } from '../lib/globalErrorHandler';
+
+initSentry();
+installGlobalErrorHandler();
+SplashScreen.preventAutoHideAsync().catch(() => {
+  // Splash may already be hidden on hot reload; that's fine.
+});
+
 import {
   PlusJakartaSans_500Medium,
   PlusJakartaSans_600SemiBold,
@@ -13,11 +26,18 @@ import { StatusBar } from 'expo-status-bar';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { LanguageProvider, useLanguage } from '../context/LanguageContext';
 import { PendingDeletionBanner } from '../components/PendingDeletionBanner';
+import { SafeModeScreen } from '../components/SafeModeScreen';
+import {
+  loadBootState,
+  markBootSuccess,
+  resetBootCounter,
+  startBootWatchdog,
+} from '../lib/bootWatchdog';
 import { queryClient } from '../lib/queryClient';
 import { useAuthStore } from '../store/authStore';
 
@@ -38,19 +58,51 @@ function withStartupTimeout<T>(promise: Promise<T>, fallback: T): Promise<T> {
   ]);
 }
 
-export default function RootLayout() {
+function RootLayout() {
+  const [bootPhase, setBootPhase] = useState<'loading' | 'safe_mode' | 'normal'>('loading');
+  const [failureCount, setFailureCount] = useState(0);
+
+  useEffect(() => {
+    (async () => {
+      const state = await loadBootState();
+      setFailureCount(state.failureCount);
+      if (state.shouldEnterSafeMode) {
+        setBootPhase('safe_mode');
+        SplashScreen.hideAsync().catch(() => {});
+        return;
+      }
+      await startBootWatchdog();
+      setBootPhase('normal');
+    })();
+  }, []);
+
+  const handleRetry = async () => {
+    await resetBootCounter();
+    setFailureCount(0);
+    await startBootWatchdog();
+    setBootPhase('normal');
+  };
+
+  if (bootPhase === 'loading') return null;
+
+  if (bootPhase === 'safe_mode') {
+    return <SafeModeScreen failureCount={failureCount} onRetry={handleRetry} />;
+  }
+
   return (
-    // GestureHandlerRootView is required so pan / pinch handlers (currently
-    // used by AvatarCropper) actually receive events on Android.
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <LanguageProvider>
-          <AppBody />
-        </LanguageProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <ErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <LanguageProvider>
+            <AppBody />
+          </LanguageProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }
+
+export default Sentry.wrap(RootLayout);
 
 function AppBody() {
   const { setLangCode } = useLanguage();
@@ -61,11 +113,16 @@ function AppBody() {
   const router = useRouter();
   const lastRedirect = useRef<string | null>(null);
 
-  // Load Plus Jakarta Sans for display typography. Body text falls back to
-  // system fonts (better Chinese / CJK rendering). We don't gate the render
-  // on fonts anymore — the welcome screen mounts immediately so the boot
-  // sequence is one continuous brand reveal (no splash → welcome jump-cut).
-  // Once fonts arrive the wordmark text re-paints in the right family.
+  // Once the React tree has committed we can hide the splash and tell the
+  // boot watchdog this boot succeeded. Doing it from a layout effect (not the
+  // hydrate finally block) means we only mark success after pixels are on
+  // screen — which is what we actually need to defend against white-screen
+  // failures, not just async hydrate completion.
+  useEffect(() => {
+    void markBootSuccess();
+    SplashScreen.hideAsync().catch(() => {});
+  }, []);
+
   useFonts({
     PlusJakartaSans_500Medium,
     PlusJakartaSans_600SemiBold,
@@ -95,16 +152,11 @@ function AppBody() {
     const isWelcome = inAuthGroup && segments[1] === 'welcome';
     const isPublicRoute = segments[0] === 'legal';
     if (!isAuthenticated && !inAuthGroup && !isPublicRoute) {
-      // First-time / logged-out users land on the welcome screen briefly,
-      // then welcome.tsx auto-redirects to /(auth)/login after 1s.
       if (lastRedirect.current !== 'welcome') {
         lastRedirect.current = 'welcome';
         router.replace('/(auth)/welcome');
       }
     } else if (isAuthenticated && inAuthGroup && !isWelcome) {
-      // Authenticated users who land on login / register / forgot-password
-      // bounce to plaza immediately. Welcome itself is exempt — it owns its
-      // own auth-aware 1-second redirect to keep the brand-reveal moment.
       if (lastRedirect.current !== 'plaza') {
         lastRedirect.current = 'plaza';
         router.replace('/(tabs)/plaza');
@@ -116,10 +168,6 @@ function AppBody() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Cream / peach backgrounds need dark status-bar text on both platforms.
-          Android defaults to light content; iOS usually picks dark but declaring
-          explicitly avoids surprises when the system theme is dark. Welcome
-          itself overrides to "light" while it's the active route. */}
       <StatusBar style="dark" />
       {isAuthenticated ? <PendingDeletionBanner /> : null}
       <Stack screenOptions={{ headerShown: false }} />
