@@ -3,6 +3,7 @@ import { Linking, Pressable, Text, View } from 'react-native';
 import { StackedButton } from '../../components/StackedButton';
 import { useLanguage } from '../../context/LanguageContext';
 import { formatDisplayLocation } from '../../lib/displayLocation';
+import { normalizeMapUrl } from '../../lib/maps';
 import { colors } from '../../theme/tokens';
 import { TranslatedText } from './TranslatedText';
 import {
@@ -123,8 +124,9 @@ function LocationQuestCard({ task, t }: { task: PersonalOdyssey; t: ReturnType<t
               className="rounded-full px-3 py-2"
               style={{ backgroundColor: '#FFE8DA' }}
               onPress={() => {
-                if (mapUrl) {
-                  void Linking.openURL(mapUrl);
+                const target = normalizeMapUrl(mapUrl, displayPlaceName ?? placeName);
+                if (target) {
+                  void Linking.openURL(target);
                 }
               }}
               disabled={!mapUrl}

@@ -23,6 +23,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { useLanguage } from '../../context/LanguageContext';
 import { formatDisplayLocation } from '../../lib/displayLocation';
+import { normalizeMapUrl } from '../../lib/maps';
 import { resolveMediaUrl } from '../../lib/media';
 import { useAuthStore } from '../../store/authStore';
 import { ReportSheet } from '../../components/ReportSheet';
@@ -451,10 +452,15 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
     ]);
   };
 
-  const handleOpenSource = (targetUrl?: string | null, entryPoint: 'location_badge' | 'source_chip' = 'source_chip') => {
-    const resolvedUrl = targetUrl ?? primarySourceUrl;
-    const resolvedHost = getSourceHost(resolvedUrl);
-    if (!resolvedUrl || !resolvedHost) {
+  const handleOpenSource = (
+    targetUrl?: string | null,
+    entryPoint: 'location_badge' | 'source_chip' = 'source_chip',
+    fallbackQuery?: string | null,
+  ) => {
+    const rawUrl = targetUrl ?? primarySourceUrl;
+    const finalUrl = normalizeMapUrl(rawUrl, fallbackQuery);
+    const resolvedHost = getSourceHost(finalUrl);
+    if (!finalUrl || !resolvedHost) {
       return;
     }
     trackCommunityEvents([
@@ -468,7 +474,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
         metadata_json: { source_host: resolvedHost, entry_point: entryPoint },
       },
     ]);
-    void Linking.openURL(resolvedUrl);
+    void Linking.openURL(finalUrl);
   };
 
   const handleSharePost = async () => {
@@ -785,7 +791,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
                         <Pressable
                           className="flex-row items-center"
                           disabled={!entry.sourceUrl}
-                          onPress={() => handleOpenSource(entry.sourceUrl, 'location_badge')}
+                          onPress={() => handleOpenSource(entry.sourceUrl, 'location_badge', entry.label)}
                         >
                           <View
                             className="mr-3 items-center justify-center rounded-full"

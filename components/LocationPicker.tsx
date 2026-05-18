@@ -23,7 +23,6 @@ import {
   StyleSheet,
   Text,
   View,
-  Platform,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE, type Region } from 'react-native-maps';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
@@ -32,16 +31,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useLanguage } from '../context/LanguageContext';
+import { buildPlaceUrl } from '../lib/maps';
 import { colors } from '../theme/tokens';
 import type { CommunitySelectedPlaceInput } from '../features/community/useCommunity';
 
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
-// Map providers per platform. Android only has PROVIDER_GOOGLE installed via
-// our config plugin; iOS supports both Google + Apple Maps, but Google keeps
-// the look + the place icons consistent across platforms.
-const MAP_PROVIDER = Platform.select({ android: PROVIDER_GOOGLE, ios: PROVIDER_GOOGLE });
+// Both platforms render Google Maps. Android only has PROVIDER_GOOGLE
+// installed via our config plugin; iOS supports both Google + Apple Maps
+// but we pick Google for visual consistency with Android.
+const MAP_PROVIDER = PROVIDER_GOOGLE;
 
 const DEFAULT_REGION: Region = {
   // Brandenburg Gate — a sensible fallback when we have no user city yet.
@@ -67,16 +67,6 @@ interface SelectedDraft {
   latitude: number;
   longitude: number;
   placeId: string | null;
-}
-
-function placeUrl(placeId: string | null, lat: number, lng: number): string {
-  // Stable URL we can store as the place's source_url. Prefer the Google
-  // Maps place_id form when we have it (survives renames and address
-  // changes); fall back to a coords-only URL otherwise.
-  if (placeId) {
-    return `https://www.google.com/maps/place/?q=place_id:${placeId}`;
-  }
-  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
 }
 
 export function LocationPicker({
@@ -181,7 +171,7 @@ export function LocationPicker({
     onConfirm({
       name: selected.name,
       subtitle: selected.subtitle,
-      source_url: placeUrl(selected.placeId, selected.latitude, selected.longitude),
+      source_url: buildPlaceUrl(selected.name, selected.latitude, selected.longitude, selected.placeId),
       latitude: selected.latitude,
       longitude: selected.longitude,
     });
