@@ -53,7 +53,7 @@ export function CommentComposerSheet({
     if (visible) {
       // Prefill edit body on open; otherwise start blank.
       setText(editTarget?.initialBody ?? '');
-      const timer = setTimeout(() => inputRef.current?.focus(), 80);
+      const timer = setTimeout(() => inputRef.current?.focus(), 200);
       return () => clearTimeout(timer);
     }
     setText('');
@@ -85,17 +85,20 @@ export function CommentComposerSheet({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable
-        className="flex-1 justify-end"
-        style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
-        onPress={onClose}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <Pressable
-          onPress={(e) => e.stopPropagation()}
-          className="rounded-t-3xl bg-white px-4 pt-3"
-          style={{ paddingBottom: Math.max(insets.bottom + 12, 16) }}
+          className="flex-1 justify-end"
+          style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
+          onPress={onClose}
         >
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            className="rounded-t-3xl bg-white px-4 pt-3"
+            style={{ paddingBottom: Math.max(insets.bottom + 12, 16) }}
+          >
             {editTarget ? (
               <View className="mb-2 flex-row items-center self-start rounded-full bg-[#F5F5F7] px-3 py-1.5">
                 <Ionicons name="create-outline" size={12} color="#6B7280" />
@@ -146,9 +149,9 @@ export function CommentComposerSheet({
                 )}
               </Pressable>
             </View>
-          </KeyboardAvoidingView>
+          </Pressable>
         </Pressable>
-      </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
