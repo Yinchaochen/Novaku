@@ -258,10 +258,11 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
     mediaScrollRef.current?.scrollTo({ x: 0, animated: false });
   }, [detailKey, scrollX]);
 
+  const recordViewMutate = recordView.mutate;
   useEffect(() => {
     if (!visible || !postId) return;
-    recordView.mutate(postId);
-  }, [visible, postId, recordView]);
+    recordViewMutate(postId);
+  }, [visible, postId, recordViewMutate]);
 
   useEffect(() => {
     if (!visible || !post || !postId || !detailKey) {
