@@ -20,7 +20,7 @@ export function BootDebugScreen({ phase, log }: BootDebugScreenProps) {
   return (
     <View style={styles.container}>
       <Image
-        source={require('../assets/splash-icon.png')}
+        source={require('../assets/splash-brand.png')}
         style={styles.icon}
         resizeMode="contain"
       />
@@ -43,13 +43,13 @@ export function BootDebugScreen({ phase, log }: BootDebugScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bgCream,
+    backgroundColor: colors.brandCoral,
     alignItems: 'center',
     justifyContent: 'center',
   },
   icon: {
-    width: 200,
-    height: 200,
+    width: 320,
+    height: 260,
   },
   footer: {
     position: 'absolute',
@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
   },
   phase: {
     fontSize: 11,
-    color: colors.textSubtle,
+    color: 'rgba(255,255,255,0.82)',
     textAlign: 'center',
     letterSpacing: 0.4,
   },
@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
   },
   logLine: {
     fontSize: 9,
-    color: colors.textSubtle,
+    color: 'rgba(255,255,255,0.72)',
     textAlign: 'center',
     fontFamily: 'Courier',
     lineHeight: 12,

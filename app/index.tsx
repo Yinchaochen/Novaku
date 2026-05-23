@@ -1,7 +1,20 @@
-import { Redirect } from 'expo-router';
+import { router } from 'expo-router';
+import { useEffect } from 'react';
 
-// Always show the welcome / brand-reveal screen first. Welcome.tsx runs a
-// 1-second timer then redirects auth-aware: authenticated → plaza, else login.
+import { BrandIntro } from '../components/BrandIntro';
+
+const WELCOME_ROUTE_DELAY_MS = 500;
+
+// Keep a short React-owned first frame before the auth-aware welcome route.
+// The native splash can disappear as soon as React is ready without becoming
+// responsible for app navigation.
 export default function Index() {
-  return <Redirect href="/(auth)/welcome" />;
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      router.replace('/(auth)/welcome');
+    }, WELCOME_ROUTE_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return <BrandIntro />;
 }

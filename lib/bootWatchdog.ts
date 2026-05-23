@@ -35,6 +35,7 @@ export async function loadBootState(): Promise<BootState> {
  * signal. Now even total SecureStore failure still emits a timeout event.
  */
 export async function startBootWatchdog(failureCount: number): Promise<void> {
+  if (bootMarked) return;
   if (watchdogTimer) clearTimeout(watchdogTimer);
   watchdogTimer = setTimeout(() => {
     if (bootMarked) return;
