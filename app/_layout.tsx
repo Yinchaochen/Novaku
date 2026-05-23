@@ -138,6 +138,7 @@ export default Sentry.wrap(RootLayout);
 function AppBody() {
   const { setLangCode } = useLanguage();
   const hydrate = useAuthStore((s) => s.hydrate);
+  const markHydrated = useAuthStore((s) => s.markHydrated);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [ready, setReady] = useState(false);
   const segments = useSegments();
@@ -163,10 +164,11 @@ function AppBody() {
       } catch {
         // hydration errors must not block the app
       } finally {
+        markHydrated();
         setReady(true);
       }
     })();
-  }, []);
+  }, [hydrate, markHydrated, setLangCode]);
 
   useEffect(() => {
     if (!ready) return;

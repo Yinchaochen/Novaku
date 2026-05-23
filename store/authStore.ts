@@ -14,6 +14,7 @@ interface AuthState {
   setTokens: (access: string, refresh: string) => Promise<void>;
   logout: () => Promise<void>;
   hydrate: () => Promise<boolean>;
+  markHydrated: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -23,6 +24,10 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setUser: (user) => {
     set({ user, isAuthenticated: true });
+  },
+
+  markHydrated: () => {
+    set({ hasHydrated: true });
   },
 
   setTokens: async (access, refresh) => {
