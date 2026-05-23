@@ -13,7 +13,7 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.postervia.app/v1",
-        "EXPO_PUBLIC_SENTRY_DSN": "https://5e4e9bb2cbcf7eb40dbec109ab054f5b@o4511412119339008.ingest.de.sentry.io/4511412126089296"
+        "EXPO_PUBLIC_SENTRY_DSN": "https://544da0dc69127a1780b042fc1ed9c9ed@o4511412119339008.ingest.de.sentry.io/4511412159840336"
       }
     },
     "preview": {
@@ -24,17 +24,18 @@
       "environment": "preview",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.postervia.app/v1",
-        "EXPO_PUBLIC_SENTRY_DSN": "https://5e4e9bb2cbcf7eb40dbec109ab054f5b@o4511412119339008.ingest.de.sentry.io/4511412126089296"
+        "EXPO_PUBLIC_SENTRY_DSN": "https://544da0dc69127a1780b042fc1ed9c9ed@o4511412119339008.ingest.de.sentry.io/4511412159840336"
       }
     },
     "production": {
+      "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"
       },
       "environment": "production",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.postervia.app/v1",
-        "EXPO_PUBLIC_SENTRY_DSN": "https://5e4e9bb2cbcf7eb40dbec109ab054f5b@o4511412119339008.ingest.de.sentry.io/4511412126089296"
+        "EXPO_PUBLIC_SENTRY_DSN": "https://544da0dc69127a1780b042fc1ed9c9ed@o4511412119339008.ingest.de.sentry.io/4511412159840336"
       }
     }
   },
