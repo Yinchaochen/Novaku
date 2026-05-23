@@ -62,6 +62,11 @@ try {
 }
 
 function RootLayout() {
+  try {
+    Sentry.captureMessage('boot:rootlayout_called', 'info');
+  } catch {
+    // best-effort
+  }
   const [failureCount, setFailureCount] = useState(0);
   const [inSafeMode, setInSafeMode] = useState(false);
 
@@ -75,6 +80,11 @@ function RootLayout() {
   };
 
   useEffect(() => {
+    try {
+      Sentry.captureMessage('boot:rootlayout_useeffect_fired', 'info');
+    } catch {
+      // best-effort
+    }
     (async () => {
       try {
         advancePhase('loading_state');
@@ -120,6 +130,11 @@ function RootLayout() {
     return <SafeModeScreen failureCount={failureCount} onRetry={handleRetry} />;
   }
 
+  try {
+    Sentry.captureMessage('boot:rootlayout_rendering', 'info');
+  } catch {
+    // best-effort
+  }
   return (
     <ErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
@@ -133,6 +148,11 @@ function RootLayout() {
   );
 }
 
+try {
+  Sentry.captureMessage('boot:about_to_export', 'info');
+} catch {
+  // best-effort
+}
 export default Sentry.wrap(RootLayout);
 
 function AppBody() {

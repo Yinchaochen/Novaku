@@ -5,7 +5,12 @@ let initialized = false;
 
 export function initSentry() {
   if (initialized) return;
-  if (!DSN) return;
+  if (!DSN) {
+    // Rule 1 (RETROSPECTIVES.md 2026-05-24): loud-fail on missing config, never silent
+    // eslint-disable-next-line no-console
+    console.error('[FATAL] EXPO_PUBLIC_SENTRY_DSN missing — Sentry disabled');
+    return;
+  }
 
   Sentry.init({
     dsn: DSN,
@@ -17,6 +22,15 @@ export function initSentry() {
   });
 
   initialized = true;
+
+  // Rule 1 self-test: emit one event the moment init completes, with DSN tail
+  // baked into the message so the Sentry dashboard project ID can be verified
+  // at a glance ("does the tail match the project I expect events in?").
+  try {
+    Sentry.captureMessage(`sentry:initialized:dsn_tail=${DSN.slice(-20)}`, 'info');
+  } catch {
+    // best-effort; never let the self-test crash the app
+  }
 }
 
 export function reportToSentry(
