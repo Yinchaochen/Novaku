@@ -12,8 +12,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.postervia.app/v1",
-        "EXPO_PUBLIC_SENTRY_DSN": "https://544da0dc69127a1780b042fc1ed9c9ed@o4511412119339008.ingest.de.sentry.io/4511412159840336"
+        "EXPO_PUBLIC_API_URL": "https://api.postervia.app/v1"
       }
     },
     "preview": {
@@ -23,8 +22,7 @@
       "distribution": "internal",
       "environment": "preview",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.postervia.app/v1",
-        "EXPO_PUBLIC_SENTRY_DSN": "https://544da0dc69127a1780b042fc1ed9c9ed@o4511412119339008.ingest.de.sentry.io/4511412159840336"
+        "EXPO_PUBLIC_API_URL": "https://api.postervia.app/v1"
       }
     },
     "production": {
@@ -34,8 +32,7 @@
       },
       "environment": "production",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.postervia.app/v1",
-        "EXPO_PUBLIC_SENTRY_DSN": "https://544da0dc69127a1780b042fc1ed9c9ed@o4511412119339008.ingest.de.sentry.io/4511412159840336"
+        "EXPO_PUBLIC_API_URL": "https://api.postervia.app/v1"
       }
     }
   },
