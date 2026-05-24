@@ -8,20 +8,28 @@ import { QueryClient, onlineManager } from '@tanstack/react-query';
 // and resume automatically when the device reconnects — no spinner-of-death
 // while the user is on the subway, no "request failed" toasts when the
 // real issue is "no network".
-onlineManager.setEventListener((setOnline) => {
-  const subscription = NetInfo.addEventListener((state) => {
-    // `isConnected` is null while NetInfo determines initial state — treat
-    // as online to avoid stalling queries on cold start. Once determined,
-    // `isInternetReachable` is the stronger signal (DNS works) when
-    // available, falling back to `isConnected` (link layer up).
-    const isOnline =
-      state.isConnected === false
-        ? false
-        : state.isInternetReachable !== false;
-    setOnline(isOnline);
+//
+// IOS-LOGIN-106 (2026-05-24): NetInfo.addEventListener fires Apple
+// Reachability + captive portal probe immediately; the result returns via
+// RCTEventEmitter before RN 0.81 new-arch bridge finishes registering the
+// emitter as a callable module → fatal crash on cold start (POSTERVIA-IOS-5).
+// Defer to next event-loop tick so the bridge bootstrap completes first.
+setTimeout(() => {
+  onlineManager.setEventListener((setOnline) => {
+    const subscription = NetInfo.addEventListener((state) => {
+      // `isConnected` is null while NetInfo determines initial state — treat
+      // as online to avoid stalling queries on cold start. Once determined,
+      // `isInternetReachable` is the stronger signal (DNS works) when
+      // available, falling back to `isConnected` (link layer up).
+      const isOnline =
+        state.isConnected === false
+          ? false
+          : state.isInternetReachable !== false;
+      setOnline(isOnline);
+    });
+    return () => subscription();
   });
-  return () => subscription();
-});
+}, 0);
 
 export const queryClient = new QueryClient({
   defaultOptions: {
