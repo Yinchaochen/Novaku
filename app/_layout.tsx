@@ -153,7 +153,29 @@ try {
 } catch {
   // best-effort
 }
-export default Sentry.wrap(RootLayout);
+
+// 2026-05-24 ROOT CAUSE OF SPLASH FREEZE: Sentry.wrap(RootLayout) returns a
+// wrapped component that never successfully renders on iOS 26 + new arch +
+// Hermes. POSTERVIA-IOS-4 proved this: cold-start trace fires
+//   1. sentry:initialized        (lib/sentry.ts initSentry)
+//   2. boot:module_loaded         (line 59 of this file)
+//   3. boot:about_to_export       (just above this comment)
+// — then NOTHING. boot:rootlayout_called (the first line of the RootLayout
+// function body) never fires. Expo Router sees the default export, attempts
+// to render it, and the wrapped component fails silently — likely a native
+// TurboModule call inside Sentry's wrap component throws and our patch
+// catches it without recovering.
+//
+// We do NOT lose meaningful Sentry functionality by dropping the wrap:
+//   - We already have an in-tree <ErrorBoundary> in RootLayout's return JSX
+//   - Profiling is configured via tracesSampleRate=0.1 in lib/sentry.ts
+//   - Touch breadcrumbs are nice-to-have, not load-bearing
+//
+// If a future Sentry RN release fixes the iOS 26 wrap regression, we can
+// re-add the wrap with confidence — but the layered RetrosPECTIVES.md
+// Rule 5 (in-app diagnostics) means we'll see the regression immediately
+// if the wrap breaks again.
+export default RootLayout;
 
 function AppBody() {
   const { setLangCode } = useLanguage();
