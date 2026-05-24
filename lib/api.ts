@@ -5,11 +5,12 @@ import axios, {
   InternalAxiosRequestConfig,
 } from 'axios';
 
+import { env } from './env';
 import { hydrateCurrentLocale } from './locale';
 import * as secureStore from './secureStore';
 import { addSentryBreadcrumb, reportToSentry } from './sentry';
 
-export const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000/v1';
+export const API_BASE = env.EXPO_PUBLIC_API_URL;
 
 export const api = axios.create({
   baseURL: API_BASE,

@@ -1,7 +1,9 @@
 import * as Sentry from '@sentry/react-native';
 import Constants from 'expo-constants';
 
-const DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
+import { env } from './env';
+
+const DSN = env.EXPO_PUBLIC_SENTRY_DSN;
 let initialized = false;
 
 // P3.8 release health: tag every event with the app version + build number
