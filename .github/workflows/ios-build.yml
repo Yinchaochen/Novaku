@@ -41,7 +41,11 @@ concurrency:
 jobs:
   build-ios:
     name: Build iOS IPA on macOS runner
-    runs-on: macos-15
+    # macos-latest 跟踪 GitHub Actions 提供的最新 macOS（2026 年是 macos-26 / Tahoe）。
+    # 之前用 macos-15 默认 Xcode 16.x，自带 iOS 18.5 SDK → 上传 TestFlight 被 Apple 拒绝：
+    #   "All iOS and iPadOS apps must be built with the iOS 26 SDK or later"
+    # 切到 macos-latest + 显式选 Xcode 26 可以拿到 iOS 26 SDK。
+    runs-on: macos-latest
     timeout-minutes: 75
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
@@ -75,15 +79,62 @@ jobs:
           cache: 'npm'
           cache-dependency-path: package-lock.json
 
-      # ── 3. 验证预装的 iOS 工具链（macos-15 自带 Xcode + Pod + Fastlane）
-      # 之前版本的 workflow 试图安装 Ruby 3.3，反而把 PATH 改了让 fastlane
-      # 找不到。系统已经有 Xcode + CocoaPods + Fastlane 预装在 image 里，
-      # 直接用。
+      # ── 3a. 列出所有可用 Xcode 版本（debug） ────────────────────────
+      - name: List available Xcode versions
+        run: |
+          echo "=== /Applications 下所有 Xcode*.app ==="
+          ls -la /Applications | grep -i Xcode || echo "(none)"
+          echo ""
+          echo "=== 当前 active Xcode ==="
+          xcode-select -p
+          xcodebuild -version
+
+      # ── 3b. 选择 Xcode 26（含 iOS 26 SDK）─────────────────────────
+      # Apple 2026 起要求上传 ASC 的 app 必须用 iOS 26 SDK 编译。
+      # GitHub macOS runner 通常多 Xcode 并存，default 不一定是最新。
+      # 主动找 Xcode 26 / Xcode latest 并切到它。
+      - name: Select Xcode with iOS 26 SDK
+        run: |
+          set -e
+          XCODE_PATH=""
+          # 优先：Xcode_26.x（GA 版本）
+          for candidate in /Applications/Xcode_26*.app /Applications/Xcode-beta.app /Applications/Xcode_latest.app /Applications/Xcode.app; do
+            if [ -d "$candidate" ]; then
+              # 检查这个 Xcode 是否有 iOS 26 SDK
+              SDKS=$(xcodebuild -showsdks 2>/dev/null | grep -i "iphoneos26" || echo "")
+              # 临时切到 candidate 看 SDK
+              if sudo xcode-select -switch "$candidate" 2>/dev/null; then
+                ACTUAL_SDKS=$(xcodebuild -showsdks 2>/dev/null | grep -i "iphoneos" || echo "(none)")
+                echo "Candidate: $candidate"
+                echo "  SDKs: $ACTUAL_SDKS"
+                if echo "$ACTUAL_SDKS" | grep -qi "iphoneos26"; then
+                  echo "  ✅ has iOS 26 SDK — using this Xcode"
+                  XCODE_PATH="$candidate"
+                  break
+                fi
+              fi
+            fi
+          done
+
+          if [ -z "$XCODE_PATH" ]; then
+            echo "::error::No Xcode with iOS 26 SDK found on this runner."
+            echo "::error::Apple requires iOS 26 SDK for App Store submission since 2026."
+            echo "::error::Available Xcode versions:"
+            ls /Applications | grep -i Xcode
+            echo "::error::Available iOS SDKs (using current Xcode):"
+            xcodebuild -showsdks | grep iphoneos
+            exit 1
+          fi
+
+          echo "=== Final Xcode selection ==="
+          xcode-select -p
+          xcodebuild -version
+          echo "=== iOS SDKs ==="
+          xcodebuild -showsdks | grep iphoneos
+
+      # ── 3c. 验证预装的 CocoaPods + Fastlane + Ruby ─────────────────
       - name: Verify preinstalled iOS toolchain
         run: |
-          echo "=== Xcode ==="
-          xcodebuild -version
-          echo ""
           echo "=== CocoaPods ==="
           pod --version
           echo ""
