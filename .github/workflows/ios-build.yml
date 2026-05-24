@@ -45,6 +45,18 @@ jobs:
     timeout-minutes: 75
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      # SENTRY_AUTH_TOKEN: 用于 @sentry/react-native 插件在 build 结束时
+      # 上传 sourcemap + dSYM 到 Sentry。EAS Cloud builds 可以从 EAS server
+      # 端读 SECRET 类型的 env var，但 `eas build --local` 只能读 Plain /
+      # Sensitive 类型 —— SECRET 故意被禁。所以我们在 GitHub Secrets 里独立
+      # 存一份，通过 workflow env 注入构建上下文。
+      # 如果 secret 不存在，build 末尾 sentry-cli 会报：
+      #   "Auth token is required for this request"
+      # 解决：在 https://postervia.sentry.io/settings/account/api/auth-tokens/
+      # 创建一个新 token（scopes: org:read + project:releases + project:write）
+      # 然后在 https://github.com/Yinchaochen/Novaku/settings/secrets/actions
+      # 加名为 SENTRY_AUTH_TOKEN 的 secret。
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       CI: 1
       npm_config_progress: 'false'
       npm_config_audit: 'false'
@@ -97,6 +109,19 @@ jobs:
             exit 1
           fi
           eas whoami
+
+      # ── 5b. 验证 Sentry auth token（必须，否则 build 末尾上传 sourcemap 时失败）
+      - name: Verify SENTRY_AUTH_TOKEN
+        run: |
+          if [ -z "${SENTRY_AUTH_TOKEN}" ]; then
+            echo "::error::SENTRY_AUTH_TOKEN secret missing."
+            echo "::error::Get one at https://postervia.sentry.io/settings/account/api/auth-tokens/"
+            echo "::error::Scopes needed: org:read + project:releases + project:write"
+            echo "::error::Add as 'SENTRY_AUTH_TOKEN' (exact name, all caps) at:"
+            echo "::error::https://github.com/Yinchaochen/Novaku/settings/secrets/actions"
+            exit 1
+          fi
+          echo "SENTRY_AUTH_TOKEN is set (length ${#SENTRY_AUTH_TOKEN})"
 
       # ── 6. 装 npm 依赖（patch-package 通过 postinstall 自动应用）─────
       - name: Install npm dependencies
