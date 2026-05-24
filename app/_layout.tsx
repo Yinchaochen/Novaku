@@ -18,6 +18,7 @@ import { StyleSheet } from 'nativewind';
 import { StatusBar } from 'expo-status-bar';
 import { Stack, usePathname, useRouter, useSegments } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
+import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -103,17 +104,13 @@ function RootLayout() {
     return <SafeModeScreen failureCount={failureCount} onRetry={handleRetry} />;
   }
 
-  return (
-    <ErrorBoundary>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <SafeAreaProvider>
-          <LanguageProvider>
-            <AppBody />
-          </LanguageProvider>
-        </SafeAreaProvider>
-      </GestureHandlerRootView>
-    </ErrorBoundary>
-  );
+  // EXPERIMENT A (2026-05-24, IOS-LOGIN-106): bypass all providers + AppBody
+  // to determine whether React commits any frame at all on iOS 26 + RN 0.81 +
+  // new arch + Hermes. If this yellow View shows, the bug is downstream
+  // (LanguageProvider / AppBody / useFonts / hydrate / Stack). If splash still
+  // freezes coral, the bug is upstream of RootLayout's return — module-level
+  // side effects or Expo Router never calling RootLayout. DO NOT MERGE.
+  return <View style={{ flex: 1, backgroundColor: 'yellow' }} />;
 }
 
 // Keep the root export plain. Sentry.wrap is unsafe on iOS 26 + new arch.
