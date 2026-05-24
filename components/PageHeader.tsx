@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '../context/LanguageContext';
 import { api } from '../lib/api';
 import { Language } from '../lib/languages';
+import { reportToSentry } from '../lib/sentry';
 import { useAuthStore } from '../store/authStore';
 import { colors, gradients, shadows, typography } from '../theme/tokens';
 import { LanguagePicker } from './LanguagePicker';
@@ -24,8 +25,10 @@ export function LangPill() {
       try {
         await api.patch('/auth/me', { locale: lang.code });
         setUser({ ...user, locale: lang.code });
-      } catch {
-        // best-effort server sync
+      } catch (err) {
+        // P2.8: locale sync to server failed → AI translations come back in
+        // wrong language. Capture so we know if it's chronic vs transient.
+        reportToSentry(err, { source: 'LangPill.locale_sync', locale: lang.code });
       }
     }
   };

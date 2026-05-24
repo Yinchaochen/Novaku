@@ -31,7 +31,7 @@ import {
   resetBootCounter,
   startBootWatchdog,
 } from '../lib/bootWatchdog';
-import { addSentryBreadcrumb } from '../lib/sentry';
+import { addSentryBreadcrumb, reportToSentry } from '../lib/sentry';
 import { queryClient } from '../lib/queryClient';
 import { useAuthStore } from '../store/authStore';
 
@@ -166,12 +166,18 @@ function AppBody() {
   const router = useRouter();
   const lastRedirect = useRef<string | null>(null);
 
-  useFonts({
+  const [, fontError] = useFonts({
     PlusJakartaSans_500Medium,
     PlusJakartaSans_600SemiBold,
     PlusJakartaSans_700Bold,
     PlusJakartaSans_800ExtraBold,
   });
+
+  // P2.9 (audit FE-MED-13): useFonts swallows errors. A missing font asset
+  // in the EAS build silently falls back to system font with no signal.
+  useEffect(() => {
+    if (fontError) reportToSentry(fontError, { source: 'useFonts' });
+  }, [fontError]);
 
   useEffect(() => {
     (async () => {
@@ -181,8 +187,13 @@ function AppBody() {
         if (user?.locale) {
           void setLangCode(user.locale);
         }
-      } catch {
-        // hydration errors must not block the app
+      } catch (err) {
+        // P2.9 (audit FE-MED-12): hydration errors must not block the app,
+        // but they also must not be invisible. Most errors are caught inside
+        // authStore.hydrate(); this outer catch fires when the dynamic
+        // import('../lib/api') itself fails or some other non-axios path
+        // throws — silent here cascades to "user mysteriously not logged in".
+        reportToSentry(err, { source: '_layout.hydrate_outer' });
       } finally {
         markHydrated();
         setReady(true);

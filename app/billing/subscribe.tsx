@@ -16,6 +16,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { SettingsHeader } from '../../components/SettingsRow';
 import { useLanguage } from '../../context/LanguageContext';
 import { api } from '../../lib/api';
+import { reportToSentry } from '../../lib/sentry';
 import { useAuthStore } from '../../store/authStore';
 import { AuthUser } from '../../features/auth/useAuth';
 import {
@@ -58,8 +59,13 @@ export default function SubscribeScreen() {
     try {
       const me = await api.get('/auth/me');
       setUser(me.data.data as AuthUser);
-    } catch {
-      // /auth/me unreachable — leave AuthStore as-is, useMe() will refresh on next mount.
+    } catch (err) {
+      // P1.8 (audit FE-CRIT-5): user paid Stripe but /auth/me refresh failed.
+      // Paywall sticks even though the subscription is active — direct revenue
+      // / refund-ticket risk. Capture so we can correlate with Stripe webhook
+      // events and reach out to the user manually if needed. AuthStore is left
+      // as-is; useMe() will refresh on next mount.
+      reportToSentry(err, { context: 'post-stripe-refresh', plan });
     }
     await queryClient.invalidateQueries({ queryKey: ['me'] });
     await queryClient.invalidateQueries({ queryKey: ['billing'] });
@@ -79,6 +85,10 @@ export default function SubscribeScreen() {
         Alert.alert(t.billing.title, t.billing.already_subscribed);
       } else {
         Alert.alert(t.billing.title, t.billing.checkout_error);
+        // Capture genuine checkout failures (network / 5xx / unexpected codes).
+        // subscription_exists is a user-state issue we surface with a friendly
+        // alert and don't treat as an error.
+        reportToSentry(err, { context: 'stripe_checkout', plan, code });
       }
     }
   };
@@ -88,8 +98,9 @@ export default function SubscribeScreen() {
       const { url } = await portal.mutateAsync();
       await WebBrowser.openAuthSessionAsync(url, 'postervia://billing/success');
       await refreshAfterStripe();
-    } catch {
+    } catch (err) {
       Alert.alert(t.billing.title, t.billing.checkout_error);
+      reportToSentry(err, { context: 'stripe_portal' });
     }
   };
 

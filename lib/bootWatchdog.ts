@@ -6,6 +6,15 @@ const BOOT_LAST_SUCCESS_KEY = 'boot_last_success';
 const SAFE_MODE_THRESHOLD = 2;
 const BOOT_TIMEOUT_MS = 8000;
 
+// P2.7 dedupe: report each persistence-failure source at most once per session.
+const _bootWatchdogReported = new Set<string>();
+function _reportBootWatchdog(source: string, err: unknown): void {
+  addSentryBreadcrumb('bootWatchdog.failure', { source });
+  if (_bootWatchdogReported.has(source)) return;
+  _bootWatchdogReported.add(source);
+  reportToSentry(err, { source: `bootWatchdog.${source}` });
+}
+
 let watchdogTimer: ReturnType<typeof setTimeout> | null = null;
 let bootMarked = false;
 
@@ -22,7 +31,8 @@ export async function loadBootState(): Promise<BootState> {
       failureCount,
       shouldEnterSafeMode: failureCount >= SAFE_MODE_THRESHOLD,
     };
-  } catch {
+  } catch (err) {
+    _reportBootWatchdog('loadBootState', err);
     return { failureCount: 0, shouldEnterSafeMode: false };
   }
 }
@@ -49,9 +59,10 @@ export async function startBootWatchdog(failureCount: number): Promise<void> {
   const nextCount = failureCount + 1;
   try {
     await secureStore.setItemAsync(BOOT_FAIL_KEY, String(nextCount));
-  } catch {
+  } catch (err) {
     // SecureStore failures must not block the app. The watchdog is already
     // armed above so we still get a Sentry signal if boot hangs.
+    _reportBootWatchdog('startBootWatchdog.setItem', err);
   }
   addSentryBreadcrumb('boot_counter_incremented', { failureCount: nextCount });
 }
@@ -66,8 +77,8 @@ export async function markBootSuccess(): Promise<void> {
   try {
     await secureStore.setItemAsync(BOOT_FAIL_KEY, '0');
     await secureStore.setItemAsync(BOOT_LAST_SUCCESS_KEY, String(Date.now()));
-  } catch {
-    // best-effort
+  } catch (err) {
+    _reportBootWatchdog('markBootSuccess', err);
   }
   addSentryBreadcrumb('boot_watchdog_success');
 }
@@ -76,7 +87,7 @@ export async function resetBootCounter(): Promise<void> {
   bootMarked = false;
   try {
     await secureStore.setItemAsync(BOOT_FAIL_KEY, '0');
-  } catch {
-    // best-effort
+  } catch (err) {
+    _reportBootWatchdog('resetBootCounter', err);
   }
 }

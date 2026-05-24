@@ -1,3 +1,5 @@
+import { addSentryBreadcrumb, reportToSentry } from './sentry';
+
 type ExpoSecureStoreModule = typeof import('expo-secure-store');
 
 // Hard cap on every native SecureStore call. On iOS 26 with new arch + our
@@ -6,6 +8,23 @@ type ExpoSecureStoreModule = typeof import('expo-secure-store');
 // resolve/reject never fires). Without this guard, a single hang here
 // freezes app boot indefinitely.
 const SECURE_STORE_TIMEOUT_MS = 3000;
+
+// P2.7 (audit FE-MED-10 + retrospective lesson): every SecureStore failure
+// since iOS 26 + new arch was previously silent. Now we capture, but cap to
+// one Sentry event per (op, key) per session so a fully-broken device doesn't
+// burn the Sentry quota. Breadcrumbs are always emitted (cheap, fully attached
+// to whatever event fires later).
+const _reportedSecureStoreFailures = new Set<string>();
+
+function _reportSecureStoreFailure(op: 'get' | 'set' | 'delete', key: string, err: unknown): void {
+  const message = err instanceof Error ? err.message : String(err);
+  const isTimeout = message.startsWith('SecureStore_timeout:');
+  addSentryBreadcrumb('securestore.failure', { op, key, isTimeout, message });
+  const dedupeKey = `${op}:${key}:${isTimeout ? 'timeout' : 'other'}`;
+  if (_reportedSecureStoreFailures.has(dedupeKey)) return;
+  _reportedSecureStoreFailures.add(dedupeKey);
+  reportToSentry(err, { source: 'secureStore', op, key, isTimeout });
+}
 
 // Explicit keychainService is required on iOS 26 — the implicit-default
 // path in expo-secure-store throws an NSException on certain keychain
@@ -58,7 +77,8 @@ export async function getItemAsync(key: string): Promise<string | null> {
       SECURE_STORE_TIMEOUT_MS,
       `get:${key}`,
     );
-  } catch {
+  } catch (err) {
+    _reportSecureStoreFailure('get', key, err);
     return null;
   }
 }
@@ -77,8 +97,9 @@ export async function setItemAsync(key: string, value: string): Promise<void> {
       SECURE_STORE_TIMEOUT_MS,
       `set:${key}`,
     );
-  } catch {
-    // best-effort: in-memory state proceeds regardless
+  } catch (err) {
+    // best-effort: in-memory state proceeds regardless, but report the failure
+    _reportSecureStoreFailure('set', key, err);
   }
 }
 
@@ -87,7 +108,7 @@ export async function deleteItemAsync(key: string): Promise<void> {
     try {
       window.localStorage.removeItem(key);
     } catch {
-      // best-effort delete
+      // best-effort delete (web fallback only)
     }
     return;
   }
@@ -100,7 +121,7 @@ export async function deleteItemAsync(key: string): Promise<void> {
       SECURE_STORE_TIMEOUT_MS,
       `delete:${key}`,
     );
-  } catch {
-    // best-effort
+  } catch (err) {
+    _reportSecureStoreFailure('delete', key, err);
   }
 }

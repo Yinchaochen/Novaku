@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -13,6 +13,7 @@ import {
 } from '../../features/buddyPosts/useBuddyPosts';
 import { useNotifications } from '../../features/community/useCommunity';
 import { tap } from '../../lib/haptics';
+import { addSentryBreadcrumb } from '../../lib/sentry';
 import { colors, shadows } from '../../theme/tokens';
 import { useAuthStore } from '../../store/authStore';
 
@@ -56,6 +57,21 @@ export default function BuddyTabScreen() {
   const notificationsQuery = useNotifications(true, 'buddy');
   const buddyUnread = notificationsQuery.data?.unread_count ?? 0;
   const items: BuddyPost[] = feed.data?.pages.flatMap((p) => p.items) ?? [];
+
+  // P2.9 (audit FE-MED-18): buddy feed has no isError UI branch — a fetch
+  // failure looks identical to "no posts" (empty list) and users blame the
+  // product. Until a proper retry UI ships, at least leave a breadcrumb so
+  // Sentry events from this surface have buddy-feed context attached. The
+  // axios interceptor in lib/api.ts already captures the underlying 5xx /
+  // network error globally; this breadcrumb just narrows the source.
+  useEffect(() => {
+    if (feed.isError) {
+      addSentryBreadcrumb('buddy.feed_isError', {
+        category,
+        city: user?.city ?? null,
+      });
+    }
+  }, [feed.isError, category, user?.city]);
 
   const handlePress = (post: BuddyPost) => {
     tap('light');

@@ -3,7 +3,26 @@ import { AxiosError } from 'axios';
 
 import { useLanguage } from '../../context/LanguageContext';
 import { api } from '../../lib/api';
+import { addSentryBreadcrumb, reportToSentry } from '../../lib/sentry';
 import { useAuthStore } from '../../store/authStore';
+
+// P1.7 (audit FE-CRIT-3): every auth-flow mutation logs a breadcrumb with the
+// mutation tag so any downstream Sentry event carries auth context. The axios
+// interceptor in lib/api.ts already captures 5xx + network errors, so we don't
+// duplicate event capture here — but we DO capture non-Axios errors (e.g.
+// SecureStore failure during setTokens) because the interceptor never sees
+// those.
+function reportAuthMutationError(mutation: string, err: unknown): void {
+  const isAxios = err instanceof AxiosError;
+  addSentryBreadcrumb('auth.mutation_error', {
+    mutation,
+    code: isAxios ? err.code : undefined,
+    status: isAxios ? err.response?.status : undefined,
+  });
+  if (!isAxios) {
+    reportToSentry(err, { mutation, source: 'auth_non_axios' });
+  }
+}
 
 type ApiErrorPayload = {
   error?: {
@@ -79,6 +98,7 @@ export function useLogin() {
       await setLangCode(user.locale);
       await queryClient.invalidateQueries({ queryKey: ['odyssey'] });
     },
+    onError: (err) => reportAuthMutationError('login', err),
   });
 }
 
@@ -112,6 +132,7 @@ export function useRegister() {
       await setLangCode(user.locale);
       await queryClient.invalidateQueries({ queryKey: ['odyssey'] });
     },
+    onError: (err) => reportAuthMutationError('register', err),
   });
 }
 
@@ -121,6 +142,7 @@ export function useForgotPassword() {
       const res = await api.post('/auth/forgot-password', data);
       return res.data.data as { accepted: boolean };
     },
+    onError: (err) => reportAuthMutationError('forgot_password', err),
   });
 }
 
@@ -142,6 +164,7 @@ export function useResetPassword() {
       const res = await api.post('/auth/reset-password', data);
       return res.data.data as { reset: boolean };
     },
+    onError: (err) => reportAuthMutationError('reset_password', err),
   });
 }
 

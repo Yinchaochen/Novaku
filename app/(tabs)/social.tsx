@@ -30,6 +30,7 @@ import { useAuthStore } from '../../store/authStore';
 import { colors, shadows } from '../../theme/tokens';
 import { formatDisplayLocation } from '../../lib/displayLocation';
 import { resolveMediaUrl } from '../../lib/media';
+import { reportToSentry } from '../../lib/sentry';
 import {
   SocialFriendship,
   SocialGroupEvent,
@@ -711,8 +712,9 @@ export default function SocialScreen() {
         // same frame the chat opens.
         markRead.mutate(convId);
       }
-    } catch {
-      // silently fail — messages won't load but UI stays open
+    } catch (err) {
+      // P2.8: messages won't load — user sees empty chat with no signal.
+      reportToSentry(err, { source: 'social.openChat' });
     } finally {
       setLoadingConversation(false);
     }
@@ -755,8 +757,11 @@ export default function SocialScreen() {
       setEditingMessage(null);
       try {
         await editMessage.mutateAsync({ messageId: msgId, body: text });
-      } catch {
+      } catch (err) {
+        // P2.8: edit-expired race vs real server failure indistinguishable
+        // to the user; capture so we can tell the two apart in dashboards.
         Alert.alert(t.common.error, t.chat.edit_expired);
+        reportToSentry(err, { source: 'social.editMessage' });
       }
       return;
     }
@@ -795,8 +800,9 @@ export default function SocialScreen() {
     try {
       const { url } = await uploadMedia.mutateAsync({ uri: asset.uri, name: filename, type: mimeType });
       await sendMessage.mutateAsync({ type: 'image', media_url: url });
-    } catch {
+    } catch (err) {
       Alert.alert(t.common.error, t.chat.upload_failed);
+      reportToSentry(err, { source: 'social.uploadImage' });
     } finally {
       setUploadingImage(false);
     }
@@ -822,8 +828,9 @@ export default function SocialScreen() {
     try {
       const { url } = await uploadStickerMedia.mutateAsync({ uri: asset.uri, name: filename, type: mimeType });
       await saveSticker.mutateAsync({ media_url: url });
-    } catch {
+    } catch (err) {
       Alert.alert(t.common.error, t.chat.upload_failed);
+      reportToSentry(err, { source: 'social.uploadSticker' });
     } finally {
       setUploadingSticker(false);
     }
@@ -864,8 +871,10 @@ export default function SocialScreen() {
         await favoriteMessage.mutateAsync({ messageId, conversationId: activeConversationId });
         showToast(t.chat.toast_favorited);
       }
-    } catch {
-      // silently ignore duplicate favorites
+    } catch (err) {
+      // P2.8: distinguish duplicate-favorite (409) noise from real failures.
+      // axios interceptor already drops 4xx; this catches non-Axios paths.
+      reportToSentry(err, { source: 'social.toggleFavorite' });
     }
   };
 

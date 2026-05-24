@@ -10,7 +10,17 @@ import {
 
 import { useLanguage } from '../../context/LanguageContext';
 import { api } from '../../lib/api';
+import { addSentryBreadcrumb } from '../../lib/sentry';
 import { useAuthStore } from '../../store/authStore';
+
+// P2.6 (audit FE-CRIT-8): every optimistic-update onError below adds a
+// breadcrumb tagged with the mutation name. Sentry event capture for 5xx /
+// network failures still happens in the axios response interceptor — this
+// breadcrumb just attaches mutation context so we can tell in the dashboard
+// which user-action surfaced the error.
+function _bc(mutation: string) {
+  addSentryBreadcrumb('community.mutation_error', { mutation });
+}
 
 export interface CommunityPostMedia {
   id?: string | null;
@@ -706,6 +716,7 @@ export function useMarkCommentHelpful(postId: string) {
       return { snapshot };
     },
     onError: (_err, _commentId, context) => {
+      _bc('mark_comment_helpful');
       restoreSnapshots(qc, context?.snapshot);
     },
     onSettled: (data) => {
@@ -737,6 +748,7 @@ export function useUnmarkCommentHelpful(postId: string) {
       return { snapshot };
     },
     onError: (_err, _commentId, context) => {
+      _bc('unmark_comment_helpful');
       restoreSnapshots(qc, context?.snapshot);
     },
     onSettled: (data) => {
@@ -793,6 +805,7 @@ export function useSetCommentReaction(postId: string) {
       return { snapshot };
     },
     onError: (_err, _input, context) => {
+      _bc('set_comment_reaction');
       restoreSnapshots(qc, context?.snapshot);
     },
     onSettled: (data) => {
@@ -824,6 +837,7 @@ export function useRemoveCommentReaction(postId: string) {
       return { snapshot };
     },
     onError: (_err, _commentId, context) => {
+      _bc('remove_comment_reaction');
       restoreSnapshots(qc, context?.snapshot);
     },
     onSettled: (data) => {
@@ -1031,6 +1045,7 @@ export function useFollowUser() {
       return { snapshot };
     },
     onError: (_err, _userId, context) => {
+      _bc('follow_user');
       restoreSnapshots(qc, context?.snapshot);
     },
     onSettled: (data) => {
@@ -1059,6 +1074,7 @@ export function useUnfollowUser() {
       return { snapshot };
     },
     onError: (_err, _userId, context) => {
+      _bc('unfollow_user');
       restoreSnapshots(qc, context?.snapshot);
     },
     onSettled: (data) => {
@@ -1165,6 +1181,7 @@ export function useMarkCommunityHelpful() {
       return { snapshot };
     },
     onError: (_err, _postId, context) => {
+      _bc('mark_community_helpful');
       restoreSnapshots(qc, context?.snapshot);
     },
     onSettled: (data) => {
@@ -1312,6 +1329,7 @@ export function useUnmarkCommunityHelpful() {
       return { snapshot };
     },
     onError: (_err, _postId, context) => {
+      _bc('unmark_community_helpful');
       restoreSnapshots(qc, context?.snapshot);
     },
     onSettled: (data) => {
@@ -1344,6 +1362,7 @@ export function useSaveCommunityPost() {
       return { snapshot };
     },
     onError: (_err, _postId, context) => {
+      _bc('save_community_post');
       restoreSnapshots(qc, context?.snapshot);
     },
     onSettled: (data) => {
@@ -1376,6 +1395,7 @@ export function useUnsaveCommunityPost() {
       return { snapshot };
     },
     onError: (_err, _postId, context) => {
+      _bc('unsave_community_post');
       restoreSnapshots(qc, context?.snapshot);
     },
     onSettled: (data) => {
