@@ -4,20 +4,12 @@ name: iOS Build & Submit (free local via macOS runner)
 #  - 用 `eas build --platform ios --local` 在 GitHub macOS runner 上跑构建。
 #  - Expo 官方文档明确：local builds 不计入 EAS cloud quota。
 #  - GitHub Actions 私有 repo 提供每月 2000 分钟 macOS runner 免费额度。
-#    一次 iOS build ~25-35 分钟（含 RN 从源码编译）→ ~60 builds/月 free。
-#  - 凭证（distribution cert / provisioning profile / ASC API key）仍由 EAS
-#    server 端管理；macOS runner 通过 EXPO_TOKEN 临时拉取并使用。我们不需要
-#    在 GitHub Secrets 里存任何 Apple .p12 / .mobileprovision 文件。
-#
-# 触发方式：
-#  - 手动 (workflow_dispatch)：Actions tab → "iOS Build & Submit" → Run workflow
-#  - 自动 (push to master)：默认关闭以避免每次 push 都吃 runner 分钟数。
-#    需要时把 `push` block 的 `branches` 解除注释即可。
+#  - macos-15 runner 镜像本身已经预装 Xcode + CocoaPods + Fastlane + Ruby。
+#    所以这个 workflow 只需要装 Node 和 eas-cli，剩下全靠 image 自带。
 #
 # 必需的 secrets （在 GitHub repo Settings → Secrets and variables → Actions）：
 #  - EXPO_TOKEN: 在 https://expo.dev/accounts/lisumchen/settings/access-tokens
-#                 生成一个新 token，命名 "github-actions"，复制 token 字符串。
-#                 这一个 token 让 macOS runner 能调用 EAS 拉凭证 + 上传产物 + bump 版本号。
+#                 生成一个新 token。
 
 on:
   workflow_dispatch:
@@ -42,11 +34,6 @@ on:
         default: false
         type: boolean
 
-  # 取消注释下面这两行可启用 master push 自动 build。默认关，省 runner 分钟。
-  # push:
-  #   branches: [master]
-
-# 同时只跑一个 build，旧的取消（防止队列堆积吃光额度）。
 concurrency:
   group: ios-build-${{ github.ref }}
   cancel-in-progress: true
@@ -54,14 +41,10 @@ concurrency:
 jobs:
   build-ios:
     name: Build iOS IPA on macOS runner
-    # macos-15 提供 macOS Sequoia + Xcode 16/17，对 iOS 26 SDK 兼容。
-    # 如果未来 RN 升级要求新 Xcode，调到 macos-latest。
     runs-on: macos-15
     timeout-minutes: 75
     env:
-      # eas-cli 读这个 env 做无交互认证。
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-      # eas build --local 可能起子进程；显式禁用 npm progress + audit 提速。
       CI: 1
       npm_config_progress: 'false'
       npm_config_audit: 'false'
@@ -72,7 +55,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      # ── 2. 安装 Node 20 LTS（package-lock.json 用 npm 锁定）─────────
+      # ── 2. 安装 Node 20 LTS ──────────────────────────────────────────
       - name: Setup Node 20
         uses: actions/setup-node@v4
         with:
@@ -80,34 +63,33 @@ jobs:
           cache: 'npm'
           cache-dependency-path: package-lock.json
 
-      # ── 3. 选 Xcode 版本（macos-15 默认是 Xcode 16）─────────────────
-      # iOS 26 SDK 需要 Xcode 16.2+。runner 上 Xcode 已预装，这步选版本即可。
-      - name: Select Xcode
+      # ── 3. 验证预装的 iOS 工具链（macos-15 自带 Xcode + Pod + Fastlane）
+      # 之前版本的 workflow 试图安装 Ruby 3.3，反而把 PATH 改了让 fastlane
+      # 找不到。系统已经有 Xcode + CocoaPods + Fastlane 预装在 image 里，
+      # 直接用。
+      - name: Verify preinstalled iOS toolchain
         run: |
-          # 列出可用 Xcode 版本，方便调试
-          ls /Applications | grep Xcode
-          # 选最新的 Xcode（macos-15 上是 Xcode_16.x.app）
-          sudo xcode-select -switch /Applications/Xcode.app
+          echo "=== Xcode ==="
           xcodebuild -version
-
-      # ── 4. Ruby + CocoaPods（macos-15 自带，但显式 install 防止版本错配）─
-      - name: Setup Ruby + CocoaPods
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.3'
-          bundler-cache: false
-      - name: Install CocoaPods
-        run: |
-          gem install cocoapods -v 1.16.2 --no-document
+          echo ""
+          echo "=== CocoaPods ==="
           pod --version
+          echo ""
+          echo "=== Fastlane ==="
+          fastlane --version | head -3
+          echo ""
+          echo "=== Ruby (system) ==="
+          ruby --version
+          echo "Ruby bin path: $(which ruby)"
+          echo "Fastlane path: $(which fastlane)"
 
-      # ── 5. 装 eas-cli 全局（无锁定版本，跟随 EAS server 更新）───────
+      # ── 4. 装 eas-cli 全局 ──────────────────────────────────────────
       - name: Install eas-cli
         run: |
           npm install -g eas-cli@latest
           eas --version
 
-      # ── 6. 验证 EAS 认证（如果 EXPO_TOKEN 错就在这一步明确报错） ────
+      # ── 5. 验证 EAS 认证 ────────────────────────────────────────────
       - name: Verify EAS auth
         run: |
           if [ -z "${EXPO_TOKEN}" ]; then
@@ -116,25 +98,14 @@ jobs:
           fi
           eas whoami
 
-      # ── 7. 装 npm 依赖 + patch-package 自动应用 ─────────────────────
-      # patch-package 通过 postinstall 钩子自动应用 react-native+0.81.5.patch
-      # 还有任何其他 patches/*.patch
+      # ── 6. 装 npm 依赖（patch-package 通过 postinstall 自动应用）─────
       - name: Install npm dependencies
         run: |
           npm ci --prefer-offline --no-audit --no-fund
-          # 显式列出 patches 文件夹，确认 D-027 patch 在
+          echo "--- patches/ 内容 ---"
           ls -la patches/
 
-      # ── 8. 跑 EAS Build (local mode) ─────────────────────────────────
-      # --local: 在本地 runner 跑构建，不消耗 EAS cloud quota
-      # --non-interactive: CI 模式无 prompt
-      # --output: IPA 输出路径
-      # eas-cli 会自动：
-      #   - 跑 expo prebuild 生成 ios/ 目录
-      #   - pod install
-      #   - 从 EAS server 拉 distribution cert + provisioning profile（透过 EXPO_TOKEN 认证）
-      #   - xcodebuild archive + export
-      #   - 自增 build number（eas.json autoIncrement: true）
+      # ── 7. 跑 EAS Build (local mode) ─────────────────────────────────
       - name: Build iOS IPA (eas build --local)
         run: |
           set -e
@@ -145,7 +116,7 @@ jobs:
           echo "Running: eas build $BUILD_FLAGS"
           eas build $BUILD_FLAGS
 
-      # ── 9. 上传 IPA 作为 workflow artifact（debug 用，可下载到本地）──
+      # ── 8. 上传 IPA 作为 workflow artifact ──────────────────────────
       - name: Upload IPA as workflow artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -155,32 +126,25 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
-      # ── 10. 提交到 TestFlight (eas submit) ───────────────────────────
-      # submit 也是免费的（不计入 build quota）
-      # ASC API Key 已经在 EAS server 配置（user 之前用 eas submit 跑过）
+      # ── 9. 提交到 TestFlight (eas submit) ───────────────────────────
       - name: Submit to TestFlight
         if: ${{ github.event.inputs.submit == 'true' && success() }}
         run: |
           set -e
           eas submit --platform ios --path ./postervia.ipa --non-interactive
 
-      # ── 11. 提示用户怎么继续（不论成败） ─────────────────────────────
+      # ── 10. 报告下一步 ───────────────────────────────────────────────
       - name: Print next steps
         if: always()
         run: |
           echo "═══════════════════════════════════════════════════════════"
-          echo "Build run #${{ github.run_number }} ended."
+          echo "Build run #${{ github.run_number }} ended (status: ${{ job.status }})."
           if [ "${{ job.status }}" = "success" ]; then
             echo "✅ IPA built + uploaded as artifact."
             if [ "${{ github.event.inputs.submit }}" = "true" ]; then
               echo "✅ Submitted to TestFlight. Apple processing ~5-15 min."
-              echo "    Email will land at lisumchen@gmail.com when ready."
             fi
           else
-            echo "❌ Build failed. Check the logs above."
-            echo "   Common first-time issues:"
-            echo "   1. EXPO_TOKEN missing or expired"
-            echo "   2. macOS runner Xcode version mismatch (try macos-latest)"
-            echo "   3. Pod install / patches issue (re-run with clear_cache=true)"
+            echo "❌ Build failed. Check the failed step's logs above."
           fi
           echo "═══════════════════════════════════════════════════════════"
