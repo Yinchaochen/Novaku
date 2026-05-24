@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 
 import { BrandIntro } from '../components/BrandIntro';
-import { addSentryBreadcrumb, Sentry } from '../lib/sentry';
+import { addSentryBreadcrumb, reportToSentry } from '../lib/sentry';
 import { useAuthStore } from '../store/authStore';
 
 const WELCOME_ROUTE_DELAY_MS = 500;
@@ -18,21 +18,15 @@ export default function Index() {
 
   useEffect(() => {
     addSentryBreadcrumb('startup:index_mounted');
-    try {
-      Sentry.captureMessage('startup:index_mounted', 'info');
-    } catch {
-      // best-effort
-    }
   }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       addSentryBreadcrumb('startup:index_to_welcome');
       try {
-        Sentry.captureMessage('startup:index_to_welcome', 'info');
         router.replace('/(auth)/welcome');
       } catch (err) {
-        Sentry.captureException(err);
+        reportToSentry(err, { source: 'startup.index_to_welcome' });
       }
     }, WELCOME_ROUTE_DELAY_MS);
     return () => clearTimeout(timer);
@@ -50,10 +44,9 @@ export default function Index() {
     const target = isAuthenticated ? '/(tabs)/plaza' : '/(auth)/login';
     addSentryBreadcrumb('startup:index_final_fallback', { target });
     try {
-      Sentry.captureMessage(`startup:index_final_fallback:${target}`, 'info');
       router.replace(target);
     } catch (err) {
-      Sentry.captureException(err);
+      reportToSentry(err, { source: 'startup.index_final_fallback', target });
     }
   }, [fallbackElapsed, hasHydrated, isAuthenticated]);
 

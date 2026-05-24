@@ -1,6 +1,6 @@
 import '../global.css';
 
-import { initSentry, Sentry } from '../lib/sentry';
+import { initSentry } from '../lib/sentry';
 import { installGlobalErrorHandler } from '../lib/globalErrorHandler';
 
 initSentry();
@@ -52,39 +52,16 @@ function withStartupTimeout<T>(promise: Promise<T>, fallback: T): Promise<T> {
   ]);
 }
 
-// Capture an early boot event the moment JS reaches this module. If Sentry
-// is healthy this is the first signal we'll see — and its absence in the
-// dashboard is itself a strong signal that JS bundle never loaded.
-try {
-  Sentry.captureMessage('boot:module_loaded', 'info');
-} catch {
-  // Sentry may not be initialized yet (no DSN, dev mode); ignore.
-}
-
 function RootLayout() {
-  try {
-    Sentry.captureMessage('boot:rootlayout_called', 'info');
-  } catch {
-    // best-effort
-  }
   const [failureCount, setFailureCount] = useState(0);
   const [inSafeMode, setInSafeMode] = useState(false);
 
   const advancePhase = (phase: string) => {
     addSentryBreadcrumb(`boot:${phase}`);
-    try {
-      Sentry.captureMessage(`boot:${phase}`, 'info');
-    } catch {
-      // best-effort
-    }
   };
 
   useEffect(() => {
-    try {
-      Sentry.captureMessage('boot:rootlayout_useeffect_fired', 'info');
-    } catch {
-      // best-effort
-    }
+    addSentryBreadcrumb('boot:rootlayout_useeffect_fired');
     (async () => {
       try {
         advancePhase('loading_state');
@@ -108,11 +85,7 @@ function RootLayout() {
         advancePhase('boot_ready');
       } catch (err) {
         advancePhase(`error:${String(err).slice(0, 80)}`);
-        try {
-          Sentry.captureException(err);
-        } catch {
-          // best-effort
-        }
+        reportToSentry(err, { source: '_layout.boot' });
       }
     })();
   }, []);
@@ -130,11 +103,6 @@ function RootLayout() {
     return <SafeModeScreen failureCount={failureCount} onRetry={handleRetry} />;
   }
 
-  try {
-    Sentry.captureMessage('boot:rootlayout_rendering', 'info');
-  } catch {
-    // best-effort
-  }
   return (
     <ErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
@@ -148,33 +116,7 @@ function RootLayout() {
   );
 }
 
-try {
-  Sentry.captureMessage('boot:about_to_export', 'info');
-} catch {
-  // best-effort
-}
-
-// 2026-05-24 ROOT CAUSE OF SPLASH FREEZE: Sentry.wrap(RootLayout) returns a
-// wrapped component that never successfully renders on iOS 26 + new arch +
-// Hermes. POSTERVIA-IOS-4 proved this: cold-start trace fires
-//   1. sentry:initialized        (lib/sentry.ts initSentry)
-//   2. boot:module_loaded         (line 59 of this file)
-//   3. boot:about_to_export       (just above this comment)
-// — then NOTHING. boot:rootlayout_called (the first line of the RootLayout
-// function body) never fires. Expo Router sees the default export, attempts
-// to render it, and the wrapped component fails silently — likely a native
-// TurboModule call inside Sentry's wrap component throws and our patch
-// catches it without recovering.
-//
-// We do NOT lose meaningful Sentry functionality by dropping the wrap:
-//   - We already have an in-tree <ErrorBoundary> in RootLayout's return JSX
-//   - Profiling is configured via tracesSampleRate=0.1 in lib/sentry.ts
-//   - Touch breadcrumbs are nice-to-have, not load-bearing
-//
-// If a future Sentry RN release fixes the iOS 26 wrap regression, we can
-// re-add the wrap with confidence — but the layered RetrosPECTIVES.md
-// Rule 5 (in-app diagnostics) means we'll see the regression immediately
-// if the wrap breaks again.
+// Keep the root export plain. Sentry.wrap is unsafe on iOS 26 + new arch.
 export default RootLayout;
 
 function AppBody() {
@@ -226,11 +168,7 @@ function AppBody() {
   useEffect(() => {
     if (!ready) return;
     void markBootSuccess();
-    try {
-      Sentry.captureMessage('boot:body_ready', 'info');
-    } catch {
-      // best-effort
-    }
+    addSentryBreadcrumb('boot:body_ready');
   }, [ready]);
 
   useEffect(() => {

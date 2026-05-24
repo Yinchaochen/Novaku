@@ -83,14 +83,15 @@ export function initSentry() {
   });
 
   initialized = true;
-
-  // Rule 1 self-test: emit one event the moment init completes, with DSN tail
-  // baked into the message so the Sentry dashboard project ID can be verified
-  // at a glance ("does the tail match the project I expect events in?").
   try {
-    Sentry.captureMessage(`sentry:initialized:dsn_tail=${DSN.slice(-20)}`, 'info');
+    Sentry.setTag('sentry_dsn_tail', DSN.slice(-20));
+    Sentry.addBreadcrumb({
+      message: 'sentry.initialized',
+      data: { dsn_tail: DSN.slice(-20) },
+      level: 'info',
+    });
   } catch {
-    // best-effort; never let the self-test crash the app
+    // best-effort; never let init metadata crash the app
   }
 }
 
