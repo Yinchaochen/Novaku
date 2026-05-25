@@ -3,25 +3,17 @@ import '../global.css';
 import { initSentry } from '../lib/sentry';
 import { installGlobalErrorHandler } from '../lib/globalErrorHandler';
 
+// Sentry + global error handler must run at module top, before any React
+// imports below resolve — an error during their evaluation otherwise goes
+// uncaptured.
 initSentry();
 installGlobalErrorHandler();
 
-// Build 28 (2026-05-25 IOS-LOGIN-106): REMOVED all explicit SplashScreen
-// control (no preventAutoHideAsync, no hideAsync, no retry loop). iPhone
-// syslog showed SpringBoardUI raising:
-//   "Live host view super view[<SBCrossfadeView ...>] not matching
-//    container view[<UIView ...>], frame not updated"
-// at every cold start. This is iOS 26's strict scene-lifecycle crossfade
-// path failing when expo-splash-screen tries to crossfade launch-storyboard
-// out to the RN root view — the RCTRootView ends up in an unexpected
-// parent and iOS bails on the transition, leaving the user staring at
-// either the stuck storyboard (coral) or the empty default UIWindow
-// (white).
-//
-// Fix path: let iOS handle splash with its OWN default "auto-hide on first
-// frame commit" behavior. We pair this with `UIApplicationSceneManifest`
-// in app.json's ios.infoPlist explicitly declaring single-scene support,
-// which is what iOS 26 actually wants us to opt into.
+// Splash hide is intentionally left to iOS's default "auto-hide on first
+// frame commit" behaviour. Explicit SplashScreen.hideAsync() proved
+// unreliable under iOS 26 + new arch; the real root cause of past splash
+// freezes was the safe-area-context Fabric component, patched separately
+// in patches/react-native-safe-area-context+5.6.2.patch.
 
 import {
   PlusJakartaSans_500Medium,
@@ -48,7 +40,7 @@ import {
   resetBootCounter,
   startBootWatchdog,
 } from '../lib/bootWatchdog';
-import { addSentryBreadcrumb, reportToSentry, Sentry } from '../lib/sentry';
+import { addSentryBreadcrumb, reportToSentry } from '../lib/sentry';
 import { queryClient } from '../lib/queryClient';
 import { useAuthStore } from '../store/authStore';
 
@@ -136,50 +128,6 @@ function RootLayout() {
 // Keep the root export plain. Sentry.wrap is unsafe on iOS 26 + new arch.
 export default RootLayout;
 
-/**
- * Build 27 (2026-05-25 IOS-LOGIN-106): on-change boot-state diagnostic.
- *
- * Mounts inside AppBody so it has access to Expo Router's pathname/segments
- * plus the auth-store flags. Captures a Sentry info event EVERY time any of
- * { pathname, segments, hasHydrated, isAuthenticated } changes — and ONLY
- * when they change. Cheaper than 1Hz polling, denser than the boot:* probes,
- * and definitively answers the question "did router.replace silently fail?".
- *
- * Expected timeline (healthy boot):
- *   diag:state_change { pathname: "/", hasHydrated: "false" }
- *   diag:state_change { pathname: "/", hasHydrated: "true" }   ← hydrate done
- *   diag:state_change { pathname: "/plaza" or "/login", ... }   ← router moved
- *
- * Smoking-gun pattern (router.replace silent fail):
- *   diag:state_change { pathname: "/", hasHydrated: "false" }
- *   diag:state_change { pathname: "/", hasHydrated: "true", isAuthenticated: "true" }
- *   ...nothing else for >30 s while user stares at coral...
- *
- * That stale tail = imperative router.replace fired but the navigator never
- * committed the new pathname. At that point the only fix is to swap back to
- * declarative <Redirect /> in app/index.tsx.
- */
-function BootDiagnostic() {
-  const pathname = usePathname();
-  const segments = useSegments();
-  const hasHydrated = useAuthStore((s) => s.hasHydrated);
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-
-  useEffect(() => {
-    Sentry.captureMessage('diag:state_change', {
-      level: 'info',
-      tags: {
-        pathname: pathname || '(empty)',
-        segments_joined: segments.join('/') || '(empty)',
-        hasHydrated: String(hasHydrated),
-        isAuthenticated: String(isAuthenticated),
-      },
-    });
-  }, [pathname, segments.join('/'), hasHydrated, isAuthenticated]);
-
-  return null;
-}
-
 function AppBody() {
   const { setLangCode } = useLanguage();
   const hydrate = useAuthStore((s) => s.hydrate);
@@ -205,12 +153,6 @@ function AppBody() {
   }, [fontError]);
 
   useEffect(() => {
-    // Build 24 (2026-05-25): every boot phase emits a Sentry info event so
-    // we can see exactly which phase is reached + when. If the user sees
-    // BrandIntro stuck, the LAST captured boot:* event tells us where the
-    // chain died. Crucially "boot:splash_hidden" or "boot:splash_hide_failed"
-    // makes the native-splash question observable for the first time.
-    Sentry.captureMessage('boot:hydrate_start', { level: 'info' });
     (async () => {
       try {
         await withStartupTimeout(hydrate(), false);
@@ -226,13 +168,8 @@ function AppBody() {
         // throws — silent here cascades to "user mysteriously not logged in".
         reportToSentry(err, { source: '_layout.hydrate_outer' });
       } finally {
-        Sentry.captureMessage('boot:hydrate_finally', { level: 'info' });
         markHydrated();
         setReady(true);
-        // Build 28: removed SplashScreen.hideAsync() — iOS 26's strict
-        // scene-lifecycle path makes explicit hideAsync fail with
-        // "Live host view super view not matching container view".
-        // Letting iOS auto-hide on first frame commit is more reliable.
       }
     })();
   }, [hydrate, markHydrated, setLangCode]);
@@ -241,7 +178,6 @@ function AppBody() {
     if (!ready) return;
     void markBootSuccess();
     addSentryBreadcrumb('boot:body_ready');
-    // Build 28: removed second hideAsync call here for same reason.
   }, [ready]);
 
   useEffect(() => {
@@ -268,7 +204,6 @@ function AppBody() {
   return (
     <QueryClientProvider client={queryClient}>
       <StatusBar style="dark" />
-      <BootDiagnostic />
       {isAuthenticated ? <PendingDeletionBanner /> : null}
       <Stack screenOptions={{ headerShown: false }} />
     </QueryClientProvider>

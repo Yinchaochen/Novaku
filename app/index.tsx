@@ -2,29 +2,19 @@ import { router } from 'expo-router';
 import { useEffect } from 'react';
 
 import { BrandIntro } from '../components/BrandIntro';
-import { Sentry, reportToSentry } from '../lib/sentry';
+import { reportToSentry } from '../lib/sentry';
 import { useAuthStore } from '../store/authStore';
 
-// Build 25 (2026-05-25 IOS-LOGIN-106): executes a clean single-hop routing
-// pattern from `/` straight to `/plaza` or `/login` upon store hydration.
-// This completely avoids the double-hop `/` -> `/welcome` -> `/plaza` chain
-// which was triggering navigation state collisions and animation freezes
-// under the concurrent Fabric renderer on iOS.
+// Single-hop routing from `/` to `/plaza` (authenticated) or `/login`. The
+// older double-hop `/ → /welcome → /plaza` chain caused navigation-state
+// collisions and animation freezes under Fabric on iOS.
 export default function Index() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
 
   useEffect(() => {
-    Sentry.captureMessage('startup:index_mounted', { level: 'info' });
-  }, []);
-
-  useEffect(() => {
     if (!hasHydrated) return;
     const target = isAuthenticated ? '/plaza' : '/login';
-    Sentry.captureMessage('startup:index_redirecting', {
-      level: 'info',
-      tags: { target, isAuthenticated: String(isAuthenticated) },
-    });
     try {
       router.replace(target);
     } catch (err) {
@@ -32,5 +22,5 @@ export default function Index() {
     }
   }, [hasHydrated, isAuthenticated]);
 
-  return <BrandIntro debugLabel="INDEX" />;
+  return <BrandIntro />;
 }
