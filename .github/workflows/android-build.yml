@@ -1,0 +1,185 @@
+name: Android Build & Submit (free local via Ubuntu runner)
+
+# 设计哲学：跟 iOS workflow 对称。
+#  - 用 `eas build --platform android --local` 在 GitHub Ubuntu runner 上跑构建。
+#  - Expo 官方文档明确：local builds 不计入 EAS cloud quota。
+#  - ubuntu-latest 自带 Java 17 + Android SDK + Gradle，所以这个 workflow
+#    只需要装 Node + eas-cli。
+#  - 私有 repo 的 ubuntu runner 每月 2000 分钟免费额度（macOS 是 10×乘数，
+#    Linux 是 1×，所以 Linux 比 macOS 便宜 10 倍）。
+#
+# 必需的 secrets （在 GitHub repo Settings → Secrets and variables → Actions）：
+#  - EXPO_TOKEN: 跟 iOS workflow 共用，已配置
+#  - SENTRY_AUTH_TOKEN: 跟 iOS workflow 共用，已配置
+#  - GOOGLE_SERVICE_ACCOUNT_KEY_BASE64: 仅当 submit=true 时必需。
+#      生成方式：将 google-service-account.json 整个文件
+#      `base64 -w 0 google-service-account.json | pbcopy`（macOS）
+#      然后粘到 GitHub Secret 里。
+#      第一次跑 build 时建议 submit=false，先验证 AAB 能产出，
+#      然后再配 secret 启用 submit。
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'EAS build profile'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - preview
+          - development
+      submit:
+        description: 'Submit to Google Play after build (requires GOOGLE_SERVICE_ACCOUNT_KEY_BASE64 secret)'
+        required: true
+        default: false
+        type: boolean
+      clear_cache:
+        description: 'Clear EAS build cache (slow but clean)'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: android-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-android:
+    name: Build Android AAB/APK on Ubuntu runner
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      GOOGLE_SERVICE_ACCOUNT_KEY_BASE64: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY_BASE64 }}
+      CI: 1
+      npm_config_progress: 'false'
+      npm_config_audit: 'false'
+      npm_config_fund: 'false'
+
+    steps:
+      # ── 1. 检出仓库 ──────────────────────────────────────────────────
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # ── 2. 安装 Node 20 LTS ──────────────────────────────────────────
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      # ── 3. 安装 Java 17 (Android Gradle Plugin 8 需要) ───────────────
+      # ubuntu-latest 默认 Java 是 21，但 RN 0.81 + AGP 8 推荐 17。
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # ── 4. 验证 Android SDK 已存在 ───────────────────────────────────
+      - name: Verify Android SDK
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          ls $ANDROID_HOME/platforms/ | head -5
+          ls $ANDROID_HOME/build-tools/ | head -5
+
+      # ── 5. 装 eas-cli 全局 ───────────────────────────────────────────
+      - name: Install eas-cli
+        run: |
+          npm install -g eas-cli@latest
+          eas --version
+
+      # ── 6. 验证 EAS 认证 ─────────────────────────────────────────────
+      - name: Verify EAS auth
+        run: |
+          if [ -z "${EXPO_TOKEN}" ]; then
+            echo "::error::EXPO_TOKEN secret missing. Add it in repo Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          eas whoami
+
+      # ── 6b. 验证 Sentry auth token ──────────────────────────────────
+      - name: Verify SENTRY_AUTH_TOKEN
+        run: |
+          if [ -z "${SENTRY_AUTH_TOKEN}" ]; then
+            echo "::error::SENTRY_AUTH_TOKEN secret missing."
+            exit 1
+          fi
+          echo "SENTRY_AUTH_TOKEN is set (length ${#SENTRY_AUTH_TOKEN})"
+
+      # ── 7. 装 npm 依赖（patch-package 通过 postinstall 自动应用）─────
+      - name: Install npm dependencies
+        run: |
+          npm ci --prefer-offline --no-audit --no-fund
+          echo "--- patches/ 内容 ---"
+          ls -la patches/
+
+      # ── 8. 还原 Google Service Account（仅当 submit=true）───────────
+      - name: Restore Google Service Account
+        if: ${{ github.event.inputs.submit == 'true' }}
+        run: |
+          if [ -z "${GOOGLE_SERVICE_ACCOUNT_KEY_BASE64}" ]; then
+            echo "::error::submit=true but GOOGLE_SERVICE_ACCOUNT_KEY_BASE64 secret is missing."
+            echo "::error::Either set submit=false, or add the secret."
+            echo "::error::Generate: base64 -w 0 google-service-account.json"
+            exit 1
+          fi
+          echo "${GOOGLE_SERVICE_ACCOUNT_KEY_BASE64}" | base64 -d > ./google-service-account.json
+          echo "Wrote google-service-account.json ($(wc -c < ./google-service-account.json) bytes)"
+
+      # ── 9. 跑 EAS Build (local mode) ─────────────────────────────────
+      - name: Build Android (eas build --local)
+        run: |
+          set -e
+          # production profile → AAB, preview/development → APK
+          if [ "${{ github.event.inputs.profile }}" = "production" ]; then
+            OUTPUT_FILE="./postervia.aab"
+          else
+            OUTPUT_FILE="./postervia.apk"
+          fi
+          BUILD_FLAGS="--platform android --profile ${{ github.event.inputs.profile }} --local --non-interactive --output $OUTPUT_FILE"
+          if [ "${{ github.event.inputs.clear_cache }}" = "true" ]; then
+            BUILD_FLAGS="$BUILD_FLAGS --clear-cache"
+          fi
+          echo "Running: eas build $BUILD_FLAGS"
+          eas build $BUILD_FLAGS
+
+      # ── 10. 上传 binary 作为 workflow artifact ──────────────────────
+      - name: Upload AAB/APK as workflow artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postervia-android-${{ github.event.inputs.profile }}-${{ github.run_number }}
+          path: |
+            ./postervia.aab
+            ./postervia.apk
+          retention-days: 7
+          if-no-files-found: warn
+
+      # ── 11. 提交到 Google Play (eas submit) ─────────────────────────
+      - name: Submit to Google Play
+        if: ${{ github.event.inputs.submit == 'true' && success() && github.event.inputs.profile == 'production' }}
+        run: |
+          set -e
+          eas submit --platform android --path ./postervia.aab --non-interactive
+
+      # ── 12. 清理 Service Account（敏感文件不留在 runner 上）─────────
+      - name: Clean up Service Account
+        if: always()
+        run: rm -f ./google-service-account.json
+
+      # ── 13. 报告下一步 ──────────────────────────────────────────────
+      - name: Print next steps
+        if: always()
+        run: |
+          echo "::notice::Android build complete. Profile: ${{ github.event.inputs.profile }}"
+          if [ "${{ github.event.inputs.submit }}" = "true" ]; then
+            echo "::notice::Submission attempted — check Google Play Console → Internal testing track for the new draft."
+          else
+            echo "::notice::No submit requested. Download the binary from the workflow artifacts (postervia-android-*) above."
+          fi
