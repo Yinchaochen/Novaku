@@ -589,8 +589,17 @@ export default function PlazaScreen() {
         </View>
       </View>
 
-      <Modal visible={composerVisible} animationType="slide" onRequestClose={closeComposer}>
-        <SafeAreaView className="flex-1" edges={['top']} style={{ backgroundColor: colors.bgCream }}>
+      <Modal
+        visible={composerVisible}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={closeComposer}
+      >
+        {/* IOS-LOGIN-109: iOS Modal opens in a separate UIWindow whose safe-area
+            insets aren't reliably forwarded to react-native-safe-area-context's
+            SafeAreaView. Bypass it and apply the outer insets.top directly so
+            the back button sits below the status bar/notch. */}
+        <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: colors.bgCream }}>
           <KeyboardAvoidingView
             className="flex-1"
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -915,7 +924,7 @@ export default function PlazaScreen() {
               </View>
             </View>
           </KeyboardAvoidingView>
-        </SafeAreaView>
+        </View>
       </Modal>
 
       <Modal
