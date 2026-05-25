@@ -61,6 +61,13 @@ jobs:
       # 然后在 https://github.com/Yinchaochen/Novaku/settings/secrets/actions
       # 加名为 SENTRY_AUTH_TOKEN 的 secret。
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      # Sentry dSYM 上传是 archive 完成后的一个 script phase。Sentry 服务端偶尔
+      # 抽风返回 5xx（实测 Build #21 跑 16 分钟到 archive 全绿，最后挂在 sentry-cli
+      # 报 "API request failed - internal server error (http status: 500)"）。
+      # SENTRY_ALLOW_FAILURE=true 让 sentry-cli 把上传错误降级为 warning 并 exit 0，
+      # IPA 还是能正常产出 + 上 TestFlight。代价：这次 build 在 Sentry 里的
+      # crash symbolication 可能不完整，可以事后手动 sentry-cli debug-files upload。
+      SENTRY_ALLOW_FAILURE: 'true'
       CI: 1
       npm_config_progress: 'false'
       npm_config_audit: 'false'
