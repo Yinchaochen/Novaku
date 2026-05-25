@@ -85,7 +85,14 @@
       ],
       "expo-apple-authentication",
       "expo-web-browser",
-      "expo-font"
+      "expo-font",
+      [
+        "react-native-maps",
+        {
+          "iosGoogleMapsApiKey": "",
+          "androidGoogleMapsApiKey": ""
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
