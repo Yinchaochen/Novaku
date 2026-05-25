@@ -9,6 +9,7 @@ import { ChalkIcon, ChalkIconName } from '../../components/ChalkIcon';
 import { OnboardingModal } from '../../components/OnboardingModal';
 import { useLanguage } from '../../context/LanguageContext';
 import { tap } from '../../lib/haptics';
+import { Sentry } from '../../lib/sentry';
 import { useAuthStore } from '../../store/authStore';
 import { colors, gradients, shadows } from '../../theme/tokens';
 
@@ -54,6 +55,18 @@ export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const user = useAuthStore((state) => state.user);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+
+  // Build 24 boot-redirect probe (2026-05-25 IOS-LOGIN-106): if `/(tabs)/_layout`
+  // never mounts even when welcome.tsx fired `welcome:redirecting` with
+  // target=/(tabs)/plaza, that means Expo Router's Redirect to a tabs route
+  // silently fails on RN 0.81 + new arch + Hermes Release. Capture so Sentry
+  // can confirm or rule out this hypothesis.
+  useEffect(() => {
+    Sentry.captureMessage('startup:tabs_layout_mounted', {
+      level: 'info',
+      tags: { has_user: String(!!user) },
+    });
+  }, []);
 
   useEffect(() => {
     if (!user) {
