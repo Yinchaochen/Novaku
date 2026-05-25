@@ -1,6 +1,8 @@
 import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
+import { useCallback, useRef } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
 
 import { colors } from '../theme/tokens';
 
@@ -23,9 +25,20 @@ interface BrandIntroProps {
 export function BrandIntro({ debugLabel }: BrandIntroProps = {}) {
   const { width } = useWindowDimensions();
   const imageWidth = Math.min(BRAND_IMAGE_WIDTH, width);
+  const hideRequestedRef = useRef(false);
+
+  const handleLayout = useCallback(() => {
+    if (hideRequestedRef.current) return;
+    hideRequestedRef.current = true;
+    requestAnimationFrame(() => {
+      SplashScreen.hideAsync().catch(() => {
+        // Default autohide may already have removed it.
+      });
+    });
+  }, []);
 
   return (
-    <View style={styles.screen}>
+    <View style={styles.screen} onLayout={handleLayout}>
       <StatusBar style="light" />
       <Image
         source={require('../assets/splash-brand.png')}

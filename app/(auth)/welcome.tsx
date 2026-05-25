@@ -32,7 +32,7 @@ export default function WelcomeScreen() {
     return <BrandIntro debugLabel="WELCOME" />;
   }
 
-  const target = isAuthenticated ? '/(tabs)/plaza' : '/(auth)/login';
+  const target = isAuthenticated ? '/plaza' : '/login';
   Sentry.captureMessage('welcome:redirecting', {
     level: 'info',
     tags: { target, isAuthenticated: String(isAuthenticated) },

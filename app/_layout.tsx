@@ -199,8 +199,10 @@ function AppBody() {
   useEffect(() => {
     if (!ready) return;
     void markBootSuccess();
-    Sentry.captureMessage('boot:body_ready', { level: 'info' });
     addSentryBreadcrumb('boot:body_ready');
+    SplashScreen.hideAsync().catch((err) => {
+      reportToSentry(err, { source: '_layout.hide_splash' });
+    });
   }, [ready]);
 
   useEffect(() => {
@@ -212,12 +214,12 @@ function AppBody() {
     if (!isAuthenticated && !isRootRoute && !inAuthGroup && !isPublicRoute) {
       if (lastRedirect.current !== 'welcome') {
         lastRedirect.current = 'welcome';
-        router.replace('/(auth)/welcome');
+        router.replace('/welcome');
       }
     } else if (isAuthenticated && inAuthGroup && !isWelcome) {
       if (lastRedirect.current !== 'plaza') {
         lastRedirect.current = 'plaza';
-        router.replace('/(tabs)/plaza');
+        router.replace('/plaza');
       }
     } else {
       lastRedirect.current = null;
