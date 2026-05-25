@@ -1,8 +1,8 @@
 diff --git a/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm b/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
-index 2a67797..0cc317c 100644
+index 2a67797..fa343f6 100644
 --- a/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
 +++ b/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
-@@ -435,7 +435,38 @@ void ObjCTurboModule::performVoidMethodInvocation(
+@@ -435,7 +435,21 @@ void ObjCTurboModule::performVoidMethodInvocation(
      @try {
        [inv invokeWithTarget:strongModule];
      } @catch (NSException *exception) {
@@ -12,32 +12,15 @@ index 2a67797..0cc317c 100644
 +      // See reactwg/react-native-new-architecture#276 and
 +      // facebook/react-native#54859. The async void block runs on a GCD queue
 +      // with no C++ catch handler; rethrowing convertNSExceptionToJSError as a
-+      // C++ exception aborts the process. The `return;` is critical.
-+      //
-+      // EXPANSION (Postervia, 2026-05-25 IOS-LOGIN-106): dump full exception
-+      // object + native callstack so iPhone.log shows exactly which native
-+      // frame called into the not-yet-callable JS bridge.
++      // C++ exception aborts the process. The `return;` is critical: without
++      // it, execution falls through to code after the try/catch/finally that
++      // assumes the invocation succeeded, accessing corrupted state and
++      // leaving the launch storyboard up forever (Postervia v1.0.3 regression).
 +      RCTLogError(
-+          @"[POSTERVIA-D027-SUPPRESS] %s.%s name=%@ reason=%@",
++          @"[TurboModule] Suppressed NSException in void method %s.%s: %@",
 +          moduleName,
 +          methodNameStr.c_str(),
-+          exception.name,
-+          exception.reason);
-+      NSLog(
-+          @"[POSTERVIA-D027-EXC-STACK] %s.%s symbols=%@",
-+          moduleName,
-+          methodNameStr.c_str(),
-+          exception.callStackSymbols);
-+      NSLog(
-+          @"[POSTERVIA-D027-THREAD-STACK] %s.%s symbols=%@",
-+          moduleName,
-+          methodNameStr.c_str(),
-+          [NSThread callStackSymbols]);
-+      NSLog(
-+          @"[POSTERVIA-D027-USERINFO] %s.%s userInfo=%@",
-+          moduleName,
-+          methodNameStr.c_str(),
-+          exception.userInfo);
++          exception);
 +      return;
      } @finally {
        [retainedObjectsForInvocation removeAllObjects];

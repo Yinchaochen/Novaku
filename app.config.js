@@ -7,21 +7,15 @@
 // One key, two env-var locations: react-native-google-places-autocomplete
 // reads it from JS at runtime (requires the EXPO_PUBLIC_* prefix to be
 // inlined into the JS bundle), and the native iOS / Android Maps SDK
-// reads it from the `react-native-maps` plugin's config block at build
-// time. Same value, just exposed in both spots.
+// reads it from `ios.config.googleMapsApiKey` / `android.config.googleMaps.apiKey`
+// at build time — Expo's BUILT-IN Maps autolink picks these up and emits the
+// `react-native-google-maps` podspec that react-native-maps 1.20.x ships.
 //
-// IOS-LOGIN-106 (2026-05-25): switched from the legacy
-// `ios.config.googleMapsApiKey` / `android.config.googleMaps.apiKey`
-// injection (which triggers Expo's BUILT-IN Maps autolink emitting
-// `pod 'react-native-google-maps'` — a podspec that react-native-maps
-// 1.21+ no longer ships) to the lib's own 1.22+ config plugin (which
-// emits the correct `pod 'react-native-maps/Google'` subspec). See
-// https://github.com/react-native-maps/react-native-maps/issues/5710.
-//
-// To set locally: add `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=AIza...` to .env,
-// then restart `npx expo start --clear`.
-// To set for EAS builds: `eas env:create --name EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
-// --value AIza... --scope project --environment development,preview,production`.
+// IOS-LOGIN-107 (2026-05-25, Build 29): reverted from the 1.22+ config-plugin
+// path (`react-native-maps/Google` subspec) back to the legacy Expo autolink
+// because react-native-maps was downgraded from 1.27.2 -> 1.20.1 alongside
+// `newArchEnabled: false` (1.27 hard-requires new arch; nuclear rollback to
+// legacy bridge to escape the iOS 26 SBCrossfadeView splash freeze).
 
 const fs = require('fs');
 const path = require('path');
@@ -37,25 +31,24 @@ module.exports = ({ config }) => {
     process.env.GOOGLE_MAPS_API_KEY || // legacy name, still honoured
     '';
 
-  // Inject the runtime key into the `react-native-maps` plugin block declared
-  // in app.json (which has empty-string placeholders so the static config is
-  // valid without secrets in git).
-  const plugins = (base.plugins || []).map((plugin) => {
-    if (Array.isArray(plugin) && plugin[0] === 'react-native-maps') {
-      return [
-        'react-native-maps',
-        {
-          ...(plugin[1] || {}),
-          iosGoogleMapsApiKey: mapsKey,
-          androidGoogleMapsApiKey: mapsKey,
-        },
-      ];
-    }
-    return plugin;
-  });
-
   return {
     ...base,
-    plugins,
+    ios: {
+      ...(base.ios || {}),
+      config: {
+        ...((base.ios && base.ios.config) || {}),
+        googleMapsApiKey: mapsKey,
+      },
+    },
+    android: {
+      ...(base.android || {}),
+      config: {
+        ...((base.android && base.android.config) || {}),
+        googleMaps: {
+          ...((base.android && base.android.config && base.android.config.googleMaps) || {}),
+          apiKey: mapsKey,
+        },
+      },
+    },
   };
 };

@@ -142,7 +142,7 @@ export default function RegisterScreen() {
         gender,
         consents,
       },
-      { onSuccess: () => router.replace('/(tabs)/plaza') },
+      { onSuccess: () => router.replace('/plaza') },
     );
   };
 
@@ -187,7 +187,7 @@ export default function RegisterScreen() {
               if (router.canGoBack()) {
                 router.back();
               } else {
-                router.replace('/(auth)/login');
+                router.replace('/login');
               }
             }}
             hitSlop={12}
@@ -498,7 +498,7 @@ export default function RegisterScreen() {
             {t.auth.already_have_account}
           </Text>
           <Pressable
-            onPress={() => router.replace('/(auth)/login')}
+            onPress={() => router.replace('/login')}
             hitSlop={6}
           >
             <Text

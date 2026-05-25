@@ -91,7 +91,7 @@ export default function LoginScreen() {
         } else {
           await clearRememberedEmail();
         }
-        router.replace('/(tabs)/plaza');
+        router.replace('/plaza');
       },
     });
   };
@@ -294,7 +294,7 @@ export default function LoginScreen() {
             </View>
             <Text style={{ fontSize: 13, color: colors.textMuted }}>{t.auth.remember_me}</Text>
           </Pressable>
-          <Pressable onPress={() => router.push('/(auth)/forgot-password')} hitSlop={6}>
+          <Pressable onPress={() => router.push('/forgot-password')} hitSlop={6}>
             <Text style={{ fontSize: 13, fontWeight: '700', color: colors.brandCoral }}>
               {t.auth.forgot_password}
             </Text>
@@ -441,7 +441,7 @@ export default function LoginScreen() {
           }}
         >
           <Text style={{ fontSize: 13.5, color: colors.textMuted }}>{t.auth.dont_have_account}</Text>
-          <Pressable onPress={() => router.replace('/(auth)/register')} hitSlop={6}>
+          <Pressable onPress={() => router.replace('/register')} hitSlop={6}>
             <Text style={{ fontSize: 13.5, color: colors.brandCoral, fontWeight: '700' }}>
               {' '}
               {t.auth.register}
