@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 
 import { BrandIntro } from '../components/BrandIntro';
-import { addSentryBreadcrumb, reportToSentry } from '../lib/sentry';
+import { addSentryBreadcrumb, reportToSentry, Sentry } from '../lib/sentry';
 import { useAuthStore } from '../store/authStore';
 
 const WELCOME_ROUTE_DELAY_MS = 500;
@@ -17,14 +17,21 @@ export default function Index() {
   const [fallbackElapsed, setFallbackElapsed] = useState(false);
 
   useEffect(() => {
-    addSentryBreadcrumb('startup:index_mounted');
+    // Build 23 diagnostic (2026-05-25): re-enable captureMessage at boot
+    // navigation points. We removed these in commit 3e94220 thinking they
+    // caused splash freeze (they didn't; the cause was the new-arch
+    // RCTEventEmitter race that Build 22 finally resolved). Now we're
+    // diagnosing a DOWNSTREAM problem — user stuck on BrandIntro — so we
+    // need explicit signals to know which navigation step is failing.
+    Sentry.captureMessage('startup:index_mounted', { level: 'info' });
   }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      addSentryBreadcrumb('startup:index_to_welcome');
+      Sentry.captureMessage('startup:index_to_welcome_attempt', { level: 'info' });
       try {
         router.replace('/(auth)/welcome');
+        Sentry.captureMessage('startup:index_to_welcome_called', { level: 'info' });
       } catch (err) {
         reportToSentry(err, { source: 'startup.index_to_welcome' });
       }
