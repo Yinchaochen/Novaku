@@ -1,10 +1,22 @@
 import '../global.css';
 
+import * as SplashScreen from 'expo-splash-screen';
+
 import { initSentry } from '../lib/sentry';
 import { installGlobalErrorHandler } from '../lib/globalErrorHandler';
 
 initSentry();
 installGlobalErrorHandler();
+
+// Build 24 (2026-05-25 IOS-LOGIN-106): hold the native splash up until we
+// explicitly call `hideAsync()` from AppBody's hydrate finally block. That
+// makes "did the native splash actually hide?" an observable question via
+// Sentry, instead of the previous BrandIntro.onLayout sync hide which
+// swallowed errors. Wrapped in catch so a late call (Expo SDK 54 sometimes
+// auto-hides on iOS 26 before this fires) doesn't throw.
+SplashScreen.preventAutoHideAsync().catch(() => {
+  // Already auto-hidden; nothing to prevent.
+});
 
 import {
   PlusJakartaSans_500Medium,
@@ -31,7 +43,7 @@ import {
   resetBootCounter,
   startBootWatchdog,
 } from '../lib/bootWatchdog';
-import { addSentryBreadcrumb, reportToSentry } from '../lib/sentry';
+import { addSentryBreadcrumb, reportToSentry, Sentry } from '../lib/sentry';
 import { queryClient } from '../lib/queryClient';
 import { useAuthStore } from '../store/authStore';
 
@@ -144,6 +156,12 @@ function AppBody() {
   }, [fontError]);
 
   useEffect(() => {
+    // Build 24 (2026-05-25): every boot phase emits a Sentry info event so
+    // we can see exactly which phase is reached + when. If the user sees
+    // BrandIntro stuck, the LAST captured boot:* event tells us where the
+    // chain died. Crucially "boot:splash_hidden" or "boot:splash_hide_failed"
+    // makes the native-splash question observable for the first time.
+    Sentry.captureMessage('boot:hydrate_start', { level: 'info' });
     (async () => {
       try {
         await withStartupTimeout(hydrate(), false);
@@ -159,8 +177,21 @@ function AppBody() {
         // throws — silent here cascades to "user mysteriously not logged in".
         reportToSentry(err, { source: '_layout.hydrate_outer' });
       } finally {
+        Sentry.captureMessage('boot:hydrate_finally', { level: 'info' });
         markHydrated();
         setReady(true);
+        try {
+          await SplashScreen.hideAsync();
+          Sentry.captureMessage('boot:splash_hidden', { level: 'info' });
+        } catch (err) {
+          // Already hidden, or hideAsync threw — either way, capture so we
+          // know the native splash status. iOS 26 sometimes auto-hides
+          // before our explicit call, producing a benign "already hidden".
+          Sentry.captureException(err, {
+            tags: { source: 'splash.hideAsync' },
+            level: 'warning',
+          });
+        }
       }
     })();
   }, [hydrate, markHydrated, setLangCode]);
@@ -168,6 +199,7 @@ function AppBody() {
   useEffect(() => {
     if (!ready) return;
     void markBootSuccess();
+    Sentry.captureMessage('boot:body_ready', { level: 'info' });
     addSentryBreadcrumb('boot:body_ready');
   }, [ready]);
 

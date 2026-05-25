@@ -1,33 +1,31 @@
 import { Image } from 'expo-image';
-import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useRef } from 'react';
-import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { colors } from '../theme/tokens';
 
 const BRAND_IMAGE_WIDTH = 300;
 const BRAND_IMAGE_ASPECT_RATIO = 960 / 780;
 
-export function BrandIntro() {
+interface BrandIntroProps {
+  /**
+   * Build 24 diagnostic chip (2026-05-25 IOS-LOGIN-106): renders a tiny label
+   * in the bottom-right corner so we can tell at a glance whether the visible
+   * coral screen is `/` (debugLabel="INDEX") or `/(auth)/welcome`
+   * (debugLabel="WELCOME") or the native splash (no debugLabel, since native
+   * splash renders the same brand image but cannot host this React-only chip).
+   *
+   * Strip this prop entirely once the boot-redirect chain is verified.
+   */
+  debugLabel?: string;
+}
+
+export function BrandIntro({ debugLabel }: BrandIntroProps = {}) {
   const { width } = useWindowDimensions();
-  const hideRequestedRef = useRef(false);
   const imageWidth = Math.min(BRAND_IMAGE_WIDTH, width);
 
-  const handleLayout = useCallback(() => {
-    if (hideRequestedRef.current) return;
-    hideRequestedRef.current = true;
-    requestAnimationFrame(() => {
-      try {
-        SplashScreen.hide();
-      } catch {
-        // Default autohide may already have removed it.
-      }
-    });
-  }, []);
-
   return (
-    <View style={styles.screen} onLayout={handleLayout}>
+    <View style={styles.screen}>
       <StatusBar style="light" />
       <Image
         source={require('../assets/splash-brand.png')}
@@ -37,6 +35,11 @@ export function BrandIntro() {
         }}
         contentFit="contain"
       />
+      {debugLabel ? (
+        <View style={styles.debugChip}>
+          <Text style={styles.debugChipText}>{debugLabel}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -47,5 +50,20 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brandCoral,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  debugChip: {
+    position: 'absolute',
+    bottom: 16,
+    right: 16,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  debugChipText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
 });
