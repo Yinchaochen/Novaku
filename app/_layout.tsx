@@ -147,6 +147,50 @@ function RootLayout() {
 // Keep the root export plain. Sentry.wrap is unsafe on iOS 26 + new arch.
 export default RootLayout;
 
+/**
+ * Build 27 (2026-05-25 IOS-LOGIN-106): on-change boot-state diagnostic.
+ *
+ * Mounts inside AppBody so it has access to Expo Router's pathname/segments
+ * plus the auth-store flags. Captures a Sentry info event EVERY time any of
+ * { pathname, segments, hasHydrated, isAuthenticated } changes — and ONLY
+ * when they change. Cheaper than 1Hz polling, denser than the boot:* probes,
+ * and definitively answers the question "did router.replace silently fail?".
+ *
+ * Expected timeline (healthy boot):
+ *   diag:state_change { pathname: "/", hasHydrated: "false" }
+ *   diag:state_change { pathname: "/", hasHydrated: "true" }   ← hydrate done
+ *   diag:state_change { pathname: "/plaza" or "/login", ... }   ← router moved
+ *
+ * Smoking-gun pattern (router.replace silent fail):
+ *   diag:state_change { pathname: "/", hasHydrated: "false" }
+ *   diag:state_change { pathname: "/", hasHydrated: "true", isAuthenticated: "true" }
+ *   ...nothing else for >30 s while user stares at coral...
+ *
+ * That stale tail = imperative router.replace fired but the navigator never
+ * committed the new pathname. At that point the only fix is to swap back to
+ * declarative <Redirect /> in app/index.tsx.
+ */
+function BootDiagnostic() {
+  const pathname = usePathname();
+  const segments = useSegments();
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  useEffect(() => {
+    Sentry.captureMessage('diag:state_change', {
+      level: 'info',
+      tags: {
+        pathname: pathname || '(empty)',
+        segments_joined: segments.join('/') || '(empty)',
+        hasHydrated: String(hasHydrated),
+        isAuthenticated: String(isAuthenticated),
+      },
+    });
+  }, [pathname, segments.join('/'), hasHydrated, isAuthenticated]);
+
+  return null;
+}
+
 function AppBody() {
   const { setLangCode } = useLanguage();
   const hydrate = useAuthStore((s) => s.hydrate);
@@ -228,9 +272,9 @@ function AppBody() {
     const isWelcome = inAuthGroup && segments[1] === 'welcome';
     const isPublicRoute = segments[0] === 'legal';
     if (!isAuthenticated && !isRootRoute && !inAuthGroup && !isPublicRoute) {
-      if (lastRedirect.current !== 'welcome') {
-        lastRedirect.current = 'welcome';
-        router.replace('/welcome');
+      if (lastRedirect.current !== 'login') {
+        lastRedirect.current = 'login';
+        router.replace('/login');
       }
     } else if (isAuthenticated && inAuthGroup && !isWelcome) {
       if (lastRedirect.current !== 'plaza') {
@@ -245,6 +289,7 @@ function AppBody() {
   return (
     <QueryClientProvider client={queryClient}>
       <StatusBar style="dark" />
+      <BootDiagnostic />
       {isAuthenticated ? <PendingDeletionBanner /> : null}
       <Stack screenOptions={{ headerShown: false }} />
     </QueryClientProvider>
