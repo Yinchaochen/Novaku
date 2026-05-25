@@ -9,27 +9,24 @@ import { QueryClient, onlineManager } from '@tanstack/react-query';
 // while the user is on the subway, no "request failed" toasts when the
 // real issue is "no network".
 //
-// IOS-LOGIN-106 (2026-05-24): NetInfo.addEventListener fires Apple
-// Reachability + captive portal probe immediately; the result returns via
-// RCTEventEmitter before RN 0.81 new-arch bridge finishes registering the
-// emitter as a callable module → fatal crash on cold start (POSTERVIA-IOS-5).
-// Defer to next event-loop tick so the bridge bootstrap completes first.
-setTimeout(() => {
-  onlineManager.setEventListener((setOnline) => {
-    const subscription = NetInfo.addEventListener((state) => {
-      // `isConnected` is null while NetInfo determines initial state — treat
-      // as online to avoid stalling queries on cold start. Once determined,
-      // `isInternetReachable` is the stronger signal (DNS works) when
-      // available, falling back to `isConnected` (link layer up).
-      const isOnline =
-        state.isConnected === false
-          ? false
-          : state.isInternetReachable !== false;
-      setOnline(isOnline);
-    });
-    return () => subscription();
+// IOS-LOGIN-106 (2026-05-25): netinfo 11.4.1 was not new-arch compatible —
+// it called the legacy `RCTEventEmitter` callable JS module which is never
+// registered under RN 0.81 + Fabric. Bumped to 12.0.1, which routes events
+// through TurboModule. POSTERVIA-IOS-5/6 should no longer reproduce.
+onlineManager.setEventListener((setOnline) => {
+  const subscription = NetInfo.addEventListener((state) => {
+    // `isConnected` is null while NetInfo determines initial state — treat
+    // as online to avoid stalling queries on cold start. Once determined,
+    // `isInternetReachable` is the stronger signal (DNS works) when
+    // available, falling back to `isConnected` (link layer up).
+    const isOnline =
+      state.isConnected === false
+        ? false
+        : state.isInternetReachable !== false;
+    setOnline(isOnline);
   });
-}, 0);
+  return () => subscription();
+});
 
 export const queryClient = new QueryClient({
   defaultOptions: {
