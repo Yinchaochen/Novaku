@@ -22,12 +22,37 @@ export const api = axios.create({
 // latency to breadcrumbs.
 type TimedConfig = InternalAxiosRequestConfig & { _startedAt?: number };
 
+// Audit 2026-05-25 (#6): generate a per-request UUID and forward it as
+// X-Request-ID. Backend CorrelationIdMiddleware reads/echoes it; structlog
+// emits it on every log line. Now we can trace one user click from Sentry
+// frontend event → axios breadcrumb → backend structlog → Postgres query.
+function _generateRequestId(): string {
+  // crypto.randomUUID is available on Hermes via the polyfill expo ships.
+  const g = globalThis as { crypto?: { randomUUID?: () => string } };
+  if (g.crypto?.randomUUID) return g.crypto.randomUUID();
+  // Fallback for older runtimes — RFC-4122-ish, sufficient for tracing.
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 api.interceptors.request.use(async (config) => {
   const token = await secureStore.getItemAsync('access_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   const locale = await hydrateCurrentLocale();
   config.headers['Accept-Language'] = locale;
+  const requestId = _generateRequestId();
+  config.headers['X-Request-ID'] = requestId;
   (config as TimedConfig)._startedAt = Date.now();
+  // Tag the in-flight Sentry breadcrumb stream so 5xx captures can be
+  // grouped/searched by request_id when cross-correlating with backend.
+  addSentryBreadcrumb('axios:request', {
+    method: config.method?.toUpperCase(),
+    url: shortUrl(config.url),
+    request_id: requestId,
+  });
   return config;
 });
 
@@ -104,7 +129,20 @@ api.interceptors.response.use(
     }
     // else: known/expected 4xx — breadcrumb already emitted above, no event capture
 
-    if (!original || status !== 401 || original._retry) {
+    if (!original || status !== 401) {
+      return Promise.reject(error);
+    }
+    if (original._retry) {
+      // Audit 2026-05-25 (#9): previously a second 401 on the same request
+      // (e.g. transient race between refresh-completion and replay-attempt)
+      // short-circuited here silently and dumped the user back to login with
+      // no Sentry breadcrumb. Now report it so we can see the post-refresh
+      // 401 pattern instead of guessing "why did the user get logged out".
+      reportToSentry(error, {
+        url,
+        status,
+        context: 'token_refresh_retry_blocked',
+      });
       return Promise.reject(error);
     }
 

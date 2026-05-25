@@ -38,33 +38,37 @@ export async function loadBootState(): Promise<BootState> {
 }
 
 /**
- * Arms the boot watchdog timer FIRST, then attempts to persist the boot
- * counter. Earlier versions did the writes first, which meant a hung
- * SecureStore call (the iOS 26 + new arch failure mode we're chasing)
- * would prevent the timer from ever arming and we'd get zero Sentry
- * signal. Now even total SecureStore failure still emits a timeout event.
+ * Arms the boot watchdog timer. Earlier versions incremented the failure
+ * counter UNCONDITIONALLY at watchdog arm — that meant a user who tapped
+ * the icon, then swiped back to home before AppBody finished mounting
+ * (perfectly normal) bumped the counter. Two such users sessions in a
+ * row pushed them into safe mode with no real bug (audit 2026-05-25 #10).
+ *
+ * Now the increment lives INSIDE the timeout callback: if boot truly
+ * doesn't reach markBootSuccess within BOOT_TIMEOUT_MS, only THEN do
+ * we count it as a failure. A user-initiated background within the
+ * boot window leaves the counter untouched.
  */
 export async function startBootWatchdog(failureCount: number): Promise<void> {
   if (bootMarked) return;
   if (watchdogTimer) clearTimeout(watchdogTimer);
-  watchdogTimer = setTimeout(() => {
+  watchdogTimer = setTimeout(async () => {
     if (bootMarked) return;
     reportToSentry(new Error('BootWatchdogTimeout'), {
       timeoutMs: BOOT_TIMEOUT_MS,
       failureCount,
     });
+    // Increment ONLY after the watchdog confirms boot did not complete
+    // in the allowed window. This is the actual "failure" signal.
+    const nextCount = failureCount + 1;
+    try {
+      await secureStore.setItemAsync(BOOT_FAIL_KEY, String(nextCount));
+      addSentryBreadcrumb('boot_counter_incremented', { failureCount: nextCount });
+    } catch (err) {
+      _reportBootWatchdog('startBootWatchdog.setItem', err);
+    }
   }, BOOT_TIMEOUT_MS);
   addSentryBreadcrumb('boot_watchdog_armed', { failureCount });
-
-  const nextCount = failureCount + 1;
-  try {
-    await secureStore.setItemAsync(BOOT_FAIL_KEY, String(nextCount));
-  } catch (err) {
-    // SecureStore failures must not block the app. The watchdog is already
-    // armed above so we still get a Sentry signal if boot hangs.
-    _reportBootWatchdog('startBootWatchdog.setItem', err);
-  }
-  addSentryBreadcrumb('boot_counter_incremented', { failureCount: nextCount });
 }
 
 export async function markBootSuccess(): Promise<void> {

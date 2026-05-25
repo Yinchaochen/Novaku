@@ -27,6 +27,13 @@ let localeHydrated = false;
  * we only ship Simplified, and showing zh-Hant users Simplified Chinese is
  * a worse experience than showing them English (industry consensus).
  */
+// Exported so LanguageProvider can seed its initial state with the OS-detected
+// locale synchronously, avoiding the IOS-LOGIN-106 audit #18 first-frame
+// English flicker for non-English users while SecureStore hydrates.
+export function detectSystemLocaleSync(): string {
+  return detectSystemLocale();
+}
+
 function detectSystemLocale(): string {
   try {
     const locales = Localization.getLocales();

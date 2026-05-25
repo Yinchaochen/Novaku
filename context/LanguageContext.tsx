@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 
 import { getTranslations, Translations } from '../lib/i18n';
 import {
-  getCurrentLocale,
+  detectSystemLocaleSync,
   hydrateCurrentLocale,
   persistCurrentLocale,
   setCurrentLocale,
@@ -17,7 +17,11 @@ interface LanguageContextValue {
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [langCode, setLangCodeState] = useState(getCurrentLocale());
+  // Audit 2026-05-25 (#18): seed initial state with the OS-detected locale
+  // synchronously so a Chinese-system user never sees an English first frame.
+  // SecureStore hydration in the effect below refines this if a saved
+  // explicit preference exists.
+  const [langCode, setLangCodeState] = useState(() => detectSystemLocaleSync());
 
   useEffect(() => {
     hydrateCurrentLocale()
