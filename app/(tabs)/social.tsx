@@ -1348,8 +1348,8 @@ export default function SocialScreen() {
       </Modal>
 
       {/* ── Connections modal ── */}
-      <Modal visible={isConnectionsVisible} animationType="slide" onRequestClose={() => setIsConnectionsVisible(false)}>
-        <SafeAreaView className="flex-1 bg-[#F6F7FB]">
+      <Modal visible={isConnectionsVisible} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setIsConnectionsVisible(false)}>
+        <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom, paddingLeft: insets.left, paddingRight: insets.right, backgroundColor: '#F6F7FB' }}>
           <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <View className="flex-row items-center justify-between px-5 pb-4 pt-4">
               <Pressable onPress={() => setIsConnectionsVisible(false)}>
@@ -1465,12 +1465,12 @@ export default function SocialScreen() {
               <View style={{ height: 24 }} />
             </ScrollView>
           </KeyboardAvoidingView>
-        </SafeAreaView>
+        </View>
       </Modal>
 
       {/* ── Create group modal ── */}
-      <Modal visible={isCreateGroupVisible} animationType="slide" onRequestClose={() => setIsCreateGroupVisible(false)}>
-        <SafeAreaView className="flex-1 bg-[#F6F7FB]">
+      <Modal visible={isCreateGroupVisible} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setIsCreateGroupVisible(false)}>
+        <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom, paddingLeft: insets.left, paddingRight: insets.right, backgroundColor: '#F6F7FB' }}>
           <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <View className="flex-row items-center justify-between px-5 pb-4 pt-4">
               <Pressable onPress={() => setIsCreateGroupVisible(false)}>
@@ -1543,7 +1543,7 @@ export default function SocialScreen() {
               </Pressable>
             </ScrollView>
           </KeyboardAvoidingView>
-        </SafeAreaView>
+        </View>
       </Modal>
 
       {/* ── Conversation modal ── */}
@@ -1565,7 +1565,10 @@ export default function SocialScreen() {
           setToastMsg(null);
         }}
       >
-        <SafeAreaView className="flex-1" edges={['top', 'left', 'right']} style={{ backgroundColor: '#EDEFF3' }}>
+        {/* IOS-LOGIN-111: iOS Modal opens in a separate UIWindow whose safe-area
+            insets aren't reliably forwarded to SafeAreaView. Use the outer
+            insets directly. See plaza.tsx compose modal for the same pattern. */}
+        <View style={{ flex: 1, paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right, backgroundColor: '#EDEFF3' }}>
           <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             {/* Header */}
             <View
@@ -2097,12 +2100,12 @@ export default function SocialScreen() {
               </View>
             </View>
           ) : null}
-        </SafeAreaView>
+        </View>
       </Modal>
 
       {/* ── Forward modal ── */}
-      <Modal visible={isForwardVisible} animationType="slide" onRequestClose={() => setIsForwardVisible(false)}>
-        <SafeAreaView className="flex-1 bg-[#F6F7FB]">
+      <Modal visible={isForwardVisible} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setIsForwardVisible(false)}>
+        <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom, paddingLeft: insets.left, paddingRight: insets.right, backgroundColor: '#F6F7FB' }}>
           <View className="flex-row items-center justify-between px-5 pb-4 pt-4">
             <Pressable onPress={() => setIsForwardVisible(false)}>
               <Ionicons name="close" size={28} color="#111827" />
@@ -2146,7 +2149,7 @@ export default function SocialScreen() {
             </View>
             <View style={{ height: 24 }} />
           </ScrollView>
-        </SafeAreaView>
+        </View>
       </Modal>
 
       {/* ── Image lightbox ── */}
@@ -2178,8 +2181,8 @@ export default function SocialScreen() {
       </Modal>
 
       {/* ── Create meetup modal ── */}
-      <Modal visible={isCreateMeetupVisible} animationType="slide" onRequestClose={() => setIsCreateMeetupVisible(false)}>
-        <SafeAreaView className="flex-1 bg-[#F6F7FB]">
+      <Modal visible={isCreateMeetupVisible} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setIsCreateMeetupVisible(false)}>
+        <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom, paddingLeft: insets.left, paddingRight: insets.right, backgroundColor: '#F6F7FB' }}>
           <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <View className="flex-row items-center justify-between px-5 pb-4 pt-4">
               <Pressable onPress={() => setIsCreateMeetupVisible(false)}>
@@ -2242,7 +2245,7 @@ export default function SocialScreen() {
               </Pressable>
             </ScrollView>
           </KeyboardAvoidingView>
-        </SafeAreaView>
+        </View>
       </Modal>
     </SafeAreaView>
     </AppBackground>

@@ -12,7 +12,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppBackground } from '../../components/AppBackground';
 import { GlassCard } from '../../components/GlassCard';
@@ -85,6 +85,7 @@ interface Props {
 
 export function OdysseyDetailModal({ visible, node, state, onClose, onTaskComplete }: Props) {
   const { t, langCode } = useLanguage();
+  const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
   const start = useStartOdyssey();
   const complete = useCompleteOdyssey();
@@ -197,9 +198,11 @@ export function OdysseyDetailModal({ visible, node, state, onClose, onTaskComple
   const typeLabel = isMain ? t.tasks.type_main : t.tasks.type_side;
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
       <AppBackground>
-        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        {/* IOS-LOGIN-111: iOS Modal context doesn't propagate safe-area insets
+            to SafeAreaView reliably; use outer insets directly. */}
+        <View style={{ flex: 1, paddingTop: insets.top }}>
           <View
             style={{
               flexDirection: 'row',
@@ -498,7 +501,7 @@ export function OdysseyDetailModal({ visible, node, state, onClose, onTaskComple
               </GlassCard>
             </ScrollView>
           </KeyboardAvoidingView>
-        </SafeAreaView>
+        </View>
       </AppBackground>
     </Modal>
   );

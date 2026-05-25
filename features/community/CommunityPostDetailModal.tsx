@@ -602,8 +602,10 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
   const currentAvatarUrl = resolveMediaUrl(user?.avatar_url);
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView className="flex-1" edges={['top']} style={{ backgroundColor: '#FFF8F1' }}>
+    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
+      {/* IOS-LOGIN-111: iOS Modal context doesn't propagate safe-area insets
+          to SafeAreaView reliably; use outer insets directly. */}
+      <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: '#FFF8F1' }}>
         <View className="px-4 pb-3 pt-2" style={{ borderBottomWidth: 1, borderBottomColor: 'rgba(98,57,40,0.06)' }}>
           <View className="flex-row items-center">
             <Pressable onPress={onClose} className="mr-3">
@@ -966,7 +968,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
             </View>
           </View>
         </KeyboardAvoidingView>
-      </SafeAreaView>
+      </View>
 
       <NotesSettingsSheet
         visible={notesSettingsVisible}

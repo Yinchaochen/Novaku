@@ -12,7 +12,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useLanguage } from '../context/LanguageContext';
 import {
@@ -54,6 +54,7 @@ export function ReportSheet({
   onSubmitted,
 }: ReportSheetProps) {
   const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
   const submit = useSubmitReport();
 
   const [reason, setReason] = useState<ReportReason | null>(null);
@@ -105,8 +106,10 @@ export function ReportSheet({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
-      <SafeAreaView className="flex-1 bg-[#F4F5F8]">
+    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={handleClose}>
+      {/* IOS-LOGIN-111: iOS Modal context doesn't propagate safe-area insets
+          to SafeAreaView reliably; use outer insets directly. */}
+      <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom, paddingLeft: insets.left, paddingRight: insets.right, backgroundColor: '#F4F5F8' }}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -209,7 +212,7 @@ export function ReportSheet({
             </Pressable>
           </ScrollView>
         </KeyboardAvoidingView>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }
