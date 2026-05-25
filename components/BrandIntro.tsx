@@ -1,8 +1,6 @@
 import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useRef } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import * as SplashScreen from 'expo-splash-screen';
 
 import { colors } from '../theme/tokens';
 
@@ -11,13 +9,17 @@ const BRAND_IMAGE_ASPECT_RATIO = 960 / 780;
 
 interface BrandIntroProps {
   /**
-   * Build 24 diagnostic chip (2026-05-25 IOS-LOGIN-106): renders a tiny label
-   * in the bottom-right corner so we can tell at a glance whether the visible
-   * coral screen is `/` (debugLabel="INDEX") or `/(auth)/welcome`
-   * (debugLabel="WELCOME") or the native splash (no debugLabel, since native
-   * splash renders the same brand image but cannot host this React-only chip).
+   * Build 24+ diagnostic chip: renders a label in the bottom-right corner.
+   * Native splash (the iOS LaunchScreen storyboard generated from
+   * `assets/splash-brand.png`) has no chip because it can't render React
+   * components.
    *
-   * Strip this prop entirely once the boot-redirect chain is verified.
+   * Build 26 visual override: in addition to the chip, the brand image is
+   * REPLACED with a giant "REACT MOUNTED v26" text label. This makes the
+   * visual diff between native splash and React-rendered BrandIntro
+   * impossible to miss — if the user sees the brand logo + tagline, that
+   * IS the native splash; if they see "REACT MOUNTED v26", React is on
+   * top. Strip this once boot-redirect is verified.
    */
   debugLabel?: string;
 }
@@ -25,29 +27,25 @@ interface BrandIntroProps {
 export function BrandIntro({ debugLabel }: BrandIntroProps = {}) {
   const { width } = useWindowDimensions();
   const imageWidth = Math.min(BRAND_IMAGE_WIDTH, width);
-  const hideRequestedRef = useRef(false);
-
-  const handleLayout = useCallback(() => {
-    if (hideRequestedRef.current) return;
-    hideRequestedRef.current = true;
-    requestAnimationFrame(() => {
-      SplashScreen.hideAsync().catch(() => {
-        // Default autohide may already have removed it.
-      });
-    });
-  }, []);
 
   return (
-    <View style={styles.screen} onLayout={handleLayout}>
+    <View style={styles.screen}>
       <StatusBar style="light" />
-      <Image
-        source={require('../assets/splash-brand.png')}
-        style={{
-          width: imageWidth,
-          height: imageWidth / BRAND_IMAGE_ASPECT_RATIO,
-        }}
-        contentFit="contain"
-      />
+      <Text style={styles.giantText}>REACT</Text>
+      <Text style={styles.giantText}>MOUNTED</Text>
+      <Text style={styles.versionText}>v26 — {debugLabel ?? 'no label'}</Text>
+      {/* Keep the image but hidden — preserves require resolution for the
+          asset bundle so we don't accidentally drop it from the IPA. */}
+      <View style={styles.hiddenImageWrap}>
+        <Image
+          source={require('../assets/splash-brand.png')}
+          style={{
+            width: imageWidth,
+            height: imageWidth / BRAND_IMAGE_ASPECT_RATIO,
+          }}
+          contentFit="contain"
+        />
+      </View>
       {debugLabel ? (
         <View style={styles.debugChip}>
           <Text style={styles.debugChipText}>{debugLabel}</Text>
@@ -64,18 +62,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  giantText: {
+    color: '#000',
+    fontSize: 48,
+    fontWeight: '900',
+    letterSpacing: 2,
+  },
+  versionText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    marginTop: 12,
+    letterSpacing: 1,
+  },
+  hiddenImageWrap: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    opacity: 0,
+  },
   debugChip: {
     position: 'absolute',
     bottom: 16,
     right: 16,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 6,
   },
   debugChipText: {
     color: '#fff',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.5,
   },

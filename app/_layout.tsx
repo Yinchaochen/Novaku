@@ -18,6 +18,22 @@ SplashScreen.preventAutoHideAsync().catch(() => {
   // Already auto-hidden; nothing to prevent.
 });
 
+// Build 26 aggressive splash hide retry: prior builds reached AppBody's
+// hydrate-finally block and called hideAsync, the call resolved without
+// throwing, yet the native splash stayed on screen. Suspected iOS 26 +
+// new arch + expo-splash-screen quirk where hideAsync acks but doesn't
+// actually transition the LaunchScreen storyboard. Retry every 200ms for
+// 5 s — idempotent so re-calls are safe; once it works, subsequent calls
+// are no-ops.
+let _splashHideTries = 0;
+const _splashHideInterval = setInterval(() => {
+  _splashHideTries += 1;
+  SplashScreen.hideAsync().catch(() => {});
+  if (_splashHideTries >= 25) {
+    clearInterval(_splashHideInterval);
+  }
+}, 200);
+
 import {
   PlusJakartaSans_500Medium,
   PlusJakartaSans_600SemiBold,
