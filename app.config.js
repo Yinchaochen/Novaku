@@ -1,21 +1,12 @@
 // Dynamic Expo config. Inherits everything from app.json and only overrides
 // what needs to come from environment variables — currently the Google Maps
-// API key for native maps SDK injection on iOS / Android. Keeping the key
-// in .env (gitignored) + EAS Secrets means it never lands in the public
-// repo and rotation doesn't require a commit.
+// API key for native maps SDK injection on iOS / Android.
 //
-// One key, two env-var locations: react-native-google-places-autocomplete
-// reads it from JS at runtime (requires the EXPO_PUBLIC_* prefix to be
-// inlined into the JS bundle), and the native iOS / Android Maps SDK
-// reads it from `ios.config.googleMapsApiKey` / `android.config.googleMaps.apiKey`
-// at build time — Expo's BUILT-IN Maps autolink picks these up and emits the
-// `react-native-google-maps` podspec that react-native-maps 1.20.x ships.
-//
-// IOS-LOGIN-107 (2026-05-25, Build 29): reverted from the 1.22+ config-plugin
-// path (`react-native-maps/Google` subspec) back to the legacy Expo autolink
-// because react-native-maps was downgraded from 1.27.2 -> 1.20.1 alongside
-// `newArchEnabled: false` (1.27 hard-requires new arch; nuclear rollback to
-// legacy bridge to escape the iOS 26 SBCrossfadeView splash freeze).
+// IOS-LOGIN-108 (2026-05-25, Build 31): reverted Build 29's legacy
+// ios.config.googleMapsApiKey path. SDK 54 + newArchEnabled OFF turned out
+// to be unsupported (3 separate libs hard-require new arch: maps 1.27,
+// reanimated 4, nativewind/css-interop's babel preset). Returning to
+// new arch ON + maps 1.22+ config plugin path.
 
 const fs = require('fs');
 const path = require('path');
@@ -31,24 +22,25 @@ module.exports = ({ config }) => {
     process.env.GOOGLE_MAPS_API_KEY || // legacy name, still honoured
     '';
 
+  // Inject the runtime key into the `react-native-maps` plugin block declared
+  // in app.json (which has empty-string placeholders so the static config is
+  // valid without secrets in git).
+  const plugins = (base.plugins || []).map((plugin) => {
+    if (Array.isArray(plugin) && plugin[0] === 'react-native-maps') {
+      return [
+        'react-native-maps',
+        {
+          ...(plugin[1] || {}),
+          iosGoogleMapsApiKey: mapsKey,
+          androidGoogleMapsApiKey: mapsKey,
+        },
+      ];
+    }
+    return plugin;
+  });
+
   return {
     ...base,
-    ios: {
-      ...(base.ios || {}),
-      config: {
-        ...((base.ios && base.ios.config) || {}),
-        googleMapsApiKey: mapsKey,
-      },
-    },
-    android: {
-      ...(base.android || {}),
-      config: {
-        ...((base.android && base.android.config) || {}),
-        googleMaps: {
-          ...((base.android && base.android.config && base.android.config.googleMaps) || {}),
-          apiKey: mapsKey,
-        },
-      },
-    },
+    plugins,
   };
 };

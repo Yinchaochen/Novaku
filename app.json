@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "scheme": "postervia",
     "splash": {
       "image": "./assets/splash-brand.png",
@@ -16,9 +16,6 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "app.novaku.mobile",
-      "config": {
-        "googleMapsApiKey": ""
-      },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "_comment_uiscene": "Build 28 (2026-05-25 IOS-LOGIN-106): explicit single-scene UIScene manifest. iOS 26 strictly enforces scene lifecycle (warning: 'UIScene lifecycle will soon be required. Failure to adopt will result in an assert'). Without UIApplicationSceneManifest, SpringBoardUI's SBCrossfadeView fails to find the RCTRootView in expected container during launch-storyboard crossfade -> frame not updated -> white screen.",
@@ -33,12 +30,7 @@
         "backgroundColor": "#F67673"
       },
       "edgeToEdgeEnabled": true,
-      "package": "app.novaku.mobile",
-      "config": {
-        "googleMaps": {
-          "apiKey": ""
-        }
-      }
+      "package": "app.novaku.mobile"
     },
     "web": {
       "bundler": "metro",
@@ -97,7 +89,14 @@
       ],
       "expo-apple-authentication",
       "expo-web-browser",
-      "expo-font"
+      "expo-font",
+      [
+        "react-native-maps",
+        {
+          "iosGoogleMapsApiKey": "",
+          "androidGoogleMapsApiKey": ""
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
