@@ -1,38 +1,27 @@
 import '../global.css';
 
-import * as SplashScreen from 'expo-splash-screen';
-
 import { initSentry } from '../lib/sentry';
 import { installGlobalErrorHandler } from '../lib/globalErrorHandler';
 
 initSentry();
 installGlobalErrorHandler();
 
-// Build 24 (2026-05-25 IOS-LOGIN-106): hold the native splash up until we
-// explicitly call `hideAsync()` from AppBody's hydrate finally block. That
-// makes "did the native splash actually hide?" an observable question via
-// Sentry, instead of the previous BrandIntro.onLayout sync hide which
-// swallowed errors. Wrapped in catch so a late call (Expo SDK 54 sometimes
-// auto-hides on iOS 26 before this fires) doesn't throw.
-SplashScreen.preventAutoHideAsync().catch(() => {
-  // Already auto-hidden; nothing to prevent.
-});
-
-// Build 26 aggressive splash hide retry: prior builds reached AppBody's
-// hydrate-finally block and called hideAsync, the call resolved without
-// throwing, yet the native splash stayed on screen. Suspected iOS 26 +
-// new arch + expo-splash-screen quirk where hideAsync acks but doesn't
-// actually transition the LaunchScreen storyboard. Retry every 200ms for
-// 5 s — idempotent so re-calls are safe; once it works, subsequent calls
-// are no-ops.
-let _splashHideTries = 0;
-const _splashHideInterval = setInterval(() => {
-  _splashHideTries += 1;
-  SplashScreen.hideAsync().catch(() => {});
-  if (_splashHideTries >= 25) {
-    clearInterval(_splashHideInterval);
-  }
-}, 200);
+// Build 28 (2026-05-25 IOS-LOGIN-106): REMOVED all explicit SplashScreen
+// control (no preventAutoHideAsync, no hideAsync, no retry loop). iPhone
+// syslog showed SpringBoardUI raising:
+//   "Live host view super view[<SBCrossfadeView ...>] not matching
+//    container view[<UIView ...>], frame not updated"
+// at every cold start. This is iOS 26's strict scene-lifecycle crossfade
+// path failing when expo-splash-screen tries to crossfade launch-storyboard
+// out to the RN root view — the RCTRootView ends up in an unexpected
+// parent and iOS bails on the transition, leaving the user staring at
+// either the stuck storyboard (coral) or the empty default UIWindow
+// (white).
+//
+// Fix path: let iOS handle splash with its OWN default "auto-hide on first
+// frame commit" behavior. We pair this with `UIApplicationSceneManifest`
+// in app.json's ios.infoPlist explicitly declaring single-scene support,
+// which is what iOS 26 actually wants us to opt into.
 
 import {
   PlusJakartaSans_500Medium,
@@ -240,18 +229,10 @@ function AppBody() {
         Sentry.captureMessage('boot:hydrate_finally', { level: 'info' });
         markHydrated();
         setReady(true);
-        try {
-          await SplashScreen.hideAsync();
-          Sentry.captureMessage('boot:splash_hidden', { level: 'info' });
-        } catch (err) {
-          // Already hidden, or hideAsync threw — either way, capture so we
-          // know the native splash status. iOS 26 sometimes auto-hides
-          // before our explicit call, producing a benign "already hidden".
-          Sentry.captureException(err, {
-            tags: { source: 'splash.hideAsync' },
-            level: 'warning',
-          });
-        }
+        // Build 28: removed SplashScreen.hideAsync() — iOS 26's strict
+        // scene-lifecycle path makes explicit hideAsync fail with
+        // "Live host view super view not matching container view".
+        // Letting iOS auto-hide on first frame commit is more reliable.
       }
     })();
   }, [hydrate, markHydrated, setLangCode]);
@@ -260,9 +241,7 @@ function AppBody() {
     if (!ready) return;
     void markBootSuccess();
     addSentryBreadcrumb('boot:body_ready');
-    SplashScreen.hideAsync().catch((err) => {
-      reportToSentry(err, { source: '_layout.hide_splash' });
-    });
+    // Build 28: removed second hideAsync call here for same reason.
   }, [ready]);
 
   useEffect(() => {

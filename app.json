@@ -17,7 +17,11 @@
       "supportsTablet": false,
       "bundleIdentifier": "app.novaku.mobile",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "_comment_uiscene": "Build 28 (2026-05-25 IOS-LOGIN-106): explicit single-scene UIScene manifest. iOS 26 strictly enforces scene lifecycle (warning: 'UIScene lifecycle will soon be required. Failure to adopt will result in an assert'). Without UIApplicationSceneManifest, SpringBoardUI's SBCrossfadeView fails to find the RCTRootView in expected container during launch-storyboard crossfade -> frame not updated -> white screen.",
+        "UIApplicationSceneManifest": {
+          "UIApplicationSupportsMultipleScenes": false
+        }
       }
     },
     "android": {
