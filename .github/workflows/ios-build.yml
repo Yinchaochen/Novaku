@@ -191,6 +191,24 @@ jobs:
           fi
           echo "SENTRY_AUTH_TOKEN is set (length ${#SENTRY_AUTH_TOKEN})"
 
+      # ── 5c. 验证 Google Maps API key（必须,否则 LocationPicker / PlacePicker
+      #       的 MapView 在 iOS 上渲染空白卡片;GooglePlacesAutocomplete 也不渲染）
+      # 这一步是 RETROSPECTIVES Rule 1 防御性 check —— GitHub Action secrets 在
+      # secret 不存在时会 silently 求值成空字符串,build 会"成功"但产出废 binary。
+      # 2026-05-26 实战教训:Build 34 用空 key 跑完,用户装上看到空白 map 才发现。
+      - name: Verify EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
+        run: |
+          if [ -z "${EXPO_PUBLIC_GOOGLE_MAPS_API_KEY}" ]; then
+            echo "::error::EXPO_PUBLIC_GOOGLE_MAPS_API_KEY secret missing."
+            echo "::error::Without this, MapView (Plaza Add Location / Social Create"
+            echo "::error::Meetup) renders blank on iOS — Google Maps SDK can't init."
+            echo "::error::Get key from GCP Console (the one in your local .env)."
+            echo "::error::Add as 'EXPO_PUBLIC_GOOGLE_MAPS_API_KEY' (exact name) at:"
+            echo "::error::https://github.com/Yinchaochen/Novaku/settings/secrets/actions"
+            exit 1
+          fi
+          echo "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY is set (length ${#EXPO_PUBLIC_GOOGLE_MAPS_API_KEY})"
+
       # ── 6. 装 npm 依赖（patch-package 通过 postinstall 自动应用）─────
       - name: Install npm dependencies
         run: |

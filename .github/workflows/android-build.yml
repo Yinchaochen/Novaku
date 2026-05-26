@@ -117,6 +117,21 @@ jobs:
           fi
           echo "SENTRY_AUTH_TOKEN is set (length ${#SENTRY_AUTH_TOKEN})"
 
+      # ── 6c. 验证 Google Maps API key（防御性 loud-fail）─────────────
+      # 跟 iOS workflow 同款保护:secret 不存在 → workflow 会 silently 用空字符串,
+      # 产出的 AAB 里 MapView 渲染空白卡片。提前 fail。
+      - name: Verify EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
+        run: |
+          if [ -z "${EXPO_PUBLIC_GOOGLE_MAPS_API_KEY}" ]; then
+            echo "::error::EXPO_PUBLIC_GOOGLE_MAPS_API_KEY secret missing."
+            echo "::error::Without this, MapView (Plaza Add Location / Social Create"
+            echo "::error::Meetup) renders blank — Google Maps SDK can't init."
+            echo "::error::Add the secret at:"
+            echo "::error::https://github.com/Yinchaochen/Novaku/settings/secrets/actions"
+            exit 1
+          fi
+          echo "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY is set (length ${#EXPO_PUBLIC_GOOGLE_MAPS_API_KEY})"
+
       # ── 7. 装 npm 依赖（patch-package 通过 postinstall 自动应用）─────
       - name: Install npm dependencies
         run: |
