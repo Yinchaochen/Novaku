@@ -46,6 +46,14 @@ function _beforeSend(
   const errAny = (hint.originalException as { code?: string } | undefined);
   if (errAny?.code === 'ERR_REQUEST_CANCELED') return null;
 
+  // Drop axios timeouts. The dominant cause on mobile is "user backgrounded
+  // the app mid-request" — iOS suspends the JS runtime, setTimeout pauses,
+  // and the 15s timer fires whenever the user returns. The breadcrumb's
+  // `ms` field shows the wall-clock time (often 60-90s) confirming this.
+  // A genuinely slow backend will surface on the server-side observability
+  // (backend Sentry + Healthchecks) — not worth burning client quota here.
+  if (errAny?.code === 'ECONNABORTED') return null;
+
   // Drop axios validation errors (422 should already be filtered at the
   // interceptor, but defense-in-depth in case some code path reports directly)
   const extras = event.extra as { status?: number | string } | undefined;
