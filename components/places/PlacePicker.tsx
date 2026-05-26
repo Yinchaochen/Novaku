@@ -284,7 +284,16 @@ function PlacePickerModal({
 }: ModalProps) {
   const { t } = useLanguage();
   return (
-    <Modal visible={open} animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible={open}
+      animationType="slide"
+      presentationStyle="fullScreen"
+      onRequestClose={onClose}
+    >
+      {/* IOS-LOGIN-112: PlacePicker is opened from inside Social's
+          Create Meetup modal (also fullScreen). Without explicit
+          presentationStyle, this would default to pageSheet on iOS 26 and
+          freeze the entire Social tab via the stuck-modal-scene bug. */}
       <SafeAreaView className="flex-1 bg-white" edges={['top']}>
         <KeyboardAvoidingView
           className="flex-1"

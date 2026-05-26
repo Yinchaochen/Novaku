@@ -930,9 +930,18 @@ export default function PlazaScreen() {
       <Modal
         visible={locationPickerVisible}
         animationType="slide"
+        presentationStyle="fullScreen"
         onRequestClose={closeLocationPicker}
       >
-        {/* Suspense fallback handles the brief moment between modal open
+        {/* IOS-LOGIN-112: presentationStyle must match the parent compose Modal
+            (also fullScreen). iOS 26 strict UIScene lifecycle does NOT
+            tolerate pageSheet (the iOS default) opened on top of a fullScreen
+            modal — the child's scene gets created but never presented, and
+            its underlying UIWindow silently captures all touches, freezing
+            the entire Plaza tab (Add Location button, scroll, LangPill,
+            everything). Fixed by forcing the child fullScreen too.
+
+            Suspense fallback handles the brief moment between modal open
             and the lazy-loaded LocationPicker (+ react-native-maps native
             bridge) finishing its first import. */}
         <Suspense
