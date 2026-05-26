@@ -75,6 +75,17 @@ function isExpected4xx(status: number, url: string): boolean {
   return false;
 }
 
+// Fire-and-forget telemetry endpoints: 5xx here is noise on the client.
+// The user is unaffected (no UI error, just a dropped event); real backend
+// outages surface via server-side Sentry + structlog + healthchecks, which
+// are far less noisy than every mobile client reporting their POST failure.
+// Audit 2026-05-26 POSTERVIA-IOS-B: a single OnePlus user got 504 from
+// /community/recommendation/events while the surrounding /community/feed
+// returned 200 — pure edge-proxy hiccup, not actionable from the client.
+function isBestEffortTelemetry(url: string): boolean {
+  return url.includes('/community/recommendation/events');
+}
+
 let refreshInFlight: Promise<string> | null = null;
 
 async function refreshAccessToken(): Promise<string> {
@@ -121,9 +132,13 @@ api.interceptors.response.use(
     //   * Report 401 on /auth/refresh (token-refresh-initial-failure = forced logout)
     //   * Skip the rest of 4xx (user/validation noise — would burn quota)
     if (!status) {
-      reportToSentry(error, { url, status: 'network', code: error.code, ms });
+      if (!isBestEffortTelemetry(url)) {
+        reportToSentry(error, { url, status: 'network', code: error.code, ms });
+      }
     } else if (status >= 500) {
-      reportToSentry(error, { url, status, ms });
+      if (!isBestEffortTelemetry(url)) {
+        reportToSentry(error, { url, status, ms });
+      }
     } else if (status === 401 && url.includes('/auth/refresh')) {
       reportToSentry(error, { url, status, ms, context: 'token_refresh_initial_401' });
     }
