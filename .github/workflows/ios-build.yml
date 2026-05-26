@@ -68,6 +68,16 @@ jobs:
       # IPA 还是能正常产出 + 上 TestFlight。代价：这次 build 在 Sentry 里的
       # crash symbolication 可能不完整，可以事后手动 sentry-cli debug-files upload。
       SENTRY_ALLOW_FAILURE: 'true'
+      # EXPO_PUBLIC_GOOGLE_MAPS_API_KEY: 用于 GooglePlacesAutocomplete (Plaza Add
+      # Location 搜索框)、react-native-maps 的 iOS/Android Maps SDK key 注入
+      # (via app.config.js)、地图 reverse-geocode。本地 dev 走 .env (gitignored);
+      # GHA / EAS production 必须从 GitHub Secret 注入,否则 metro bundler 拿到的
+      # process.env 是 undefined → GooglePlacesAutocomplete 直接 bail 不渲染 input,
+      # native Maps SDK 在 iOS 上 fall back 到 Apple Maps。
+      # 注意:这是 client-side public key,在 app bundle 里反正都能被提取出来 ——
+      # 真正的安全是在 GCP 控制台给 key 加 Application Restriction (绑 bundle ID +
+      # SHA-1),目前 (2026-05-12) 还没绑,v1 上架前必须补。
+      EXPO_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY }}
       CI: 1
       npm_config_progress: 'false'
       npm_config_audit: 'false'
