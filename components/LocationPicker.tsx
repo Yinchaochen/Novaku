@@ -33,7 +33,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useLanguage } from '../context/LanguageContext';
 import { buildPlaceUrl } from '../lib/maps';
-import { addSentryBreadcrumb } from '../lib/sentry';
+import { captureSentryMessage } from '../lib/sentry';
 import { colors } from '../theme/tokens';
 import type { CommunitySelectedPlaceInput } from '../features/community/useCommunity';
 
@@ -49,7 +49,7 @@ const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 // chain breaks. Module-load-time breadcrumb fires before React even sees
 // this component — if it never appears, `import 'react-native-maps'` itself
 // is throwing (TurboModule registration on iOS 26 new arch).
-addSentryBreadcrumb('LocationPicker.module_loaded', {
+captureSentryMessage('LocationPicker.module_loaded', {
   keyPresent: GOOGLE_MAPS_API_KEY.length > 0,
   keyLength: GOOGLE_MAPS_API_KEY.length,
   platform: Platform.OS,
@@ -99,7 +99,7 @@ export function LocationPicker({
   // doesn't, something threw during render between this line and React's
   // commit phase (e.g. a Hook ordering issue, a MapView prop validator
   // throwing, etc.).
-  addSentryBreadcrumb('LocationPicker.body_evaluated', {
+  captureSentryMessage('LocationPicker.body_evaluated', {
     keyLength: GOOGLE_MAPS_API_KEY.length,
     platform: Platform.OS,
   });
@@ -113,7 +113,7 @@ export function LocationPicker({
   // If body_evaluated fires but mounted doesn't, a child component threw
   // during render and was caught by the ErrorBoundary above.
   useEffect(() => {
-    addSentryBreadcrumb('LocationPicker.mounted', {
+    captureSentryMessage('LocationPicker.mounted', {
       keyLength: GOOGLE_MAPS_API_KEY.length,
       platform: Platform.OS,
       platformVersion: String(Platform.Version),
@@ -231,7 +231,7 @@ export function LocationPicker({
           // bridge is wired but GMSServices.init() is silently failing
           // (most likely cause: missing/invalid API key, or Application
           // restriction in GCP blocking the bundle ID).
-          addSentryBreadcrumb('LocationPicker.map_ready', {
+          captureSentryMessage('LocationPicker.map_ready', {
             platform: Platform.OS,
           });
         }}

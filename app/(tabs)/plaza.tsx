@@ -33,7 +33,7 @@ import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { GlassCard } from '../../components/GlassCard';
 import { LangPill } from '../../components/PageHeader';
 import { useLanguage } from '../../context/LanguageContext';
-import { addSentryBreadcrumb } from '../../lib/sentry';
+import { captureSentryMessage } from '../../lib/sentry';
 import { colors, shadows } from '../../theme/tokens';
 import { resolveMediaUrl } from '../../lib/media';
 import { CommunityPostCard } from '../../features/community/CommunityPostCard';
@@ -142,7 +142,7 @@ function deriveTaggedPlacesFromPost(post: CommunityPost): CommunitySelectedPlace
 // but no LocationPicker.module_loaded afterward, the lazy import is hung.
 function LocationPickerSuspenseFallback() {
   useEffect(() => {
-    addSentryBreadcrumb('plaza.suspense.fallback_visible', {
+    captureSentryMessage('plaza.suspense.fallback_visible', {
       platform: Platform.OS,
     });
   }, []);
@@ -312,7 +312,7 @@ export default function PlazaScreen() {
     // IOS-LOGIN-113: first link in the diagnostic chain. Sentry session
     // showing this breadcrumb but missing LocationPicker.module_loaded
     // means the lazy() import is hanging/rejecting before user code runs.
-    addSentryBreadcrumb('plaza.add_location.tap', { platform: Platform.OS });
+    captureSentryMessage('plaza.add_location.tap', { platform: Platform.OS });
     setLocationPickerVisible(true);
   };
 

@@ -139,4 +139,20 @@ export function addSentryBreadcrumb(message: string, data?: Record<string, unkno
   }
 }
 
+// IOS-LOGIN-113 Build 37: breadcrumbs alone don't surface as Issues when the
+// JS chain dies silently (lazy import hang → no throw → trail never uploads).
+// Promote chain checkpoints to captureMessage so each step becomes a discrete
+// info-level Issue. Strip these calls once we know where the chain dies.
+export function captureSentryMessage(
+  message: string,
+  data?: Record<string, unknown>,
+) {
+  if (!initialized) return;
+  try {
+    Sentry.captureMessage(message, { level: 'info', extra: data });
+  } catch {
+    // best-effort
+  }
+}
+
 export { Sentry };
