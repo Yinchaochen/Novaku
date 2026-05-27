@@ -29,9 +29,11 @@ import { z } from 'zod/v4';
 
 import { AppBackground } from '../../components/AppBackground';
 import { ChalkIcon } from '../../components/ChalkIcon';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { GlassCard } from '../../components/GlassCard';
 import { LangPill } from '../../components/PageHeader';
 import { useLanguage } from '../../context/LanguageContext';
+import { addSentryBreadcrumb } from '../../lib/sentry';
 import { colors, shadows } from '../../theme/tokens';
 import { resolveMediaUrl } from '../../lib/media';
 import { CommunityPostCard } from '../../features/community/CommunityPostCard';
@@ -132,6 +134,23 @@ function deriveTaggedPlacesFromPost(post: CommunityPost): CommunitySelectedPlace
   }
 
   return derived;
+}
+
+// IOS-LOGIN-113: standalone fallback component so we can attach a useEffect
+// that emits a breadcrumb when the spinner actually mounts. If a Sentry
+// session shows plaza.add_location.tap → plaza.suspense.fallback_visible
+// but no LocationPicker.module_loaded afterward, the lazy import is hung.
+function LocationPickerSuspenseFallback() {
+  useEffect(() => {
+    addSentryBreadcrumb('plaza.suspense.fallback_visible', {
+      platform: Platform.OS,
+    });
+  }, []);
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF' }}>
+      <ActivityIndicator size="large" color={colors.brandCoral} />
+    </View>
+  );
 }
 
 export default function PlazaScreen() {
@@ -290,6 +309,10 @@ export default function PlazaScreen() {
   };
 
   const openLocationPicker = () => {
+    // IOS-LOGIN-113: first link in the diagnostic chain. Sentry session
+    // showing this breadcrumb but missing LocationPicker.module_loaded
+    // means the lazy() import is hanging/rejecting before user code runs.
+    addSentryBreadcrumb('plaza.add_location.tap', { platform: Platform.OS });
     setLocationPickerVisible(true);
   };
 
@@ -943,22 +966,23 @@ export default function PlazaScreen() {
 
             Suspense fallback handles the brief moment between modal open
             and the lazy-loaded LocationPicker (+ react-native-maps native
-            bridge) finishing its first import. */}
-        <Suspense
-          fallback={
-            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF' }}>
-              <ActivityIndicator size="large" color={colors.brandCoral} />
-            </View>
-          }
-        >
-          <LocationPickerLazy
-            initialLatitude={user?.latitude ?? null}
-            initialLongitude={user?.longitude ?? null}
-            initialPlaceName={user?.city ?? null}
-            onConfirm={applyMapPickerSelection}
-            onCancel={closeLocationPicker}
-          />
-        </Suspense>
+            bridge) finishing its first import.
+
+            IOS-LOGIN-113: wrapped in ErrorBoundary so that a lazy() rejection
+            (e.g. react-native-maps TurboModule registration failure on iOS 26
+            new arch) lands a Sentry event instead of bubbling silently up to
+            the root boundary or freezing on the spinner. */}
+        <ErrorBoundary onReset={closeLocationPicker}>
+          <Suspense fallback={<LocationPickerSuspenseFallback />}>
+            <LocationPickerLazy
+              initialLatitude={user?.latitude ?? null}
+              initialLongitude={user?.longitude ?? null}
+              initialPlaceName={user?.city ?? null}
+              onConfirm={applyMapPickerSelection}
+              onCancel={closeLocationPicker}
+            />
+          </Suspense>
+        </ErrorBoundary>
       </Modal>
 
       <CommunityPostDetailModal

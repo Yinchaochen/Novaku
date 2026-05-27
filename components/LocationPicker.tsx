@@ -15,10 +15,11 @@
  * <MapView> renders as a grey rectangle until the dev client is installed.
  */
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -32,10 +33,28 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useLanguage } from '../context/LanguageContext';
 import { buildPlaceUrl } from '../lib/maps';
+import { addSentryBreadcrumb } from '../lib/sentry';
 import { colors } from '../theme/tokens';
 import type { CommunitySelectedPlaceInput } from '../features/community/useCommunity';
 
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+
+// IOS-LOGIN-113 diagnostic instrumentation. The 2026-05-27 iPhone syslog
+// dump showed CoreLocation firing + user touches + zero GMSServices logs,
+// proving Maps native SDK never inits on iOS. The chain we're tracing:
+//   plaza.add_location.tap → plaza.suspense.fallback_visible
+//   → LocationPicker.body_evaluated → LocationPicker.mounted
+//   → LocationPicker.map_ready (MapView native bridge init)
+// Whichever breadcrumb is missing from a Sentry session tells us where the
+// chain breaks. Module-load-time breadcrumb fires before React even sees
+// this component — if it never appears, `import 'react-native-maps'` itself
+// is throwing (TurboModule registration on iOS 26 new arch).
+addSentryBreadcrumb('LocationPicker.module_loaded', {
+  keyPresent: GOOGLE_MAPS_API_KEY.length > 0,
+  keyLength: GOOGLE_MAPS_API_KEY.length,
+  platform: Platform.OS,
+  platformVersion: String(Platform.Version),
+});
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
 // Both platforms render Google Maps. Android only has PROVIDER_GOOGLE
@@ -76,10 +95,30 @@ export function LocationPicker({
   onConfirm,
   onCancel,
 }: LocationPickerProps) {
+  // Body-evaluation breadcrumb. If this fires but LocationPicker.mounted
+  // doesn't, something threw during render between this line and React's
+  // commit phase (e.g. a Hook ordering issue, a MapView prop validator
+  // throwing, etc.).
+  addSentryBreadcrumb('LocationPicker.body_evaluated', {
+    keyLength: GOOGLE_MAPS_API_KEY.length,
+    platform: Platform.OS,
+  });
+
   const { t } = useLanguage();
   const mapRef = useRef<MapView | null>(null);
   const [selected, setSelected] = useState<SelectedDraft | null>(null);
   const [locatingMe, setLocatingMe] = useState(false);
+
+  // Mount breadcrumb. Confirms React committed the component to the tree.
+  // If body_evaluated fires but mounted doesn't, a child component threw
+  // during render and was caught by the ErrorBoundary above.
+  useEffect(() => {
+    addSentryBreadcrumb('LocationPicker.mounted', {
+      keyLength: GOOGLE_MAPS_API_KEY.length,
+      platform: Platform.OS,
+      platformVersion: String(Platform.Version),
+    });
+  }, []);
 
   const initialRegion: Region =
     initialLatitude != null && initialLongitude != null
@@ -185,6 +224,17 @@ export function LocationPicker({
         style={StyleSheet.absoluteFill}
         initialRegion={initialRegion}
         onPress={handleMapPress}
+        onMapReady={() => {
+          // Fires once native GMSMapView finishes its first layout. Presence
+          // of this breadcrumb in Sentry proves Google Maps SDK booted. If
+          // LocationPicker.mounted fires but map_ready never does → native
+          // bridge is wired but GMSServices.init() is silently failing
+          // (most likely cause: missing/invalid API key, or Application
+          // restriction in GCP blocking the bundle ID).
+          addSentryBreadcrumb('LocationPicker.map_ready', {
+            platform: Platform.OS,
+          });
+        }}
         showsUserLocation
         showsMyLocationButton={false}
       >
