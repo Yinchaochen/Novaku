@@ -43,7 +43,7 @@ function _beforeSend(
   hint: { originalException?: unknown },
 ): Sentry.ErrorEvent | null {
   // Drop user-initiated OAuth cancellation
-  const errAny = (hint.originalException as { code?: string } | undefined);
+  const errAny = (hint.originalException as { code?: string; message?: string } | undefined);
   if (errAny?.code === 'ERR_REQUEST_CANCELED') return null;
 
   // Drop axios timeouts. The dominant cause on mobile is "user backgrounded
@@ -65,6 +65,17 @@ function _beforeSend(
   if (exception?.value?.includes('canceled') || exception?.value?.includes('aborted')) {
     return null;
   }
+
+  // Drop `no_refresh_token` — this is the expected logged-out signal from
+  // axios's refresh-token interceptor when SecureStore has no refresh_token
+  // (session naturally expired, OAuth re-login failed mid-flow, user wiped
+  // app data, etc.). App handles it gracefully by redirecting to /login,
+  // so user UX is fine — Sentry just sees noise. Observed first in
+  // POSTERVIA-IOS-E (2026-05-27, Android 1.0.4, 7 events/1 user). If a
+  // real auth bug emerges later it'll show up as a different error type
+  // upstream of the refresh attempt — this filter doesn't blind us.
+  if (errAny?.message === 'no_refresh_token') return null;
+  if (exception?.value === 'no_refresh_token') return null;
 
   return event;
 }
