@@ -2,6 +2,8 @@ import '../global.css';
 
 import { initSentry } from '../lib/sentry';
 import { installGlobalErrorHandler } from '../lib/globalErrorHandler';
+import { Platform } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
 
 // Sentry + global error handler must run at module top, before any React
 // imports below resolve — an error during their evaluation otherwise goes
@@ -9,11 +11,27 @@ import { installGlobalErrorHandler } from '../lib/globalErrorHandler';
 initSentry();
 installGlobalErrorHandler();
 
-// Splash hide is intentionally left to iOS's default "auto-hide on first
-// frame commit" behaviour. Explicit SplashScreen.hideAsync() proved
-// unreliable under iOS 26 + new arch; the real root cause of past splash
-// freezes was the safe-area-context Fabric component, patched separately
-// in patches/react-native-safe-area-context+5.6.2.patch.
+// IOS-LOGIN-114 (2026-05-27): Android-only explicit splash control.
+//
+// Background: Build 28 (d3a70ae) removed all explicit SplashScreen.* calls
+// because expo-splash-screen's hideAsync was crashing the iOS 26 + new arch
+// crossfade (SBCrossfadeView "frame not updated"). That fix worked for iOS,
+// but it exposed a latent Android 12+ issue: Android's SplashScreen API
+// treats `splash-brand.png` as a centered icon constrained to ~192dp inside
+// a fixed display area, so the wide rectangular arch + POSTERVIA + tagline
+// gets cropped. Pre-Build-28, the native splash was visible for milliseconds
+// before JS-driven hideAsync swapped to BrandIntro — too brief to notice the
+// crop. Post-Build-28, the native splash sticks around for the full bundle
+// load (1-3s) and the crop is glaringly visible.
+//
+// Compromise: re-enable prevent + hide ONLY on Android. iOS keeps Build 28's
+// default behaviour (auto-hide on first-frame-commit, no JS control) to
+// avoid reintroducing the iOS 26 freeze. .catch swallows any failure — if
+// preventAutoHideAsync is racing the native auto-hide, that's fine; the
+// hideAsync below is the load-bearing call.
+if (Platform.OS === 'android') {
+  SplashScreen.preventAutoHideAsync().catch(() => {});
+}
 
 import {
   PlusJakartaSans_500Medium,
@@ -145,6 +163,22 @@ function AppBody() {
     PlusJakartaSans_700Bold,
     PlusJakartaSans_800ExtraBold,
   });
+
+  // IOS-LOGIN-114: Android-only native splash dismiss. AppBody mounting
+  // means RootLayout's full tree (including the `/` route → BrandIntro) has
+  // committed its first frame. Hiding the native splash now reveals
+  // BrandIntro — the same image at the same imageWidth, so visually
+  // seamless. iOS path: no-op; iOS continues to rely on the OS
+  // first-frame-commit auto-hide (Build 28 decision, kept to avoid the
+  // iOS 26 SBCrossfadeView freeze).
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      SplashScreen.hideAsync().catch(() => {
+        // If hide fails (e.g. already hidden by OS race), no-op. The native
+        // splash will be gone within a frame either way.
+      });
+    }
+  }, []);
 
   // P2.9 (audit FE-MED-13): useFonts swallows errors. A missing font asset
   // in the EAS build silently falls back to system font with no signal.
