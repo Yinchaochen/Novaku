@@ -54,6 +54,11 @@
           "image": "./assets/splash-brand.png",
           "imageWidth": 300,
           "resizeMode": "contain",
+          "android": {
+            "_comment": "IOS-LOGIN-114 (2026-05-27): Android 12+ SplashScreen API treats the splash image as a centered icon constrained to a ~192dp safe circle (Expo SDK 52 changelog confirms: 'Android splash no longer supports full-screen image'). The wordmark splash-brand.png (arch + POSTERVIA + tagline) cannot fit there. This android.image override points to an arch-only PNG sized for the safe circle (1024x1024 canvas, content ~60% occupation). BrandIntro continues to use splash-brand.png unchanged.",
+            "image": "./assets/splash-icon-android.png",
+            "imageWidth": 192
+          },
           "dark": {
             "backgroundColor": "#F67673",
             "image": "./assets/splash-brand.png"
