@@ -33,7 +33,7 @@ import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { GlassCard } from '../../components/GlassCard';
 import { LangPill } from '../../components/PageHeader';
 import { useLanguage } from '../../context/LanguageContext';
-import { addSentryBreadcrumb } from '../../lib/sentry';
+import { captureSentryMessage } from '../../lib/sentry';
 import { colors, shadows } from '../../theme/tokens';
 import { resolveMediaUrl } from '../../lib/media';
 import { CommunityPostCard } from '../../features/community/CommunityPostCard';
@@ -142,7 +142,7 @@ function deriveTaggedPlacesFromPost(post: CommunityPost): CommunitySelectedPlace
 // but no LocationPicker.module_loaded afterward, the lazy import is hung.
 function LocationPickerSuspenseFallback() {
   useEffect(() => {
-    addSentryBreadcrumb('plaza.suspense.fallback_visible', {
+    captureSentryMessage('plaza.suspense.fallback_visible', {
       platform: Platform.OS,
     });
   }, []);
@@ -312,7 +312,9 @@ export default function PlazaScreen() {
     // IOS-LOGIN-113: first link in the diagnostic chain. Sentry session
     // showing this breadcrumb but missing LocationPicker.module_loaded
     // means the lazy() import is hanging/rejecting before user code runs.
-    addSentryBreadcrumb('plaza.add_location.tap', { platform: Platform.OS });
+    // Build 39: promoted to captureSentryMessage so the chain uploads as
+    // discrete Issues even when the native side dies silently.
+    captureSentryMessage('plaza.add_location.tap', { platform: Platform.OS });
     setLocationPickerVisible(true);
   };
 
@@ -618,10 +620,33 @@ export default function PlazaScreen() {
         presentationStyle="fullScreen"
         onRequestClose={closeComposer}
       >
-        {/* IOS-LOGIN-109: iOS Modal opens in a separate UIWindow whose safe-area
-            insets aren't reliably forwarded to react-native-safe-area-context's
-            SafeAreaView. Bypass it and apply the outer insets.top directly so
-            the back button sits below the status bar/notch. */}
+        {/* IOS-LOGIN-113 Build 39: render LocationPicker in-place inside the
+            composer Modal instead of as a stacked second Modal. iOS 26 strict
+            UIScene lifecycle silently failed to present the nested fullScreen
+            modal even though native MapView mounted — Build 38 syslog showed
+            CoreLocation full init + GMS SDK auth handshake succeeding, but
+            no tile-fetch burst (the modal never got a visible frame to
+            render). Single Modal mirrors Twitter / Instagram approach and
+            sidesteps the iOS-26 nested-UIScene present-failure entirely.
+
+            IOS-LOGIN-109: iOS Modal opens in a separate UIWindow whose
+            safe-area insets aren't reliably forwarded to
+            react-native-safe-area-context's SafeAreaView. The composer branch
+            bypasses it via paddingTop: insets.top; the LocationPicker branch
+            renders its own SafeAreaView header layer. */}
+        {locationPickerVisible ? (
+          <ErrorBoundary onReset={closeLocationPicker}>
+            <Suspense fallback={<LocationPickerSuspenseFallback />}>
+              <LocationPickerLazy
+                initialLatitude={user?.latitude ?? null}
+                initialLongitude={user?.longitude ?? null}
+                initialPlaceName={user?.city ?? null}
+                onConfirm={applyMapPickerSelection}
+                onCancel={closeLocationPicker}
+              />
+            </Suspense>
+          </ErrorBoundary>
+        ) : (
         <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: colors.bgCream }}>
           <KeyboardAvoidingView
             className="flex-1"
@@ -948,41 +973,7 @@ export default function PlazaScreen() {
             </View>
           </KeyboardAvoidingView>
         </View>
-      </Modal>
-
-      <Modal
-        visible={locationPickerVisible}
-        animationType="slide"
-        presentationStyle="fullScreen"
-        onRequestClose={closeLocationPicker}
-      >
-        {/* IOS-LOGIN-112: presentationStyle must match the parent compose Modal
-            (also fullScreen). iOS 26 strict UIScene lifecycle does NOT
-            tolerate pageSheet (the iOS default) opened on top of a fullScreen
-            modal — the child's scene gets created but never presented, and
-            its underlying UIWindow silently captures all touches, freezing
-            the entire Plaza tab (Add Location button, scroll, LangPill,
-            everything). Fixed by forcing the child fullScreen too.
-
-            Suspense fallback handles the brief moment between modal open
-            and the lazy-loaded LocationPicker (+ react-native-maps native
-            bridge) finishing its first import.
-
-            IOS-LOGIN-113: wrapped in ErrorBoundary so that a lazy() rejection
-            (e.g. react-native-maps TurboModule registration failure on iOS 26
-            new arch) lands a Sentry event instead of bubbling silently up to
-            the root boundary or freezing on the spinner. */}
-        <ErrorBoundary onReset={closeLocationPicker}>
-          <Suspense fallback={<LocationPickerSuspenseFallback />}>
-            <LocationPickerLazy
-              initialLatitude={user?.latitude ?? null}
-              initialLongitude={user?.longitude ?? null}
-              initialPlaceName={user?.city ?? null}
-              onConfirm={applyMapPickerSelection}
-              onCancel={closeLocationPicker}
-            />
-          </Suspense>
-        </ErrorBoundary>
+        )}
       </Modal>
 
       <CommunityPostDetailModal
