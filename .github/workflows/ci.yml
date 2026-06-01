@@ -1,0 +1,32 @@
+name: app-ci
+
+# Runs on every push and PR. The only other workflow (ios-build.yml) is
+# workflow_dispatch-only, so until now nothing type-checked the app on push.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # postinstall runs patch-package (RN/iOS-26 safe-area-context patch) —
+      # npm ci runs it automatically, so the patched tree is what tsc sees.
+      - name: Install
+        run: npm ci
+
+      # tsconfig extends expo/tsconfig.base with strict:true. No eslint config
+      # exists in this project, so the type-checker is the gate. Typed-routes
+      # hrefs degrade to `string` when .expo/types is absent, so tsc stays green
+      # without running the dev server first.
+      - name: Typecheck
+        run: npx tsc --noEmit
