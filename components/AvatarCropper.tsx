@@ -50,6 +50,8 @@ export interface AvatarCropperProps {
   uri: string;
   imageWidth: number;
   imageHeight: number;
+  topInset?: number;
+  bottomInset?: number;
   /**
    * Called once the user taps Confirm and the local crop is applied. May
    * return a Promise — the cropper keeps its Confirm spinner visible until
@@ -79,11 +81,15 @@ export function AvatarCropper({
   uri,
   imageWidth,
   imageHeight,
+  topInset = 0,
+  bottomInset = 0,
   onConfirm,
   onCancel,
 }: AvatarCropperProps) {
   const { t } = useLanguage();
   const [isProcessing, setIsProcessing] = useState(false);
+  const safeTopInset = Math.max(topInset, 20);
+  const safeBottomInset = Math.max(bottomInset, 0);
 
   // baseScale fits the image's SHORTER edge to CROP_SIZE so the image always
   // covers the circle at userScale = 1. User pinch-zoom multiplies on top.
@@ -341,7 +347,7 @@ export function AvatarCropper({
           alignItems: 'center',
           justifyContent: 'space-between',
           paddingHorizontal: 20,
-          paddingTop: 56,
+          paddingTop: safeTopInset + 12,
           paddingBottom: 16,
         }}
       >
@@ -417,7 +423,7 @@ export function AvatarCropper({
           flexDirection: 'row',
           gap: 12,
           paddingHorizontal: 24,
-          paddingBottom: 36,
+          paddingBottom: safeBottomInset + 24,
           paddingTop: 12,
         }}
       >

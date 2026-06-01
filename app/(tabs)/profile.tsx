@@ -20,7 +20,7 @@ import {
   ToastAndroid,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppBackground } from '../../components/AppBackground';
 import { AvatarCropper } from '../../components/AvatarCropper';
@@ -482,6 +482,7 @@ function ProfilePostsPane({
 
 export default function ProfileScreen() {
   const { t, langCode } = useLanguage();
+  const insets = useSafeAreaInsets();
   const { user, logout } = useAuthStore();
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [showAvatarViewer, setShowAvatarViewer] = useState(false);
@@ -1568,21 +1569,42 @@ export default function ProfileScreen() {
       </Modal>
 
       <Modal visible={showAvatarViewer} animationType="slide" onRequestClose={closeAvatarViewer}>
-        <SafeAreaView className="flex-1 bg-[#05070D]">
+        <View
+          className="flex-1 bg-[#05070D]"
+          style={{
+            paddingTop: Math.max(insets.top, 20),
+            paddingBottom: Math.max(insets.bottom, 0),
+          }}
+        >
           <View className="flex-row items-center justify-between px-5 py-4">
-            <Pressable onPress={closeAvatarViewer} disabled={isUploadingAvatar}>
+            <Pressable
+              onPress={closeAvatarViewer}
+              disabled={isUploadingAvatar}
+              hitSlop={12}
+              className="h-11 w-11 items-start justify-center"
+            >
               <Ionicons name="arrow-back" size={28} color="#FFFFFF" />
             </Pressable>
             <Text className="text-2xl font-semibold text-white">{t.profile.change_avatar}</Text>
             <View className="flex-row items-center gap-4">
-              <Pressable onPress={handlePickAvatar} disabled={isUploadingAvatar}>
+              <Pressable
+                onPress={handlePickAvatar}
+                disabled={isUploadingAvatar}
+                hitSlop={12}
+                className="h-11 w-11 items-center justify-center"
+              >
                 <Ionicons
                   name="pencil"
                   size={24}
                   color={isUploadingAvatar ? '#7C879C' : '#FFFFFF'}
                 />
               </Pressable>
-              <Pressable onPress={handleShareAvatar} disabled={!viewerAvatarUri || isUploadingAvatar}>
+              <Pressable
+                onPress={handleShareAvatar}
+                disabled={!viewerAvatarUri || isUploadingAvatar}
+                hitSlop={12}
+                className="h-11 w-11 items-end justify-center"
+              >
                 <Ionicons
                   name="share-social-outline"
                   size={24}
@@ -1623,7 +1645,7 @@ export default function ProfileScreen() {
               </View>
             )}
           </View>
-        </SafeAreaView>
+        </View>
       </Modal>
 
       {/* Custom circular cropper. Renders on top of the viewer modal once the
@@ -1639,6 +1661,8 @@ export default function ProfileScreen() {
             uri={cropperAsset.uri}
             imageWidth={cropperAsset.width}
             imageHeight={cropperAsset.height}
+            topInset={insets.top}
+            bottomInset={insets.bottom}
             onConfirm={handleCropperConfirm}
             onCancel={handleCropperCancel}
           />
