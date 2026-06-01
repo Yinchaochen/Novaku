@@ -58,8 +58,8 @@ export default function RegisterScreen() {
 
   const [birthDate, setBirthDate] = useState<Date | null>(null);
   const [gender, setGender] = useState<
-    'male' | 'female' | 'non_binary' | 'prefer_not_to_say' | null
-  >(null);
+    'male' | 'female' | 'non_binary' | 'prefer_not_to_say'
+  >('prefer_not_to_say');
   const [acceptTos, setAcceptTos] = useState(false);
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
   const [acceptMarketing, setAcceptMarketing] = useState(false);
@@ -82,7 +82,7 @@ export default function RegisterScreen() {
   // OAuth users still register a fresh account if their email is new — so we
   // require the same legal consent (ToS + Privacy + age) before letting them
   // hit Google / Apple. GDPR Art. 6(1)(b) needs an active acceptance.
-  const oauthReady = !!birthDate && !!gender && acceptTos && acceptPrivacy && !isMinor;
+  const oauthReady = !!birthDate && acceptTos && acceptPrivacy && !isMinor;
   const handleOAuth = (run: () => unknown) => {
     if (!oauthReady) {
       setConsentError(true);
@@ -98,7 +98,7 @@ export default function RegisterScreen() {
   });
 
   const canSubmit =
-    !!birthDate && !isMinor && !!gender && acceptTos && acceptPrivacy && !register.isPending;
+    !!birthDate && !isMinor && acceptTos && acceptPrivacy && !register.isPending;
 
   const handleBirthDateChange = (date: Date | null) => {
     if (!date) {
@@ -118,7 +118,7 @@ export default function RegisterScreen() {
   };
 
   const onSubmit = (data: FormData) => {
-    if (!birthDate || isMinor || !gender || !acceptTos || !acceptPrivacy) {
+    if (!birthDate || isMinor || !acceptTos || !acceptPrivacy) {
       setConsentError(true);
       return;
     }
@@ -332,7 +332,7 @@ export default function RegisterScreen() {
           </View>
         ) : null}
 
-        {/* Gender — required so Buddy compose doesn't gate users later. */}
+        {/* Gender is optional (Apple 5.1.1(v) bars requiring it); defaults to "prefer not to say". */}
         <Text style={[labelStyle, { marginTop: 18 }]}>{t.profile.gender_label}</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {(['male', 'female', 'non_binary', 'prefer_not_to_say'] as const).map((g) => {
