@@ -24,9 +24,16 @@ jobs:
       - name: Install
         run: npm ci
 
+      # Emit the git-ignored .expo/types/router.d.ts (typed routes). Locally the
+      # dev server writes it; a fresh CI checkout has none, and this is Expo's
+      # documented no-dev-server way to generate it. Without it useSegments()
+      # degrades to the 1-tuple [string], so segments[1] in app/_layout.tsx is a
+      # TS2493 error — green locally, red in CI. Leaves tsconfig.json untouched.
+      - name: Generate typed routes
+        run: npx expo customize tsconfig.json
+
       # tsconfig extends expo/tsconfig.base with strict:true. No eslint config
-      # exists in this project, so the type-checker is the gate. Typed-routes
-      # hrefs degrade to `string` when .expo/types is absent, so tsc stays green
-      # without running the dev server first.
+      # exists in this project, so the type-checker is the gate. Typed routes are
+      # emitted by the step above, so CI validates the same Href types as local.
       - name: Typecheck
         run: npx tsc --noEmit
