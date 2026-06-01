@@ -513,7 +513,8 @@ export type Translations = {
     scan_qr_permission_title: string;
     scan_qr_permission_body: string;
     scan_qr_permission_denied: string;
-    scan_qr_permission_grant: string;
+    scan_qr_permission_continue: string;
+    scan_qr_permission_open_settings: string;
     scan_qr_invalid_title: string;
     scan_qr_invalid_body: string;
     scan_qr_again: string;

@@ -90,7 +90,9 @@ export default function ScanQRCodeScreen() {
             className="mt-6 rounded-full bg-white px-6 py-2.5"
           >
             <Text className="text-[14px] font-semibold text-black">
-              {t.profile.scan_qr_permission_grant}
+              {permission.canAskAgain
+                ? t.profile.scan_qr_permission_continue
+                : t.profile.scan_qr_permission_open_settings}
             </Text>
           </Pressable>
         </View>
