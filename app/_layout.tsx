@@ -164,13 +164,13 @@ function AppBody() {
     PlusJakartaSans_800ExtraBold,
   });
 
-  // IOS-LOGIN-114: Android-only native splash dismiss. AppBody mounting
-  // means RootLayout's full tree (including the `/` route → BrandIntro) has
-  // committed its first frame. Hiding the native splash now reveals
-  // BrandIntro — the same image at the same imageWidth, so visually
-  // seamless. iOS path: no-op; iOS continues to rely on the OS
-  // first-frame-commit auto-hide (Build 28 decision, kept to avoid the
-  // iOS 26 SBCrossfadeView freeze).
+  // IOS-LOGIN-114/116: Android-only native splash dismiss. AppBody mounting
+  // means RootLayout's full tree (including the `/` route -> BrandIntro) has
+  // committed its first frame. Hiding the icon-only Android native splash now
+  // reveals the full JS wordmark composition as early as React can safely draw
+  // it. iOS path: no-op; iOS continues to rely on the OS first-frame-commit
+  // auto-hide (Build 28 decision, kept to avoid the iOS 26 SBCrossfadeView
+  // freeze).
   useEffect(() => {
     if (Platform.OS === 'android') {
       SplashScreen.hideAsync().catch(() => {

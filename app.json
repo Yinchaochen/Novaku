@@ -2,7 +2,7 @@
   "expo": {
     "name": "Postervia",
     "slug": "novaku-app",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -55,9 +55,15 @@
           "imageWidth": 300,
           "resizeMode": "contain",
           "android": {
-            "_comment": "IOS-LOGIN-114 (2026-05-27): Android 12+ SplashScreen API treats the splash image as a centered icon constrained to a ~192dp safe circle (Expo SDK 52 changelog confirms: 'Android splash no longer supports full-screen image'). The wordmark splash-brand.png (arch + POSTERVIA + tagline) cannot fit there. This android.image override points to an arch-only PNG sized for the safe circle (1024x1024 canvas, content ~60% occupation). BrandIntro continues to use splash-brand.png unchanged.",
-            "image": "./assets/splash-icon-android.png",
-            "imageWidth": 192
+            "_comment": "IOS-LOGIN-114/116: Android 12+ SplashScreen API renders a centered launch icon, not a full React Native page. The full splash-brand.png wordmark cannot be made identical to BrandIntro here without being shrunk or cropped. Keep the unavoidable native frame as a crisp arch-only mark, then hand off quickly to BrandIntro for the full POSTERVIA + tagline composition.",
+            "backgroundColor": "#F67673",
+            "image": "./assets/adaptive-icon.png",
+            "imageWidth": 288,
+            "resizeMode": "contain",
+            "dark": {
+              "backgroundColor": "#F67673",
+              "image": "./assets/adaptive-icon.png"
+            }
           },
           "dark": {
             "backgroundColor": "#F67673",
