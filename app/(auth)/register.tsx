@@ -57,9 +57,6 @@ export default function RegisterScreen() {
   const registerErrorCode = getApiErrorCode(register.error);
 
   const [birthDate, setBirthDate] = useState<Date | null>(null);
-  const [gender, setGender] = useState<
-    'male' | 'female' | 'non_binary' | 'prefer_not_to_say'
-  >('prefer_not_to_say');
   const [acceptTos, setAcceptTos] = useState(false);
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
   const [acceptMarketing, setAcceptMarketing] = useState(false);
@@ -139,7 +136,6 @@ export default function RegisterScreen() {
         ...data,
         locale: langCode,
         birth_year: birthDate.getFullYear(),
-        gender,
         consents,
       },
       { onSuccess: () => router.replace('/plaza') },
@@ -331,38 +327,6 @@ export default function RegisterScreen() {
             <Text style={{ fontSize: 12, lineHeight: 17, color: colors.danger }}>{t.auth.minor_notice}</Text>
           </View>
         ) : null}
-
-        {/* Gender is optional (Apple 5.1.1(v) bars requiring it); defaults to "prefer not to say". */}
-        <Text style={[labelStyle, { marginTop: 18 }]}>{t.profile.gender_label}</Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {(['male', 'female', 'non_binary', 'prefer_not_to_say'] as const).map((g) => {
-            const active = gender === g;
-            return (
-              <Pressable
-                key={g}
-                onPress={() => setGender(g)}
-                style={{
-                  paddingHorizontal: 14,
-                  paddingVertical: 9,
-                  borderRadius: 999,
-                  borderWidth: 1.5,
-                  borderColor: active ? '#F47C7C' : 'rgba(59, 42, 34, 0.12)',
-                  backgroundColor: active ? '#FFF1F2' : INPUT_FILL,
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 13.5,
-                    fontWeight: '600',
-                    color: active ? '#F47C7C' : '#3B2A22',
-                  }}
-                >
-                  {t.buddy[`gender_${g}` as const]}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
 
         {/* GDPR consent rows — kept (legal requirement) but compact */}
         <View style={{ marginTop: 22, gap: 10 }}>
