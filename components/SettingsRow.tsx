@@ -5,7 +5,7 @@ export interface SettingsRowProps {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   hint?: string;
-  onPress: () => void;
+  onPress?: () => void;
   destructive?: boolean;
 }
 
@@ -14,8 +14,9 @@ export function SettingsRow({ icon, label, hint, onPress, destructive }: Setting
   return (
     <Pressable
       onPress={onPress}
+      disabled={!onPress}
       className="flex-row items-center gap-3 px-4 py-4"
-      android_ripple={{ color: '#F4F5F8' }}
+      android_ripple={onPress ? { color: '#F4F5F8' } : undefined}
     >
       <View className="h-9 w-9 items-center justify-center rounded-full bg-[#F4F5F8]">
         <Ionicons name={icon} size={18} color={color} />
@@ -30,7 +31,7 @@ export function SettingsRow({ icon, label, hint, onPress, destructive }: Setting
           </Text>
         ) : null}
       </View>
-      <Ionicons name="chevron-forward" size={18} color="#C4C9D4" />
+      {onPress ? <Ionicons name="chevron-forward" size={18} color="#C4C9D4" /> : null}
     </Pressable>
   );
 }

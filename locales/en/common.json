@@ -744,6 +744,12 @@
     "copied_to_clipboard": "Copied"
   },
   "chat": {
+    "menu_view_profile": "View profile",
+    "menu_report": "Report",
+    "menu_block": "Block",
+    "block_confirm_title": "Block this user?",
+    "block_confirm_message": "They won't be able to message you, and you won't see each other across Postervia.",
+    "blocked_toast": "User blocked.",
     "hold_to_talk": "Hold to Talk",
     "slide_to_cancel": "Slide to cancel",
     "stt_listening": "Listening...",

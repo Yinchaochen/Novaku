@@ -37,6 +37,7 @@ import {
   SocialGroupSummary,
   useAcceptFriendRequest,
   useAddSocialEventToOdyssey,
+  useBlockUser,
   useCreateSocialGroup,
   useCreateSocialGroupEvent,
   useDeclineFriendRequest,
@@ -62,6 +63,7 @@ import {
   useUnfavoriteMessage,
 } from '../../features/chat/useChat';
 import { MessageActionMenu, MenuAction } from '../../components/MessageActionMenu';
+import { ReportSheet } from '../../components/ReportSheet';
 import { useNotifications } from '../../features/community/useCommunity';
 import { api } from '../../lib/api';
 import { useSearchIntentStore } from '../../store/searchIntentStore';
@@ -466,6 +468,47 @@ export default function SocialScreen() {
   // Conversation search lives in /social/search now; the inline list is unfiltered.
   const [peopleSearch, setPeopleSearch] = useState('');
   const [selectedConversation, setSelectedConversation] = useState<ConversationItem | null>(null);
+  const [reportSheetVisible, setReportSheetVisible] = useState(false);
+  const blockUser = useBlockUser();
+  const chatPeerUserId = selectedConversation?.friendUserId ?? null;
+
+  const confirmBlockChatPeer = () => {
+    if (!chatPeerUserId) return;
+    Alert.alert(t.chat.block_confirm_title, t.chat.block_confirm_message, [
+      { text: t.common.cancel, style: 'cancel' },
+      {
+        text: t.chat.menu_block,
+        style: 'destructive',
+        onPress: () =>
+          blockUser.mutate(
+            { userId: chatPeerUserId },
+            {
+              onSuccess: () => {
+                setIsConversationVisible(false);
+                Alert.alert(t.chat.blocked_toast);
+              },
+              onError: () => Alert.alert(t.common.error),
+            },
+          ),
+      },
+    ]);
+  };
+
+  const openChatActionMenu = () => {
+    if (!chatPeerUserId) return;
+    Alert.alert(selectedConversation?.title ?? '', undefined, [
+      {
+        text: t.chat.menu_view_profile,
+        onPress: () => {
+          setIsConversationVisible(false);
+          router.push(`/users/${chatPeerUserId}` as never);
+        },
+      },
+      { text: t.chat.menu_report, onPress: () => setReportSheetVisible(true) },
+      { text: t.chat.menu_block, style: 'destructive', onPress: confirmBlockChatPeer },
+      { text: t.common.cancel, style: 'cancel' },
+    ]);
+  };
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [loadingConversation, setLoadingConversation] = useState(false);
   const [draftMessage, setDraftMessage] = useState('');
@@ -1628,12 +1671,23 @@ export default function SocialScreen() {
                       </Text>
                     ) : null}
                   </View>
-                  <Pressable style={{ padding: 4 }} hitSlop={8}>
-                    <Ionicons name="ellipsis-horizontal" size={24} color="#374151" />
-                  </Pressable>
+                  {chatPeerUserId ? (
+                    <Pressable onPress={openChatActionMenu} style={{ padding: 4 }} hitSlop={8}>
+                      <Ionicons name="ellipsis-horizontal" size={24} color="#374151" />
+                    </Pressable>
+                  ) : (
+                    <View style={{ width: 32 }} />
+                  )}
                 </>
               )}
             </View>
+
+            <ReportSheet
+              visible={reportSheetVisible}
+              contentType="profile"
+              contentId={chatPeerUserId}
+              onClose={() => setReportSheetVisible(false)}
+            />
 
             {/* Messages */}
             {loadingConversation ? (
@@ -1846,9 +1900,7 @@ export default function SocialScreen() {
                 paddingBottom: chatBottomInset + 8,
               }}
             >
-              <Pressable style={{ padding: 5 }} hitSlop={6}>
-                <Ionicons name="mic-outline" size={26} color="#6B7280" />
-              </Pressable>
+              {/* Voice recording entry hidden until voice messages ship (V2 WS4). */}
               <View
                 style={{
                   flex: 1,

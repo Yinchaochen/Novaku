@@ -118,6 +118,58 @@ export function useSendFriendRequest() {
   });
 }
 
+export interface BlockedUser {
+  user: SocialUserSummary;
+  reason: string | null;
+  created_at: string;
+}
+
+export function useBlockUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { userId: string; reason?: string }) => {
+      const res = await api.post('/social/blocks', { user_id: input.userId, reason: input.reason });
+      return res.data.data as { blocked: boolean };
+    },
+    onSuccess: async () => {
+      // A block changes who is visible across every feed — refresh them all.
+      await qc.invalidateQueries({ queryKey: ['social'] });
+      await qc.invalidateQueries({ queryKey: ['chat'] });
+      await qc.invalidateQueries({ queryKey: ['community'] });
+      await qc.invalidateQueries({ queryKey: ['buddy'] });
+    },
+  });
+}
+
+export function useUnblockUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await api.delete(`/social/blocks/${userId}`);
+      return res.data.data as { blocked: boolean };
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['social'] });
+      await qc.invalidateQueries({ queryKey: ['chat'] });
+      await qc.invalidateQueries({ queryKey: ['community'] });
+      await qc.invalidateQueries({ queryKey: ['buddy'] });
+    },
+  });
+}
+
+export function useBlockedUsers() {
+  const user = useAuthStore((state) => state.user);
+  const { langCode } = useLanguage();
+  return useQuery({
+    queryKey: ['social', 'blocks', user?.id, langCode],
+    queryFn: async () => {
+      const res = await api.get('/social/blocks');
+      return res.data.data.items as BlockedUser[];
+    },
+    enabled: Boolean(user),
+  });
+}
+
 export type SearchVisibility = 'open' | 'limited' | 'hidden';
 
 export function useUpdateSearchVisibility() {

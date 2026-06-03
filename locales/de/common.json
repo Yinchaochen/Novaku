@@ -744,6 +744,12 @@
     "tap_map_hint": "Tippe auf die Karte für einen Pin oder suche oben"
   },
   "chat": {
+    "menu_view_profile": "Profil ansehen",
+    "menu_report": "Melden",
+    "menu_block": "Blockieren",
+    "block_confirm_title": "Diese Person blockieren?",
+    "block_confirm_message": "Sie kann dir nicht mehr schreiben, und ihr seht einander in Postervia nicht mehr.",
+    "blocked_toast": "Blockiert.",
     "hold_to_talk": "Gedrückt halten zum Sprechen",
     "slide_to_cancel": "Nach links schieben zum Abbrechen",
     "stt_listening": "Zuhören...",

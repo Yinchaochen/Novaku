@@ -744,6 +744,12 @@
     "tap_map_hint": "在地图上点一下落 pin，或在搜索框找地点"
   },
   "chat": {
+    "menu_view_profile": "查看资料",
+    "menu_report": "举报",
+    "menu_block": "屏蔽",
+    "block_confirm_title": "屏蔽该用户？",
+    "block_confirm_message": "对方将无法私信你，你们也不会在 Postervia 上看到彼此。",
+    "blocked_toast": "已屏蔽。",
     "hold_to_talk": "按住说话",
     "slide_to_cancel": "向左滑动取消",
     "stt_listening": "正在监听...",

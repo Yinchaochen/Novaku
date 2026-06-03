@@ -836,6 +836,12 @@ export type Translations = {
     toast_favorited: string;
     toast_copied: string;
     toast_forwarded: string;
+    menu_view_profile: string;
+    menu_report: string;
+    menu_block: string;
+    block_confirm_title: string;
+    block_confirm_message: string;
+    blocked_toast: string;
   };
   map: {
     our_map: string;

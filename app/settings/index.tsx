@@ -105,7 +105,6 @@ export default function SettingsHubScreen() {
           <SettingsRow
             icon="information-circle-outline"
             label={`${t.settings.about_version} ${version}`}
-            onPress={() => {}}
           />
         </SettingsSection>
 
