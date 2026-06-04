@@ -575,6 +575,14 @@ export type Translations = {
     search_visibility_limited_hint: string;
     search_visibility_hidden: string;
     search_visibility_hidden_hint: string;
+    blocked_users_title: string;
+    blocked_users_hint: string;
+    blocked_users_explainer: string;
+    blocked_users_empty_title: string;
+    blocked_users_empty_body: string;
+    blocked_unblock_action: string;
+    blocked_unblock_confirm_title: string;
+    blocked_unblock_confirm_body: string;
     privacy_consents: string;
     privacy_consents_hint: string;
     privacy_data: string;

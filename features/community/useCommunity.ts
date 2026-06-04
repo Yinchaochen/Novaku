@@ -479,6 +479,40 @@ export function useDeleteCommunityPost() {
   });
 }
 
+/**
+ * Hide a post from the current user's feed (per-user hard filter).
+ *
+ * The backend writes a `user_hidden_posts` row and the feed query then
+ * filters by it permanently — distinct from the `plaza_hide_post`
+ * recommendation event which only nudged ranker weights and didn't
+ * actually prevent the post from coming back.
+ */
+export function useHidePost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (postId: string) => {
+      await api.post(`/community/posts/${postId}/hide`);
+      return { postId };
+    },
+    onSuccess: ({ postId }) => {
+      // Evict from every loaded feed page so it vanishes without waiting on refetch.
+      qc.setQueriesData<InfiniteData<CommunityFeedPage>>(
+        { queryKey: ['community', 'feed'] },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              items: page.items.filter((item) => item.id !== postId),
+            })),
+          };
+        },
+      );
+    },
+  });
+}
+
 export function useUpdateCommunityPost(postId?: string | null) {
   const qc = useQueryClient();
   return useMutation({

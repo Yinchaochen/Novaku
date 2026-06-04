@@ -42,6 +42,7 @@ import {
   useDeleteCommunityPost,
   useEditComment,
   useFollowUser,
+  useHidePost,
   useMarkCommunityHelpful,
   useUnmarkCommunityHelpful,
   useSaveCommunityPost,
@@ -199,6 +200,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
   const user = useAuthStore((state) => state.user);
   const qc = useQueryClient();
   const { mutate: trackCommunityEvents } = useTrackCommunityEvents();
+  const hidePost = useHidePost();
   const helpful = useMarkCommunityHelpful();
   const unhelpful = useUnmarkCommunityHelpful();
   const savePost = useSaveCommunityPost();
@@ -411,6 +413,10 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
           text: t.plaza.hide_post,
           style: 'destructive',
           onPress: () => {
+            // Real per-user hard filter — the row in user_hidden_posts keeps the
+            // post out of this user's feed permanently across refresh / restart.
+            hidePost.mutate(post.id);
+            // Recommendation signal kept (feeds ranker / author trust score).
             trackCommunityEvents([
               {
                 event_name: 'plaza_hide_post',

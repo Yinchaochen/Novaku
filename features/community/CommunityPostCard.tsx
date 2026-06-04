@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import { Alert, Pressable, Text, View } from 'react-native';
 
 import { colors, shadows } from '../../theme/tokens';
 import { useLanguage } from '../../context/LanguageContext';
@@ -10,6 +10,7 @@ import { useAuthStore } from '../../store/authStore';
 import { TranslatedText } from './TranslatedText';
 import {
   CommunityPost,
+  useHidePost,
   useMarkCommunityHelpful,
   useUnmarkCommunityHelpful,
 } from './useCommunity';
@@ -81,7 +82,9 @@ export function CommunityPostCard({ post, onPress }: Props) {
   const { t } = useLanguage();
   const helpful = useMarkCommunityHelpful();
   const unhelpful = useUnmarkCommunityHelpful();
+  const hidePost = useHidePost();
   const viewerId = useAuthStore((s) => s.user?.id ?? null);
+  const isOwnPost = viewerId != null && post.author.id === viewerId;
   const typeColor = getTypeColor(post.post_type);
   const imageHeight = getVisualHeight(post);
   const hasEventCandidate = post.action_candidates.some(
@@ -109,6 +112,29 @@ export function CommunityPostCard({ post, onPress }: Props) {
     } else {
       router.push(`/users/${post.author.id}` as never);
     }
+  };
+
+  // Card-level "..." menu: per-user hide so the post stops showing on this user's feed.
+  // Own posts skip this entry — you can't hide yourself from yourself.
+  const openCardActions = () => {
+    if (isOwnPost) return;
+    Alert.alert(t.plaza.more_actions_title, undefined, [
+      {
+        text: t.plaza.hide_post,
+        style: 'destructive',
+        onPress: () => {
+          Alert.alert(t.plaza.hide_post, t.plaza.hide_post_confirm_body, [
+            { text: t.common.cancel, style: 'cancel' },
+            {
+              text: t.plaza.hide_post,
+              style: 'destructive',
+              onPress: () => hidePost.mutate(post.id),
+            },
+          ]);
+        },
+      },
+      { text: t.common.cancel, style: 'cancel' },
+    ]);
   };
 
   return (
@@ -228,6 +254,16 @@ export function CommunityPostCard({ post, onPress }: Props) {
               {post.helpful_count}
             </Text>
           </Pressable>
+
+          {!isOwnPost ? (
+            <Pressable
+              onPress={openCardActions}
+              hitSlop={10}
+              style={{ marginLeft: 6, paddingVertical: 6, paddingHorizontal: 6 }}
+            >
+              <Ionicons name="ellipsis-horizontal" size={17} color={colors.textMuted} />
+            </Pressable>
+          ) : null}
         </View>
       </View>
     </View>

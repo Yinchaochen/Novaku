@@ -48,6 +48,12 @@ export default function SettingsHubScreen() {
             onPress={() => router.push('/settings/search-visibility' as never)}
           />
           <SettingsRow
+            icon="ban-outline"
+            label={t.settings.blocked_users_title}
+            hint={t.settings.blocked_users_hint}
+            onPress={() => router.push('/settings/blocked-users' as never)}
+          />
+          <SettingsRow
             icon="checkmark-done-outline"
             label={t.settings.privacy_consents}
             hint={t.settings.privacy_consents_hint}
