@@ -34,8 +34,10 @@ import {
 } from '../../features/community/useCommunity';
 import {
   useAcceptFriendRequest,
+  useBlockUser,
   useSendFriendRequest,
 } from '../../features/social/useSocial';
+import { ReportSheet } from '../../components/ReportSheet';
 import { numericDisplayId } from '../../lib/displayId';
 import { resolveMediaUrl } from '../../lib/media';
 import { useAuthStore } from '../../store/authStore';
@@ -120,8 +122,10 @@ export default function UserProfileScreen() {
   const unfollowMutation = useUnfollowUser();
   const sendFriendRequest = useSendFriendRequest();
   const acceptFriendRequest = useAcceptFriendRequest();
+  const blockUser = useBlockUser();
   const [friendRequestVisible, setFriendRequestVisible] = useState(false);
   const [friendRequestMessage, setFriendRequestMessage] = useState('');
+  const [reportSheetVisible, setReportSheetVisible] = useState(false);
 
   const profileData = profile.data;
 
@@ -181,6 +185,37 @@ export default function UserProfileScreen() {
 
   const handleMessage = () => {
     Alert.alert(t.profile.message_button, t.plaza.coming_soon);
+  };
+
+  const confirmBlockUser = () => {
+    if (!profileData) return;
+    Alert.alert(t.chat.block_confirm_title, t.chat.block_confirm_message, [
+      { text: t.common.cancel, style: 'cancel' },
+      {
+        text: t.chat.menu_block,
+        style: 'destructive',
+        onPress: () =>
+          blockUser.mutate(
+            { userId: profileData.id },
+            {
+              onSuccess: () => {
+                Alert.alert(t.chat.blocked_toast);
+                router.back();
+              },
+              onError: () => Alert.alert(t.common.error),
+            },
+          ),
+      },
+    ]);
+  };
+
+  const openProfileActions = () => {
+    if (!profileData) return;
+    Alert.alert(profileData.display_name, undefined, [
+      { text: t.chat.menu_report, onPress: () => setReportSheetVisible(true) },
+      { text: t.chat.menu_block, style: 'destructive', onPress: confirmBlockUser },
+      { text: t.common.cancel, style: 'cancel' },
+    ]);
   };
 
   const handleCopyDisplayId = async () => {
@@ -289,10 +324,7 @@ export default function UserProfileScreen() {
         <Text numberOfLines={1} className="flex-1 px-4 text-center text-[16px] font-semibold text-black">
           {profileData.display_name}
         </Text>
-        <Pressable
-          onPress={() => Alert.alert(profileData.display_name, t.plaza.coming_soon)}
-          hitSlop={8}
-        >
+        <Pressable onPress={openProfileActions} hitSlop={8}>
           <Ionicons name="ellipsis-horizontal" size={22} color="#111111" />
         </Pressable>
       </View>
@@ -497,6 +529,13 @@ export default function UserProfileScreen() {
         displayName={profileData.display_name}
         avatarUrl={profileData.avatar_url}
         onClose={() => setQrVisible(false)}
+      />
+
+      <ReportSheet
+        visible={reportSheetVisible}
+        contentType="profile"
+        contentId={profileData.id}
+        onClose={() => setReportSheetVisible(false)}
       />
 
       <Modal

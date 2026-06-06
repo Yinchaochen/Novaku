@@ -26,6 +26,7 @@ import { formatDisplayLocation } from '../../lib/displayLocation';
 import { normalizeMapUrl } from '../../lib/maps';
 import { resolveMediaUrl } from '../../lib/media';
 import { useAuthStore } from '../../store/authStore';
+import { useBlockUser } from '../../features/social/useSocial';
 import { ReportSheet } from '../../components/ReportSheet';
 import { Toast, type ToastMessage } from '../../components/Toast';
 import { CommentComposerSheet, type CommentComposerInput } from './CommentComposerSheet';
@@ -245,6 +246,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
   const mediaItemCount = post?.media_items.length ?? 0;
   const hasMediaPager = mediaItemCount > 1;
   const canEditPost = Boolean(user?.id && post?.author.id === user.id);
+  const blockUser = useBlockUser();
 
   useEffect(() => {
     if (!visible) {
@@ -450,12 +452,40 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
     setReportSheetVisible(true);
   };
 
+  const handleBlockAuthor = () => {
+    if (!post) return;
+    Alert.alert(t.chat.block_confirm_title, t.chat.block_confirm_message, [
+      { text: t.common.cancel, style: 'cancel' },
+      {
+        text: t.chat.menu_block,
+        style: 'destructive',
+        onPress: () =>
+          blockUser.mutate(
+            { userId: post.author.id },
+            {
+              onSuccess: () => {
+                // Instant removal from this viewer's feed (Apple 1.2); block also
+                // writes an audit_log so the developer is notified.
+                removePostFromFeedCache(post.id);
+                onClose();
+                Alert.alert(t.chat.blocked_toast);
+              },
+              onError: () => Alert.alert(t.common.error),
+            },
+          ),
+      },
+    ]);
+  };
+
   const handleOpenMoreActions = () => {
     if (!post) return;
     Alert.alert(t.plaza.more_actions_title, undefined, [
       { text: t.plaza.hide_post, onPress: handleHidePost },
-      { text: t.plaza.report_post, style: 'destructive', onPress: handleReportPost },
-      { text: t.common.cancel, style: 'cancel' },
+      { text: t.plaza.report_post, style: 'destructive' as const, onPress: handleReportPost },
+      ...(!canEditPost
+        ? [{ text: t.chat.menu_block, style: 'destructive' as const, onPress: handleBlockAuthor }]
+        : []),
+      { text: t.common.cancel, style: 'cancel' as const },
     ]);
   };
 

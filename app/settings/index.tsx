@@ -1,16 +1,39 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import { ScrollView } from 'react-native';
+import { Alert, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SettingsHeader, SettingsRow, SettingsSection } from '../../components/SettingsRow';
 import { useLanguage } from '../../context/LanguageContext';
+import { useCreateDSR } from '../../features/compliance/useCompliance';
 import { useAuthStore } from '../../store/authStore';
 
 export default function SettingsHubScreen() {
   const { t } = useLanguage();
   const version = Constants.expoConfig?.version ?? '0.1.0';
   const isStaff = useAuthStore((s) => s.user?.is_staff ?? false);
+  const createDsr = useCreateDSR();
+
+  // App Store Guideline 5.1.1(v): account deletion must be reachable in-app.
+  // Initiates the GDPR erasure DSR, then opens the Data screen where the user
+  // sees the pending-deletion state and can cancel within the grace period.
+  const requestAccountDeletion = () => {
+    Alert.alert(t.settings.data_delete_confirm_title, t.settings.data_delete_confirm_body, [
+      { text: t.common.cancel, style: 'cancel' },
+      {
+        text: t.settings.data_delete_action,
+        style: 'destructive',
+        onPress: () =>
+          createDsr.mutate(
+            { request_type: 'erasure' },
+            {
+              onSuccess: () => router.push('/settings/data' as never),
+              onError: () => Alert.alert(t.common.error),
+            },
+          ),
+      },
+    ]);
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-[#F4F5F8]" edges={['top']}>
@@ -32,6 +55,13 @@ export default function SettingsHubScreen() {
               onPress={() => router.push('/billing/subscribe' as never)}
             />
           ) : null}
+          <SettingsRow
+            icon="trash-outline"
+            label={t.settings.data_delete}
+            hint={t.settings.data_delete_hint}
+            onPress={requestAccountDeletion}
+            destructive
+          />
         </SettingsSection>
 
         <SettingsSection title={t.settings.section_privacy}>

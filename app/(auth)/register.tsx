@@ -25,6 +25,7 @@ import { getApiErrorCode, useRegister } from '../../features/auth/useAuth';
 import { useAppleLogin, useGoogleLogin } from '../../features/auth/useOAuth';
 import { tap } from '../../lib/haptics';
 import { colors } from '../../theme/tokens';
+import { GoogleSignInButton } from '../../components/GoogleSignInButton';
 
 const CONSENT_DOCUMENT_VERSION = '2026-05-05.v1';
 const CURRENT_YEAR = new Date().getFullYear();
@@ -423,29 +424,26 @@ export default function RegisterScreen() {
           </Text>
         ) : null}
 
-        {/* OAuth row — small coral circle buttons */}
-        <View style={{ marginTop: 24, alignItems: 'center' }}>
-          <Text style={{ fontSize: 13, color: colors.textMuted, marginBottom: 14 }}>
+        {/* OAuth — official Sign in with Apple button (Guideline 4) + full-width Google */}
+        <View style={{ marginTop: 24, opacity: oauthReady ? 1 : 0.5 }}>
+          <Text style={{ fontSize: 13, color: colors.textMuted, marginBottom: 14, textAlign: 'center' }}>
             {t.auth.or_sign_up_with}
           </Text>
-          <View style={{ flexDirection: 'row', gap: 18, opacity: oauthReady ? 1 : 0.5 }}>
-            <OAuthCircle
-              onPress={() => handleOAuth(() => google.promptAsync())}
-              disabled={!google.request || google.isPending}
-              loading={google.isPending}
-            >
-              <Text style={{ color: colors.brandCoral, fontSize: 18, fontWeight: '700' }}>G</Text>
-            </OAuthCircle>
-            {Platform.OS === 'ios' && (
-              <OAuthCircle
-                onPress={() => handleOAuth(() => apple.signIn())}
-                disabled={apple.isPending}
-                loading={apple.isPending}
-              >
-                <Ionicons name="logo-apple" size={20} color={colors.brandCoral} />
-              </OAuthCircle>
-            )}
-          </View>
+          {Platform.OS === 'ios' ? (
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP}
+              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+              cornerRadius={28}
+              style={{ width: '100%', height: 52, marginBottom: 12 }}
+              onPress={() => handleOAuth(() => apple.signIn())}
+            />
+          ) : null}
+          <GoogleSignInButton
+            label={t.auth.continue_with_google}
+            onPress={() => handleOAuth(() => google.promptAsync())}
+            disabled={!google.request || google.isPending}
+            loading={google.isPending}
+          />
         </View>
 
         {/* Already have account → back to login */}
@@ -538,44 +536,3 @@ function ConsentRow({
   );
 }
 
-/**
- * Small coral circle button used for OAuth icons. Bordered + soft fill so it
- * matches YumQuick's look without needing brand-asset PNGs for each provider.
- */
-function OAuthCircle({
-  children,
-  onPress,
-  disabled,
-  loading,
-}: {
-  children: React.ReactNode;
-  onPress: () => void;
-  disabled?: boolean;
-  loading?: boolean;
-}) {
-  return (
-    <Pressable
-      onPress={() => {
-        tap('light');
-        onPress();
-      }}
-      disabled={disabled}
-      style={({ pressed }) => [
-        {
-          width: 48,
-          height: 48,
-          borderRadius: 24,
-          borderWidth: 1.5,
-          borderColor: 'rgba(246, 118, 115, 0.45)',
-          backgroundColor: 'rgba(255, 232, 218, 0.85)',
-          alignItems: 'center',
-          justifyContent: 'center',
-          opacity: disabled ? 0.5 : 1,
-        },
-        pressed && !disabled ? { transform: [{ scale: 0.94 }] } : null,
-      ]}
-    >
-      {loading ? <ActivityIndicator size="small" color={colors.brandCoral} /> : children}
-    </Pressable>
-  );
-}
