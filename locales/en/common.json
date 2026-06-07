@@ -879,6 +879,7 @@
     "data_delete_pending_body": "Your account will be permanently deleted in {days} days. You can cancel until then.",
     "data_delete_cancel_action": "Cancel deletion",
     "data_delete_cancelled": "Deletion request cancelled.",
+    "data_delete_already_pending": "Your account deletion is already in progress — no need to submit again. It completes automatically after the grace period, or you can cancel it anytime before then.",
     "data_restrict_confirm_title": "Restrict processing",
     "data_restrict_confirm_body": "Once restricted, we stop using your data for recommendations, analytics, etc. You can lift it any time.",
     "data_restrict_active_title": "Processing is restricted",

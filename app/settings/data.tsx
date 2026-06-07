@@ -15,6 +15,7 @@ import {
   useFetchDSRDownload,
   useLiftRestriction,
 } from '../../features/compliance/useCompliance';
+import { getApiErrorCode } from '../../features/auth/useAuth';
 
 export default function DataScreen() {
   const { t, langCode } = useLanguage();
@@ -30,6 +31,10 @@ export default function DataScreen() {
   const graceDays = status.data?.deletion_grace_days_remaining ?? 0;
 
   const requestErasure = () => {
+    if (pendingDeletion) {
+      Alert.alert(t.settings.data_delete_pending_title, t.settings.data_delete_already_pending);
+      return;
+    }
     Alert.alert(
       t.settings.data_delete_confirm_title,
       t.settings.data_delete_confirm_body,
@@ -38,7 +43,19 @@ export default function DataScreen() {
         {
           text: t.settings.data_delete_action,
           style: 'destructive',
-          onPress: () => createDsr.mutate({ request_type: 'erasure' }),
+          onPress: () =>
+            createDsr.mutate(
+              { request_type: 'erasure' },
+              {
+                onError: (err) => {
+                  if (getApiErrorCode(err) === 'compliance.deletion_already_pending') {
+                    Alert.alert(t.settings.data_delete_pending_title, t.settings.data_delete_already_pending);
+                  } else {
+                    Alert.alert(t.common.error);
+                  }
+                },
+              },
+            ),
         },
       ],
     );

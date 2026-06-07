@@ -623,6 +623,7 @@ export type Translations = {
     data_delete_pending_body: string;
     data_delete_cancel_action: string;
     data_delete_cancelled: string;
+    data_delete_already_pending: string;
     data_restrict_confirm_title: string;
     data_restrict_confirm_body: string;
     data_restrict_active_title: string;

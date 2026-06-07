@@ -879,6 +879,7 @@
     "data_delete_pending_body": "你的账户将在 {days} 天后被永久删除。在此之前可随时撤销。",
     "data_delete_cancel_action": "撤销删除",
     "data_delete_cancelled": "已撤销删除请求。",
+    "data_delete_already_pending": "你的账户删除申请已在处理中，无需重复提交。宽限期结束后会自动完成，在此之前可随时取消。",
     "data_restrict_confirm_title": "限制处理我的数据",
     "data_restrict_confirm_body": "限制后我们不会再使用你的数据用于推荐、分析等用途。可随时解除。",
     "data_restrict_active_title": "处理已被限制",

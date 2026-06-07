@@ -879,6 +879,7 @@
     "data_delete_pending_body": "Dein Konto wird in {days} Tagen endgültig gelöscht. Du kannst die Löschung bis dahin widerrufen.",
     "data_delete_cancel_action": "Löschung widerrufen",
     "data_delete_cancelled": "Löschantrag widerrufen.",
+    "data_delete_already_pending": "Deine Kontolöschung wird bereits bearbeitet – du musst sie nicht erneut absenden. Nach Ablauf der Karenzfrist wird sie automatisch abgeschlossen; bis dahin kannst du sie jederzeit abbrechen.",
     "data_restrict_confirm_title": "Verarbeitung einschränken",
     "data_restrict_confirm_body": "Nach der Einschränkung verwenden wir deine Daten nicht mehr für Empfehlungen, Analysen etc. Du kannst die Einschränkung jederzeit aufheben.",
     "data_restrict_active_title": "Verarbeitung ist eingeschränkt",
