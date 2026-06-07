@@ -7,7 +7,7 @@ import { tap } from '../lib/haptics';
 // branding guidelines. Do not recolor or alter the paths.
 function GoogleGLogo({ size = 18 }: { size?: number }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 48 48">
+    <Svg width={size} height={size} viewBox="0 0 48 48" style={{ width: size, height: size }}>
       <Path
         fill="#EA4335"
         d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
@@ -53,6 +53,7 @@ export function GoogleSignInButton({
       disabled={disabled}
       style={({ pressed }) => [
         {
+          width: '100%',
           height: 52,
           borderRadius: 28,
           borderWidth: 1,

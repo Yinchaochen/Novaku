@@ -12,7 +12,9 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.postervia.app/v1"
+        "EXPO_PUBLIC_API_URL": "https://api.postervia.app/v1",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "1038451665598-mepu68bedfm5e121030iqjjgf4r9vh4v.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "1038451665598-999c7bqc99dtghss1duf1oakghetd0ph.apps.googleusercontent.com"
       }
     },
     "preview": {
@@ -22,7 +24,9 @@
       "distribution": "internal",
       "environment": "preview",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.postervia.app/v1"
+        "EXPO_PUBLIC_API_URL": "https://api.postervia.app/v1",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "1038451665598-mepu68bedfm5e121030iqjjgf4r9vh4v.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "1038451665598-999c7bqc99dtghss1duf1oakghetd0ph.apps.googleusercontent.com"
       }
     },
     "production": {
@@ -32,7 +36,9 @@
       },
       "environment": "production",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.postervia.app/v1"
+        "EXPO_PUBLIC_API_URL": "https://api.postervia.app/v1",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "1038451665598-mepu68bedfm5e121030iqjjgf4r9vh4v.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "1038451665598-999c7bqc99dtghss1duf1oakghetd0ph.apps.googleusercontent.com"
       }
     }
   },

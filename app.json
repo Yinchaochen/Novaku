@@ -7,7 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "scheme": "postervia",
+    "scheme": ["postervia", "app.novaku.mobile"],
     "splash": {
       "image": "./assets/splash-brand.png",
       "resizeMode": "contain",
