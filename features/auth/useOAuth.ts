@@ -3,7 +3,7 @@ import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { useLanguage } from '../../context/LanguageContext';
 import { api } from '../../lib/api';
@@ -16,9 +16,18 @@ const GOOGLE_WEB_CLIENT_ID = env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
 const GOOGLE_IOS_CLIENT_ID = env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '';
 const GOOGLE_ANDROID_CLIENT_ID = env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? '';
 
+export interface OAuthRegistrationInput {
+  birth_year: number;
+  consents: {
+    consent_type: string;
+    granted: boolean;
+    document_version?: string;
+  }[];
+}
+
 async function exchangeOAuthTokens(
   endpoint: string,
-  payload: Record<string, string | undefined>,
+  payload: Record<string, unknown>,
   locale: string,
   setTokens: (a: string, r: string) => Promise<void>,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -36,6 +45,7 @@ export function useGoogleLogin() {
   const { setTokens, setUser } = useAuthStore();
   const { langCode, setLangCode } = useLanguage();
   const queryClient = useQueryClient();
+  const registrationRef = useRef<OAuthRegistrationInput | null>(null);
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId: GOOGLE_WEB_CLIENT_ID,
@@ -45,10 +55,20 @@ export function useGoogleLogin() {
   });
 
   const mutation = useMutation({
-    mutationFn: (accessToken: string) =>
+    mutationFn: ({
+      accessToken,
+      registration,
+    }: {
+      accessToken: string;
+      registration: OAuthRegistrationInput | null;
+    }) =>
       exchangeOAuthTokens(
         '/auth/google',
-        { access_token: accessToken },
+        {
+          access_token: accessToken,
+          mode: registration ? 'register' : 'login',
+          ...registration,
+        },
         langCode,
         setTokens,
         setUser,
@@ -63,12 +83,32 @@ export function useGoogleLogin() {
   useEffect(() => {
     if (response?.type === 'success') {
       const accessToken = response.authentication?.accessToken;
-      if (accessToken) mutation.mutate(accessToken);
+      const registration = registrationRef.current;
+      registrationRef.current = null;
+      if (accessToken) mutation.mutate({ accessToken, registration });
+    } else if (response) {
+      registrationRef.current = null;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [response]);
 
-  return { request, promptAsync, isPending: mutation.isPending, isError: mutation.isError };
+  const signIn = async (registration?: OAuthRegistrationInput) => {
+    registrationRef.current = registration ?? null;
+    try {
+      return await promptAsync();
+    } catch (error) {
+      registrationRef.current = null;
+      throw error;
+    }
+  };
+
+  return {
+    request,
+    signIn,
+    isPending: mutation.isPending,
+    isError: mutation.isError,
+    error: mutation.error,
+  };
 }
 
 export function useAppleLogin() {
@@ -77,7 +117,13 @@ export function useAppleLogin() {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: (credential: AppleAuthentication.AppleAuthenticationCredential) => {
+    mutationFn: ({
+      credential,
+      registration,
+    }: {
+      credential: AppleAuthentication.AppleAuthenticationCredential;
+      registration: OAuthRegistrationInput | null;
+    }) => {
       const fullName = credential.fullName
         ? [credential.fullName.givenName, credential.fullName.familyName]
             .filter(Boolean)
@@ -85,7 +131,12 @@ export function useAppleLogin() {
         : undefined;
       return exchangeOAuthTokens(
         '/auth/apple',
-        { identity_token: credential.identityToken ?? '', full_name: fullName },
+        {
+          identity_token: credential.identityToken ?? '',
+          full_name: fullName,
+          mode: registration ? 'register' : 'login',
+          ...registration,
+        },
         langCode,
         setTokens,
         setUser,
@@ -98,7 +149,7 @@ export function useAppleLogin() {
     },
   });
 
-  const signIn = async () => {
+  const signIn = async (registration?: OAuthRegistrationInput) => {
     try {
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
@@ -106,12 +157,17 @@ export function useAppleLogin() {
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
       });
-      mutation.mutate(credential);
+      mutation.mutate({ credential, registration: registration ?? null });
     } catch (e: unknown) {
       const err = e as { code?: string };
       if (err.code !== 'ERR_REQUEST_CANCELED') throw e;
     }
   };
 
-  return { signIn, isPending: mutation.isPending, isError: mutation.isError };
+  return {
+    signIn,
+    isPending: mutation.isPending,
+    isError: mutation.isError,
+    error: mutation.error,
+  };
 }

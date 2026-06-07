@@ -50,6 +50,11 @@ export default function LoginScreen() {
   const google = useGoogleLogin();
   const apple = useAppleLogin();
   const loginErrorCode = getApiErrorCode(login.error);
+  const googleErrorCode = getApiErrorCode(google.error);
+  const appleErrorCode = getApiErrorCode(apple.error);
+  const oauthAccountNotFound =
+    googleErrorCode === 'auth.oauth_account_not_found' ||
+    appleErrorCode === 'auth.oauth_account_not_found';
 
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
@@ -422,13 +427,13 @@ export default function LoginScreen() {
           ) : null}
           <GoogleSignInButton
             label={t.auth.continue_with_google}
-            onPress={() => google.promptAsync()}
+            onPress={() => google.signIn()}
             disabled={!google.request || google.isPending}
             loading={google.isPending}
           />
           {(google.isError || apple.isError) ? (
             <Text style={{ marginTop: 10, fontSize: 12, color: colors.danger, textAlign: 'center' }}>
-              {t.common.error}
+              {oauthAccountNotFound ? t.auth.dont_have_account : t.common.error}
             </Text>
           ) : null}
         </View>

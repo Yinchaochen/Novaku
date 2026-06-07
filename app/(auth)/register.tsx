@@ -22,7 +22,11 @@ import { z } from 'zod/v4';
 import { DatePicker } from '../../components/datetime/DatePicker';
 import { useLanguage } from '../../context/LanguageContext';
 import { getApiErrorCode, useRegister } from '../../features/auth/useAuth';
-import { useAppleLogin, useGoogleLogin } from '../../features/auth/useOAuth';
+import {
+  OAuthRegistrationInput,
+  useAppleLogin,
+  useGoogleLogin,
+} from '../../features/auth/useOAuth';
 import { tap } from '../../lib/haptics';
 import { colors } from '../../theme/tokens';
 import { GoogleSignInButton } from '../../components/GoogleSignInButton';
@@ -75,19 +79,40 @@ export default function RegisterScreen() {
     return Math.max(years, 0);
   }, [birthDate]);
   const isMinor = age !== null && age < MIN_AGE;
-  const birthYear = birthDate?.getFullYear() ?? null;
+  const buildConsents = () => [
+    { consent_type: 'tos', granted: true, document_version: CONSENT_DOCUMENT_VERSION },
+    { consent_type: 'privacy_policy', granted: true, document_version: CONSENT_DOCUMENT_VERSION },
+    {
+      consent_type: 'marketing_email',
+      granted: acceptMarketing,
+      document_version: CONSENT_DOCUMENT_VERSION,
+    },
+  ];
 
   // OAuth users still register a fresh account if their email is new — so we
   // require the same legal consent (ToS + Privacy + age) before letting them
   // hit Google / Apple. GDPR Art. 6(1)(b) needs an active acceptance.
-  const oauthReady = !!birthDate && acceptTos && acceptPrivacy && !isMinor;
-  const handleOAuth = (run: () => unknown) => {
-    if (!oauthReady) {
+  const handleOAuth = (run: (registration: OAuthRegistrationInput) => unknown) => {
+    if (!birthDate) {
       setConsentError(true);
+      Alert.alert(t.auth.create_account, t.auth.birth_year_hint);
+      return;
+    }
+    if (isMinor) {
+      setConsentError(true);
+      Alert.alert(t.auth.underage_title, t.auth.underage_body);
+      return;
+    }
+    if (!acceptTos || !acceptPrivacy) {
+      setConsentError(true);
+      Alert.alert(t.auth.create_account, t.auth.consent_required_hint);
       return;
     }
     setConsentError(false);
-    void run();
+    void run({
+      birth_year: birthDate.getFullYear(),
+      consents: buildConsents(),
+    });
   };
 
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
@@ -122,22 +147,12 @@ export default function RegisterScreen() {
     }
     setConsentError(false);
 
-    const consents = [
-      { consent_type: 'tos', granted: true, document_version: CONSENT_DOCUMENT_VERSION },
-      { consent_type: 'privacy_policy', granted: true, document_version: CONSENT_DOCUMENT_VERSION },
-      {
-        consent_type: 'marketing_email',
-        granted: acceptMarketing,
-        document_version: CONSENT_DOCUMENT_VERSION,
-      },
-    ];
-
     register.mutate(
       {
         ...data,
         locale: langCode,
         birth_year: birthDate.getFullYear(),
-        consents,
+        consents: buildConsents(),
       },
       { onSuccess: () => router.replace('/plaza') },
     );
@@ -425,7 +440,7 @@ export default function RegisterScreen() {
         ) : null}
 
         {/* OAuth — official Sign in with Apple button (Guideline 4) + full-width Google */}
-        <View style={{ marginTop: 24, opacity: oauthReady ? 1 : 0.5 }}>
+        <View style={{ marginTop: 24 }}>
           <Text style={{ fontSize: 13, color: colors.textMuted, marginBottom: 14, textAlign: 'center' }}>
             {t.auth.or_sign_up_with}
           </Text>
@@ -435,12 +450,12 @@ export default function RegisterScreen() {
               buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
               cornerRadius={28}
               style={{ width: '100%', height: 52, marginBottom: 12 }}
-              onPress={() => handleOAuth(() => apple.signIn())}
+              onPress={() => handleOAuth((registration) => apple.signIn(registration))}
             />
           ) : null}
           <GoogleSignInButton
             label={t.auth.continue_with_google}
-            onPress={() => handleOAuth(() => google.promptAsync())}
+            onPress={() => handleOAuth((registration) => google.signIn(registration))}
             disabled={!google.request || google.isPending}
             loading={google.isPending}
           />

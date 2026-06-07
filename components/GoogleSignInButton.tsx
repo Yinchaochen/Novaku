@@ -1,4 +1,4 @@
-import { ActivityIndicator, Pressable, Text } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { tap } from '../lib/haptics';
@@ -59,10 +59,8 @@ export function GoogleSignInButton({
           borderWidth: 1,
           borderColor: '#747775',
           backgroundColor: '#FFFFFF',
-          flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 12,
           opacity: disabled ? 0.5 : 1,
         },
         pressed && !disabled ? { transform: [{ scale: 0.98 }] } : null,
@@ -73,9 +71,18 @@ export function GoogleSignInButton({
       {loading ? (
         <ActivityIndicator size="small" color="#3c4043" />
       ) : (
-        <>
+        <View
+          pointerEvents="none"
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 12,
+          }}
+        >
           <GoogleGLogo size={18} />
           <Text
+            numberOfLines={1}
             style={{
               color: '#1f1f1f',
               fontSize: 15,
@@ -85,7 +92,7 @@ export function GoogleSignInButton({
           >
             {label}
           </Text>
-        </>
+        </View>
       )}
     </Pressable>
   );
