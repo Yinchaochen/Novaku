@@ -492,6 +492,8 @@ You agree not to:
 
 We may suspend or terminate accounts that violate this section. For serious violations — illegal content, child safety risks, or coordinated platform abuse — we may act immediately without prior notice.
 
+**Postervia has zero tolerance for objectionable content and abusive users.** When such content is reported to us, we remove it and may suspend or permanently remove the responsible user — normally within 24 hours of a valid report.
+
 ## Buddy posts and chats
 
 Postervia lets users meet each other in real life through buddy posts. We do not employ, vet, or supervise buddies. We do not verify identities beyond what is needed to create an account. **You meet other Postervia users entirely at your own risk.**
@@ -655,6 +657,8 @@ Du verpflichtest dich, Folgendes zu unterlassen:
 - Umgehung von Rate-Limits, Regionseinschränkungen, Altersprüfungen oder Moderationsentscheidungen.
 
 Wir können Konten sperren oder kündigen, die gegen diesen Abschnitt verstoßen. Bei schweren Verstößen — illegale Inhalte, Risiken für Minderjährige oder koordinierter Plattform-Missbrauch — können wir ohne Vorankündigung sofort handeln.
+
+**Postervia duldet keinerlei anstößige Inhalte oder missbräuchliche Nutzer (Null-Toleranz).** Wird uns solcher Inhalt gemeldet, entfernen wir ihn und können die verantwortlichen Nutzer sperren oder dauerhaft entfernen — in der Regel innerhalb von 24 Stunden nach einer berechtigten Meldung.
 
 ## Buddy-Posts und Chats
 
