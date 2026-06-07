@@ -54,7 +54,7 @@
     "consent_marketing_label": "Ich möchte Produkt-Updates per E-Mail erhalten (optional, jederzeit widerruflich).",
     "consent_required_hint": "Bitte akzeptiere die erforderlichen Einwilligungen, um fortzufahren.",
     "underage_title": "Registrierung nicht möglich",
-    "underage_body": "Postervia setzt ein Mindestalter von 13 Jahren voraus.",
+    "underage_body": "Postervia setzt ein Mindestalter von 16 Jahren voraus.",
     "minor_notice": "Du bist unter 16 — strengere Datenschutz-Standardeinstellungen werden angewendet.",
     "errors": {
       "email_taken": "Diese E-Mail ist bereits registriert. Bitte melde dich direkt an.",

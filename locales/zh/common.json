@@ -54,7 +54,7 @@
     "consent_marketing_label": "我希望收到产品更新邮件（可选，随时可退订）。",
     "consent_required_hint": "继续注册前请勾选必填的同意项。",
     "underage_title": "暂时无法注册",
-    "underage_body": "Postervia 目前要求年满 13 岁才能使用。",
+    "underage_body": "Postervia 目前要求年满 16 岁才能使用。",
     "minor_notice": "你未满 16 岁，部分功能将默认开启更严格的隐私保护。",
     "errors": {
       "email_taken": "这个邮箱已经注册过了，请直接登录。",

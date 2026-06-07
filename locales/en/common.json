@@ -54,7 +54,7 @@
     "consent_marketing_label": "Send me product updates by email (optional, unsubscribe anytime).",
     "consent_required_hint": "Please accept the required consents to continue.",
     "underage_title": "Unable to register",
-    "underage_body": "Postervia requires you to be at least 13 years old.",
+    "underage_body": "Postervia requires you to be at least 16 years old.",
     "minor_notice": "You are under 16 — stricter privacy defaults will be applied.",
     "errors": {
       "email_taken": "This email is already registered. Try logging in instead.",

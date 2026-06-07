@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useMemo, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
   ActivityIndicator,
@@ -19,7 +19,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod/v4';
 
-import { DatePicker } from '../../components/datetime/DatePicker';
+import { YearPicker } from '../../components/datetime/YearPicker';
 import { useLanguage } from '../../context/LanguageContext';
 import { getApiErrorCode, useRegister } from '../../features/auth/useAuth';
 import {
@@ -37,7 +37,7 @@ const CURRENT_YEAR = new Date().getFullYear();
 // own behalf. Some EU member states have lowered this to 13, but 16 is the
 // safe default and what the Privacy Policy / Terms of Use declare.
 const MIN_AGE = 16;
-const MIN_BIRTH_DATE = new Date(1900, 0, 1);
+const MIN_BIRTH_YEAR = 1900;
 
 // Yellow hero band — matches YumQuick reference (warm butter yellow). The
 // register page hero is intentionally lighter than the welcome's coral so
@@ -61,23 +61,17 @@ export default function RegisterScreen() {
   const apple = useAppleLogin();
   const registerErrorCode = getApiErrorCode(register.error);
 
-  const [birthDate, setBirthDate] = useState<Date | null>(null);
+  const [birthYear, setBirthYear] = useState<number | null>(null);
+  const [birthYearPickerOpen, setBirthYearPickerOpen] = useState(false);
+  const [birthYearError, setBirthYearError] = useState(false);
   const [acceptTos, setAcceptTos] = useState(false);
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
   const [acceptMarketing, setAcceptMarketing] = useState(false);
   const [consentError, setConsentError] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const pendingOAuthRef = useRef<((registration: OAuthRegistrationInput) => unknown) | null>(null);
 
-  const age = useMemo(() => {
-    if (!birthDate) return null;
-    const now = new Date();
-    let years = now.getFullYear() - birthDate.getFullYear();
-    const beforeBirthday =
-      now.getMonth() < birthDate.getMonth() ||
-      (now.getMonth() === birthDate.getMonth() && now.getDate() < birthDate.getDate());
-    if (beforeBirthday) years -= 1;
-    return Math.max(years, 0);
-  }, [birthDate]);
+  const age = birthYear === null ? null : CURRENT_YEAR - birthYear;
   const isMinor = age !== null && age < MIN_AGE;
   const buildConsents = () => [
     { consent_type: 'tos', granted: true, document_version: CONSENT_DOCUMENT_VERSION },
@@ -92,27 +86,39 @@ export default function RegisterScreen() {
   // OAuth users still register a fresh account if their email is new — so we
   // require the same legal consent (ToS + Privacy + age) before letting them
   // hit Google / Apple. GDPR Art. 6(1)(b) needs an active acceptance.
-  const handleOAuth = (run: (registration: OAuthRegistrationInput) => unknown) => {
-    if (!birthDate) {
-      setConsentError(true);
-      Alert.alert(t.auth.create_account, t.auth.birth_year_hint);
-      return;
-    }
-    if (isMinor) {
-      setConsentError(true);
+  const runOAuthRegistration = (
+    run: (registration: OAuthRegistrationInput) => unknown,
+    selectedBirthYear: number,
+  ) => {
+    if (CURRENT_YEAR - selectedBirthYear < MIN_AGE) {
+      setBirthYearError(true);
+      setConsentError(false);
       Alert.alert(t.auth.underage_title, t.auth.underage_body);
       return;
     }
     if (!acceptTos || !acceptPrivacy) {
       setConsentError(true);
+      setBirthYearError(false);
       Alert.alert(t.auth.create_account, t.auth.consent_required_hint);
       return;
     }
+    setBirthYearError(false);
     setConsentError(false);
     void run({
-      birth_year: birthDate.getFullYear(),
+      birth_year: selectedBirthYear,
       consents: buildConsents(),
     });
+  };
+
+  const handleOAuth = (run: (registration: OAuthRegistrationInput) => unknown) => {
+    if (birthYear === null) {
+      pendingOAuthRef.current = run;
+      setBirthYearError(true);
+      setConsentError(false);
+      setBirthYearPickerOpen(true);
+      return;
+    }
+    runOAuthRegistration(run, birthYear);
   };
 
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
@@ -121,37 +127,55 @@ export default function RegisterScreen() {
   });
 
   const canSubmit =
-    !!birthDate && !isMinor && acceptTos && acceptPrivacy && !register.isPending;
+    birthYear !== null && !isMinor && acceptTos && acceptPrivacy && !register.isPending;
 
-  const handleBirthDateChange = (date: Date | null) => {
-    if (!date) {
-      setBirthDate(null);
-      return;
-    }
-    setBirthDate(date);
-    const now = new Date();
-    let years = now.getFullYear() - date.getFullYear();
-    const beforeBirthday =
-      now.getMonth() < date.getMonth() ||
-      (now.getMonth() === date.getMonth() && now.getDate() < date.getDate());
-    if (beforeBirthday) years -= 1;
-    if (years < MIN_AGE) {
+  const handleBirthYearChange = (year: number) => {
+    setBirthYear(year);
+    setBirthYearError(false);
+
+    const pendingOAuth = pendingOAuthRef.current;
+    pendingOAuthRef.current = null;
+    if (pendingOAuth) {
+      setTimeout(() => runOAuthRegistration(pendingOAuth, year), 350);
+    } else if (CURRENT_YEAR - year < MIN_AGE) {
+      setBirthYearError(true);
       Alert.alert(t.auth.underage_title, t.auth.underage_body);
     }
   };
 
+  const handleBirthYearPickerOpenChange = (open: boolean) => {
+    setBirthYearPickerOpen(open);
+    if (!open && birthYear === null) {
+      pendingOAuthRef.current = null;
+    }
+  };
+
   const onSubmit = (data: FormData) => {
-    if (!birthDate || isMinor || !acceptTos || !acceptPrivacy) {
+    if (birthYear === null) {
+      setBirthYearError(true);
+      setConsentError(false);
+      setBirthYearPickerOpen(true);
+      return;
+    }
+    if (isMinor) {
+      setBirthYearError(true);
+      setConsentError(false);
+      Alert.alert(t.auth.underage_title, t.auth.underage_body);
+      return;
+    }
+    if (!acceptTos || !acceptPrivacy) {
+      setBirthYearError(false);
       setConsentError(true);
       return;
     }
+    setBirthYearError(false);
     setConsentError(false);
 
     register.mutate(
       {
         ...data,
         locale: langCode,
-        birth_year: birthDate.getFullYear(),
+        birth_year: birthYear,
         consents: buildConsents(),
       },
       { onSuccess: () => router.replace('/plaza') },
@@ -320,30 +344,41 @@ export default function RegisterScreen() {
           <Text style={{ marginTop: 4, fontSize: 12, color: colors.danger }}>{errors.email.message}</Text>
         ) : null}
 
-        {/* Date of birth — full date picker so users can pick year + month + day. */}
+        {/* Only the birth year is stored and sent for age verification. */}
         <Text style={[labelStyle, { marginTop: 18 }]}>{t.auth.birth_year_label}</Text>
-        <DatePicker
-          value={birthDate}
-          onChange={handleBirthDateChange}
+        <YearPicker
+          value={birthYear}
+          onChange={handleBirthYearChange}
           placeholder={t.auth.birth_year_placeholder}
-          minDate={MIN_BIRTH_DATE}
-          maxDate={new Date()}
+          minYear={MIN_BIRTH_YEAR}
+          maxYear={CURRENT_YEAR}
+          initialYear={CURRENT_YEAR - 18}
+          open={birthYearPickerOpen}
+          onOpenChange={handleBirthYearPickerOpenChange}
+          error={birthYearError && birthYear === null}
         />
-        <Text style={{ marginTop: 6, fontSize: 12, color: colors.textMuted, lineHeight: 17 }}>
-          {t.auth.birth_year_hint}
-        </Text>
-        {isMinor ? (
-          <View style={{
-            marginTop: 8,
-            backgroundColor: 'rgba(244, 124, 124, 0.10)',
+        <View
+          style={{
+            marginTop: 9,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 7,
             borderRadius: 12,
-            paddingHorizontal: 12,
+            backgroundColor: '#FFF0E9',
+            paddingHorizontal: 10,
             paddingVertical: 8,
-          }}>
-            <Text style={{ fontSize: 12, lineHeight: 17, color: colors.danger }}>{t.auth.minor_notice}</Text>
-          </View>
+          }}
+        >
+          <Ionicons name="shield-checkmark-outline" size={15} color={colors.brandCoral} />
+          <Text style={{ flex: 1, fontSize: 12, color: colors.textMuted, lineHeight: 17 }}>
+            {t.auth.birth_year_hint}
+          </Text>
+        </View>
+        {birthYearError && birthYear === null ? (
+          <Text style={{ marginTop: 6, fontSize: 12, color: colors.danger }}>
+            {t.auth.birth_year_placeholder}
+          </Text>
         ) : null}
-
         {/* GDPR consent rows — kept (legal requirement) but compact */}
         <View style={{ marginTop: 22, gap: 10 }}>
           <ConsentRow checked={acceptTos} onToggle={() => setAcceptTos((v) => !v)} required>
