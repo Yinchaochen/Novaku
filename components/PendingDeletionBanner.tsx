@@ -1,12 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useLanguage } from '../context/LanguageContext';
 import { useAccountStatus } from '../features/compliance/useCompliance';
 
 export function PendingDeletionBanner() {
   const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
   const { data } = useAccountStatus();
 
   if (!data?.pending_deletion_at) return null;
@@ -15,8 +17,8 @@ export function PendingDeletionBanner() {
   return (
     <Pressable
       onPress={() => router.push('/settings/data' as never)}
-      className="flex-row items-center gap-3 px-4 py-2.5"
-      style={{ backgroundColor: '#F47C7C' }}
+      className="flex-row items-center gap-3 px-4 pb-2.5"
+      style={{ backgroundColor: '#F47C7C', paddingTop: insets.top + 10 }}
     >
       <Ionicons name="alert-circle" size={18} color="#FFFFFF" />
       <View className="flex-1">
