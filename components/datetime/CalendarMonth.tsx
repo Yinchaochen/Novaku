@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -92,9 +93,23 @@ export function CalendarMonth({
         <Pressable
           onPress={() => setPickerOpen(true)}
           hitSlop={8}
-          className="px-3 py-1.5"
+          accessibilityRole="button"
+          accessibilityState={{ expanded: pickerOpen }}
+          style={({ pressed }) => [
+            styles.monthPickerTrigger,
+            pressed ? styles.monthPickerTriggerPressed : null,
+          ]}
         >
-          <Text className="text-[15px] font-semibold text-neutral-800">{monthLabel}</Text>
+          <Text
+            style={styles.monthPickerLabel}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {monthLabel}
+          </Text>
+          <View style={styles.monthPickerChevron}>
+            <Ionicons name="chevron-down" size={16} color="#C85C63" />
+          </View>
         </Pressable>
       </View>
 
@@ -193,5 +208,36 @@ const styles = StyleSheet.create({
   rangeDayBubble: {
     borderRadius: 16,
     backgroundColor: CORAL_LIGHT,
+  },
+  monthPickerTrigger: {
+    minHeight: 38,
+    maxWidth: '92%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: '#F7B9B8',
+    backgroundColor: '#FFF1EE',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  monthPickerTriggerPressed: {
+    opacity: 0.72,
+    transform: [{ scale: 0.98 }],
+  },
+  monthPickerLabel: {
+    flexShrink: 1,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#7A3337',
+  },
+  monthPickerChevron: {
+    width: 16,
+    height: 16,
+    flexShrink: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

@@ -11,6 +11,9 @@ export interface DatePickerProps {
   placeholder?: string;
   minDate?: Date;
   maxDate?: Date;
+  initialViewDate?: Date;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   /** Box height to align with surrounding inputs (defaults to 50). */
   height?: number;
 }
@@ -21,11 +24,22 @@ export function DatePicker({
   placeholder,
   minDate,
   maxDate,
+  initialViewDate,
+  open,
+  onOpenChange,
   height = 50,
 }: DatePickerProps) {
   const { t, langCode } = useLanguage();
-  const [open, setOpen] = useState(false);
-  const [viewMonth, setViewMonth] = useState(() => value ?? new Date());
+  const [internalOpen, setInternalOpen] = useState(false);
+  const [viewMonth, setViewMonth] = useState(() => value ?? initialViewDate ?? new Date());
+  const visible = open ?? internalOpen;
+
+  const setVisible = (next: boolean) => {
+    if (open === undefined) {
+      setInternalOpen(next);
+    }
+    onOpenChange?.(next);
+  };
 
   const label = useMemo(() => {
     if (!value) return null;
@@ -44,11 +58,12 @@ export function DatePicker({
     <>
       <Pressable
         onPress={() => {
-          setViewMonth(value ?? new Date());
-          setOpen(true);
+          setViewMonth(value ?? initialViewDate ?? new Date());
+          setVisible(true);
         }}
         className="flex-row items-center rounded-2xl bg-white px-4"
         style={{ height, borderWidth: 1, borderColor: '#E5E7EB' }}
+        accessibilityRole="button"
       >
         <Ionicons name="calendar-outline" size={18} color="#9CA3AF" />
         <Text
@@ -62,13 +77,13 @@ export function DatePicker({
       </Pressable>
 
       <Modal
-        visible={open}
+        visible={visible}
         transparent
         animationType="fade"
-        onRequestClose={() => setOpen(false)}
+        onRequestClose={() => setVisible(false)}
       >
         <Pressable
-          onPress={() => setOpen(false)}
+          onPress={() => setVisible(false)}
           className="flex-1 items-center justify-center bg-black/40 px-6"
         >
           <Pressable onPress={(e) => e.stopPropagation()} className="w-full max-w-[360px]">
@@ -78,14 +93,14 @@ export function DatePicker({
               selected={value}
               onSelect={(date) => {
                 onChange(date);
-                setOpen(false);
+                setVisible(false);
               }}
               minDate={minDate}
               maxDate={maxDate}
             />
             <View className="mt-3 flex-row gap-2">
               <Pressable
-                onPress={() => setOpen(false)}
+                onPress={() => setVisible(false)}
                 className="flex-1 items-center justify-center rounded-full bg-white py-3"
               >
                 <Text className="text-[14px] font-semibold text-neutral-600">

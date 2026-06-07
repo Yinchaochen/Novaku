@@ -30,10 +30,6 @@ export interface ScrollWheelProps<T extends string | number> {
   formatter?: (v: T) => string;
   /** Color used for the top/bottom fade. Defaults to white. */
   fadeColor?: string;
-  /** Background color for the selected row highlight. */
-  highlightColor?: string;
-  /** Border color for the selected row highlight. */
-  highlightBorderColor?: string;
 }
 
 export function ScrollWheel<T extends string | number>({
@@ -44,8 +40,6 @@ export function ScrollWheel<T extends string | number>({
   visibleCount = 5,
   formatter,
   fadeColor = '#FFFFFF',
-  highlightColor = 'rgba(244,124,124,0.10)',
-  highlightBorderColor = 'transparent',
 }: ScrollWheelProps<T>) {
   const listRef = useRef<FlatList<T>>(null);
   const isInteractingRef = useRef(false);
@@ -259,9 +253,7 @@ export function ScrollWheel<T extends string | number>({
           right: 6,
           height: itemHeight,
           borderRadius: itemHeight / 2,
-          backgroundColor: highlightColor,
-          borderWidth: 1.5,
-          borderColor: highlightBorderColor,
+          backgroundColor: 'rgba(244,124,124,0.10)',
         }}
       />
       <AnimatedFlatList
