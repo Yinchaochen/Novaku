@@ -22,7 +22,7 @@ import {
 } from '../features/auth/useAuth';
 import { useAuthStore } from '../store/authStore';
 
-type Step = 'location' | 'city' | 'persona';
+type Step = 'city' | 'persona';
 type Mode = 'required' | 'edit';
 
 type SelectedCity = {
@@ -62,7 +62,7 @@ export function OnboardingModal({
   const updateProfile = useUpdateProfile();
   const resolveCity = useResolveCityFromCoordinates();
 
-  const [step, setStep] = useState<Step>('location');
+  const [step, setStep] = useState<Step>('city');
   const [cityQuery, setCityQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState<SelectedCity | null>(null);
   const [selectedIntents, setSelectedIntents] = useState<OnboardingIntentTag[]>([]);
@@ -81,7 +81,7 @@ export function OnboardingModal({
       return;
     }
 
-    setStep(mode === 'edit' && user.onboarding_completed ? 'persona' : 'location');
+    setStep(mode === 'edit' && user.onboarding_completed ? 'persona' : 'city');
     setCityQuery(user.city ?? '');
     setSelectedCity(
       user.city
@@ -119,7 +119,6 @@ export function OnboardingModal({
       if (permission.status !== 'granted') {
         setLocationSource('manual');
         setFeedback(t.onboarding.location_denied);
-        setStep('city');
         return;
       }
 
@@ -142,14 +141,7 @@ export function OnboardingModal({
     } catch {
       setLocationSource('manual');
       setFeedback(t.onboarding.location_failed);
-      setStep('city');
     }
-  };
-
-  const handleManualCity = () => {
-    setLocationSource('manual');
-    setFeedback(null);
-    setStep('city');
   };
 
   const handleSelectCity = (city: SelectedCity) => {
@@ -189,10 +181,6 @@ export function OnboardingModal({
   const handleBack = () => {
     if (step === 'persona') {
       setStep('city');
-      return;
-    }
-    if (step === 'city') {
-      setStep('location');
     }
   };
 
@@ -212,11 +200,9 @@ export function OnboardingModal({
             <View className="flex-1">
               <Text className="text-2xl font-extrabold text-gray-900">{t.onboarding.title}</Text>
               <Text className="mt-1 text-sm text-gray-500">
-                {step === 'location'
-                  ? t.onboarding.location_step_title
-                  : step === 'city'
-                    ? t.onboarding.city_step_title
-                    : t.onboarding.persona_step_title}
+                {step === 'city'
+                  ? t.onboarding.city_step_title
+                  : t.onboarding.persona_step_title}
               </Text>
             </View>
             {canDismiss ? (
@@ -227,7 +213,7 @@ export function OnboardingModal({
           </View>
 
           <View className="mb-4 flex-row gap-2">
-            {(['location', 'city', 'persona'] as Step[]).map((item) => (
+            {(['city', 'persona'] as Step[]).map((item) => (
               <View
                 key={item}
                 className={`h-2 flex-1 rounded-full ${step === item ? 'bg-primary' : 'bg-gray-200'}`}
@@ -236,42 +222,6 @@ export function OnboardingModal({
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            {step === 'location' ? (
-              <View>
-                <Text className="mb-2 text-base font-semibold text-gray-900">
-                  {t.onboarding.location_prompt}
-                </Text>
-                <Text className="mb-5 text-sm leading-6 text-gray-500">
-                  {t.onboarding.location_hint}
-                </Text>
-
-                <View className="gap-3">
-                  <Pressable
-                    onPress={handleUseLocation}
-                    disabled={isBusy}
-                    className="rounded-3xl bg-primary px-5 py-4"
-                  >
-                    {resolveCity.isPending ? (
-                      <ActivityIndicator color="#fff" />
-                    ) : (
-                      <Text className="text-center text-base font-bold text-white">
-                        {t.onboarding.location_allow}
-                      </Text>
-                    )}
-                  </Pressable>
-                  <Pressable
-                    onPress={handleManualCity}
-                    disabled={isBusy}
-                    className="rounded-3xl bg-primary/10 px-5 py-4"
-                  >
-                    <Text className="text-center text-base font-bold text-primary">
-                      {t.onboarding.location_manual}
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
-            ) : null}
-
             {step === 'city' ? (
               <View>
                 <Text className="mb-2 text-base font-semibold text-gray-900">
@@ -292,6 +242,21 @@ export function OnboardingModal({
                   placeholder={t.onboarding.city_search_placeholder}
                   className="rounded-3xl border border-gray-200 bg-gray-50 px-4 py-3 text-base text-gray-900"
                 />
+
+                <Pressable
+                  onPress={handleUseLocation}
+                  disabled={isBusy}
+                  className="mt-3 flex-row items-center justify-center rounded-3xl bg-primary/10 px-5 py-3.5"
+                  accessibilityLabel={t.onboarding.location_allow}
+                >
+                  {resolveCity.isPending ? (
+                    <ActivityIndicator color="#FF9F6E" />
+                  ) : (
+                    <Text className="text-center text-base font-bold text-primary">
+                      {`📍  ${t.onboarding.location_allow}`}
+                    </Text>
+                  )}
+                </Pressable>
 
                 <View className="mt-4 gap-2">
                   {citySuggestions.isLoading ? (
@@ -324,14 +289,11 @@ export function OnboardingModal({
                   ) : null}
                 </View>
 
-                <View className="mt-5 flex-row gap-3">
-                  <Pressable onPress={handleBack} className="flex-1 rounded-3xl bg-gray-100 px-4 py-3">
-                    <Text className="text-center text-base font-semibold text-gray-600">{t.common.back}</Text>
-                  </Pressable>
+                <View className="mt-5">
                   <Pressable
                     onPress={() => setStep('persona')}
                     disabled={!canContinueFromCity}
-                    className={`flex-1 rounded-3xl px-4 py-3 ${canContinueFromCity ? 'bg-primary' : 'bg-gray-200'}`}
+                    className={`rounded-3xl px-4 py-3 ${canContinueFromCity ? 'bg-primary' : 'bg-gray-200'}`}
                   >
                     <Text
                       className={`text-center text-base font-bold ${canContinueFromCity ? 'text-white' : 'text-gray-500'}`}

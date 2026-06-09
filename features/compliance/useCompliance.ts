@@ -138,3 +138,90 @@ export function useFetchDSRDownload() {
     },
   });
 }
+
+export type ConsentType =
+  | 'tos'
+  | 'privacy_policy'
+  | 'cookies_analytics'
+  | 'cookies_marketing'
+  | 'marketing_email'
+  | 'push_notifications'
+  | 'personalized_recommendations'
+  | 'ml_training'
+  | 'profile_indexing'
+  | 'location_sharing'
+  | 'ai_processing';
+
+export interface ConsentRecord {
+  id: string;
+  consent_type: ConsentType;
+  document_version: string;
+  granted: boolean;
+  granted_at: string;
+  revoked_at: string | null;
+  consent_method: string | null;
+}
+
+export function useConsents() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  return useQuery({
+    queryKey: ['compliance', 'consents'],
+    enabled: isAuthenticated,
+    queryFn: async () => {
+      const res = await api.get('/compliance/consents');
+      return (res.data.data?.items ?? []) as ConsentRecord[];
+    },
+  });
+}
+
+// Optimistic consent toggle: grant = POST batch, withdraw = DELETE by type.
+// Follows the project's onMutate/onError/onSettled convention so the Switch
+// flips instantly and rolls back on failure.
+export function useSetConsent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ consentType, granted }: { consentType: ConsentType; granted: boolean }) => {
+      if (granted) {
+        await api.post('/compliance/consents', {
+          items: [{ consent_type: consentType, granted: true }],
+          method: 'settings',
+        });
+      } else {
+        await api.delete(`/compliance/consents/${consentType}`);
+      }
+      return { consentType, granted };
+    },
+    onMutate: async ({ consentType, granted }) => {
+      await qc.cancelQueries({ queryKey: ['compliance', 'consents'] });
+      const previous = qc.getQueryData<ConsentRecord[]>(['compliance', 'consents']);
+      qc.setQueryData<ConsentRecord[]>(['compliance', 'consents'], (old) => {
+        const list = old ? [...old] : [];
+        const idx = list.findIndex((c) => c.consent_type === consentType);
+        const now = new Date().toISOString();
+        if (idx >= 0) {
+          list[idx] = { ...list[idx], granted, revoked_at: granted ? null : now };
+        } else {
+          list.push({
+            id: `optimistic-${consentType}`,
+            consent_type: consentType,
+            document_version: '1.0',
+            granted,
+            granted_at: now,
+            revoked_at: granted ? null : now,
+            consent_method: 'settings',
+          });
+        }
+        return list;
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) {
+        qc.setQueryData(['compliance', 'consents'], ctx.previous);
+      }
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ['compliance', 'consents'] });
+    },
+  });
+}

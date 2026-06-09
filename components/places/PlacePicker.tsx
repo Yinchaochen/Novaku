@@ -28,6 +28,7 @@ export interface PlacePickerProps {
   value: PickedPlace | null;
   onChange: (next: PickedPlace | null) => void;
   placeholder?: string;
+  outerInsets?: { top: number; bottom: number };
 }
 
 const BERLIN: { lat: number; lon: number } = { lat: 52.52, lon: 13.405 };
@@ -93,7 +94,7 @@ function buildLeafletHtml(initialLat: number, initialLon: number, zoom: number):
 </html>`;
 }
 
-export function PlacePicker({ value, onChange, placeholder }: PlacePickerProps) {
+export function PlacePicker({ value, onChange, placeholder, outerInsets }: PlacePickerProps) {
   const { t } = useLanguage();
   const user = useAuthStore((s) => s.user);
   const [open, setOpen] = useState(false);
@@ -204,6 +205,7 @@ export function PlacePicker({ value, onChange, placeholder }: PlacePickerProps) 
           onWebViewMessage={onWebViewMessage}
           onConfirm={confirm}
           webRef={webRef}
+          outerInsets={outerInsets}
         />
       </>
     );
@@ -248,6 +250,7 @@ export function PlacePicker({ value, onChange, placeholder }: PlacePickerProps) 
         onWebViewMessage={onWebViewMessage}
         onConfirm={confirm}
         webRef={webRef}
+        outerInsets={outerInsets}
       />
     </>
   );
@@ -266,6 +269,7 @@ interface ModalProps {
   onWebViewMessage: (e: WebViewMessageEvent) => void;
   onConfirm: () => void;
   webRef: React.RefObject<WebView | null>;
+  outerInsets?: { top: number; bottom: number };
 }
 
 function PlacePickerModal({
@@ -281,6 +285,7 @@ function PlacePickerModal({
   onWebViewMessage,
   onConfirm,
   webRef,
+  outerInsets,
 }: ModalProps) {
   const { t } = useLanguage();
   return (
@@ -294,7 +299,7 @@ function PlacePickerModal({
           Create Meetup modal (also fullScreen). Without explicit
           presentationStyle, this would default to pageSheet on iOS 26 and
           freeze the entire Social tab via the stuck-modal-scene bug. */}
-      <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+      <View className="flex-1 bg-white" style={{ paddingTop: outerInsets?.top ?? 0 }}>
         <KeyboardAvoidingView
           className="flex-1"
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -393,7 +398,7 @@ function PlacePickerModal({
           {/* Bottom action bar */}
           <View
             className="border-t border-neutral-100 bg-white px-4 pt-3"
-            style={{ paddingBottom: Platform.OS === 'ios' ? 24 : 16 }}
+            style={{ paddingBottom: outerInsets ? outerInsets.bottom + 8 : (Platform.OS === 'ios' ? 24 : 16) }}
           >
             {draft ? (
               <View className="mb-3 flex-row items-center rounded-2xl bg-[#FFF1F2] px-3 py-2.5">
@@ -424,7 +429,7 @@ function PlacePickerModal({
             </Pressable>
           </View>
         </KeyboardAvoidingView>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }

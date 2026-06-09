@@ -994,6 +994,8 @@ export interface UserProfile {
   viewer_is_self: boolean;
   relationship_state: 'none' | 'outgoing_pending' | 'incoming_pending' | 'friends';
   relationship_id?: string | null;
+  restricted?: boolean;
+  profile_visibility?: 'public' | 'followers' | 'friends' | 'only_me';
   tab_notes_public: boolean;
   tab_comments_public: boolean;
   tab_saves_public: boolean;

@@ -454,7 +454,13 @@ export default function UserProfileScreen() {
           </View>
         </View>
 
-        {visibleTabs.length > 0 ? (
+        {profileData.restricted ? (
+          <View className="mt-10 items-center px-8">
+            <Text className="text-[13px] text-neutral-400">
+              {t.settings.profile_private_notice}
+            </Text>
+          </View>
+        ) : visibleTabs.length > 0 ? (
           <View className="mt-6 border-t border-neutral-100">
             <View className="flex-row px-3 pt-3">
               {visibleTabs.map((tab) => {

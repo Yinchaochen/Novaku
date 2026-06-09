@@ -2258,6 +2258,7 @@ export default function SocialScreen() {
                     value={eventPlace}
                     onChange={setEventPlace}
                     placeholder={t.social.event_place}
+                    outerInsets={insets}
                   />
                 </View>
                 <View className="mt-3">

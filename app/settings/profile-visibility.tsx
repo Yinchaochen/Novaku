@@ -5,20 +5,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SettingsHeader } from '../../components/SettingsRow';
 import { useLanguage } from '../../context/LanguageContext';
-import { type FeedMode, useUpdateFeedMode } from '../../features/social/useSocial';
+import { type ProfileVisibility, useUpdateProfileVisibility } from '../../features/social/useSocial';
 import { useAuthStore } from '../../store/authStore';
 
-const OPTIONS: FeedMode[] = ['personalized', 'chronological', 'following'];
+const OPTIONS: ProfileVisibility[] = ['public', 'followers', 'friends', 'only_me'];
 
-export default function RecommendationsScreen() {
+export default function ProfileVisibilityScreen() {
   const { t } = useLanguage();
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
-  const update = useUpdateFeedMode();
+  const update = useUpdateProfileVisibility();
 
-  const current = (user?.feed_mode as FeedMode | undefined) ?? 'personalized';
+  const current = (user?.profile_visibility as ProfileVisibility | undefined) ?? 'public';
 
-  const handleSelect = async (next: FeedMode) => {
+  const handleSelect = async (next: ProfileVisibility) => {
     if (next === current || update.isPending) return;
     try {
       const updated = await update.mutateAsync(next);
@@ -30,28 +30,32 @@ export default function RecommendationsScreen() {
     }
   };
 
-  const labels: Record<FeedMode, { title: string; hint: string }> = {
-    personalized: {
-      title: t.settings.recommendations_mode_personalized,
-      hint: t.settings.recommendations_mode_personalized_hint,
+  const labels: Record<ProfileVisibility, { title: string; hint: string }> = {
+    public: {
+      title: t.settings.profile_visibility_public,
+      hint: t.settings.profile_visibility_public_hint,
     },
-    chronological: {
-      title: t.settings.recommendations_mode_chronological,
-      hint: t.settings.recommendations_mode_chronological_hint,
+    followers: {
+      title: t.settings.profile_visibility_followers,
+      hint: t.settings.profile_visibility_followers_hint,
     },
-    following: {
-      title: t.settings.recommendations_mode_following,
-      hint: t.settings.recommendations_mode_following_hint,
+    friends: {
+      title: t.settings.profile_visibility_friends,
+      hint: t.settings.profile_visibility_friends_hint,
+    },
+    only_me: {
+      title: t.settings.profile_visibility_only_me,
+      hint: t.settings.profile_visibility_only_me_hint,
     },
   };
 
   return (
     <SafeAreaView className="flex-1 bg-[#F4F5F8]" edges={['top']}>
-      <SettingsHeader title={t.settings.recommendations_title} onBack={() => router.back()} />
+      <SettingsHeader title={t.settings.profile_visibility_title} onBack={() => router.back()} />
 
       <ScrollView className="flex-1" contentContainerClassName="pb-12 pt-2">
         <Text className="px-5 pb-3 text-[12px] leading-5 text-neutral-500">
-          {t.settings.recommendations_explainer}
+          {t.settings.profile_visibility_explainer}
         </Text>
 
         <View className="mx-4 overflow-hidden rounded-[20px] bg-white">
@@ -89,19 +93,6 @@ export default function RecommendationsScreen() {
               </Pressable>
             );
           })}
-        </View>
-
-        {/* Algorithm Transparency Card */}
-        <View className="mx-4 mt-6 rounded-[24px] bg-white px-5 py-5">
-          <View className="mb-2 flex-row items-center gap-2">
-            <Ionicons name="sparkles-outline" size={18} color="#F47C7C" />
-            <Text className="text-[14px] font-bold text-[#3B2A22]">
-              {t.settings.recommendations_algorithm_transparency}
-            </Text>
-          </View>
-          <Text className="text-[12px] leading-5 text-neutral-600">
-            {t.settings.recommendations_algorithm_transparency_body}
-          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>

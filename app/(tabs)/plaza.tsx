@@ -641,6 +641,7 @@ export default function PlazaScreen() {
                 initialLatitude={user?.latitude ?? null}
                 initialLongitude={user?.longitude ?? null}
                 initialPlaceName={user?.city ?? null}
+                outerInsets={insets}
                 onConfirm={applyMapPickerSelection}
                 onCancel={closeLocationPicker}
               />

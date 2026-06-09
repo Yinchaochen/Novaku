@@ -29,7 +29,6 @@ import MapView, { Marker, PROVIDER_GOOGLE, type Region } from 'react-native-maps
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useLanguage } from '../context/LanguageContext';
 import { buildPlaceUrl } from '../lib/maps';
@@ -76,6 +75,11 @@ export interface LocationPickerProps {
   initialLatitude?: number | null;
   initialLongitude?: number | null;
   initialPlaceName?: string | null;
+  /** Safe-area insets captured in the OUTER screen scope (outside the Modal).
+   * iOS Modals live in a separate UIWindow whose insets don't reach
+   * SafeAreaView reliably, so the header/footer would render under the status
+   * bar / home indicator. Parent passes them in. See MOBILE_PLATFORM_GOTCHAS 坑#2. */
+  outerInsets?: { top: number; bottom: number };
   onConfirm: (place: CommunitySelectedPlaceInput) => void;
   onCancel: () => void;
 }
@@ -92,6 +96,7 @@ export function LocationPicker({
   initialLatitude,
   initialLongitude,
   initialPlaceName,
+  outerInsets,
   onConfirm,
   onCancel,
 }: LocationPickerProps) {
@@ -249,7 +254,7 @@ export function LocationPicker({
       </MapView>
 
       {/* Header (back) + search */}
-      <SafeAreaView edges={['top']} style={styles.headerLayer} pointerEvents="box-none">
+      <View style={[styles.headerLayer, { paddingTop: outerInsets?.top ?? 0 }]} pointerEvents="box-none">
         <View style={styles.headerRow}>
           <Pressable
             onPress={onCancel}
@@ -319,10 +324,10 @@ export function LocationPicker({
             }}
           />
         </View>
-      </SafeAreaView>
+      </View>
 
       {/* Selected card + Confirm */}
-      <SafeAreaView edges={['bottom']} style={styles.footerLayer} pointerEvents="box-none">
+      <View style={[styles.footerLayer, { paddingBottom: (outerInsets?.bottom ?? 0) + 8 }]} pointerEvents="box-none">
         {selected ? (
           <View style={styles.selectedCard}>
             <View style={{ flex: 1 }}>
@@ -364,7 +369,7 @@ export function LocationPicker({
             <Text style={styles.confirmText}>{t.common.confirm}</Text>
           </Pressable>
         </View>
-      </SafeAreaView>
+      </View>
     </View>
   );
 }

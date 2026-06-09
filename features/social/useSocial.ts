@@ -187,6 +187,41 @@ export function useUpdateSearchVisibility() {
   });
 }
 
+export type ProfileVisibility = 'public' | 'followers' | 'friends' | 'only_me';
+
+export function useUpdateProfileVisibility() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (visibility: ProfileVisibility) => {
+      const res = await api.patch('/auth/me/profile-visibility', {
+        profile_visibility: visibility,
+      });
+      return res.data.data;
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['auth', 'me'] });
+    },
+  });
+}
+
+export type FeedMode = 'personalized' | 'chronological' | 'following';
+
+export function useUpdateFeedMode() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (feedMode: FeedMode) => {
+      const res = await api.patch('/auth/me/feed-mode', {
+        feed_mode: feedMode,
+      });
+      return res.data.data;
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['auth', 'me'] });
+      await qc.invalidateQueries({ queryKey: ['community', 'feed'] });
+    },
+  });
+}
+
 export function useUserByDisplayId(displayId: string | null, enabled = true) {
   const user = useAuthStore((state) => state.user);
   const { langCode } = useLanguage();

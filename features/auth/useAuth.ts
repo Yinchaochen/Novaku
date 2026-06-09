@@ -60,6 +60,8 @@ export interface AuthUser {
   is_staff: boolean;
   is_vianter_plus: boolean;
   search_visibility: 'open' | 'limited' | 'hidden';
+  profile_visibility: 'public' | 'followers' | 'friends' | 'only_me';
+  feed_mode: 'personalized' | 'chronological' | 'following';
   gender: 'male' | 'female' | 'non_binary' | 'prefer_not_to_say' | null;
   buddy_publish_banned_at: string | null;
 }

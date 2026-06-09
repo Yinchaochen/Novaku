@@ -69,7 +69,7 @@ export default function SettingsHubScreen() {
             icon="eye-outline"
             label={t.settings.privacy_visibility}
             hint={t.settings.privacy_visibility_hint}
-            onPress={() => router.push('/(tabs)/profile' as never)}
+            onPress={() => router.push('/settings/profile-visibility' as never)}
           />
           <SettingsRow
             icon="search-outline"
