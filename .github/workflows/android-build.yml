@@ -152,6 +152,27 @@ jobs:
           echo "${GOOGLE_SERVICE_ACCOUNT_KEY_BASE64}" | base64 -d > ./google-service-account.json
           echo "Wrote google-service-account.json ($(wc -c < ./google-service-account.json) bytes)"
 
+      # ── 8b. 把 Maps key 注入 eas.json env（修复 Android 地图空白）──────
+      # `eas build --local` 不读 GitHub Actions 的 shell env（eas-cli #3248），
+      # 只读 eas.json 的 env 块 + EAS 服务器端环境变量。所以上面 env: 里的
+      # EXPO_PUBLIC_GOOGLE_MAPS_API_KEY 进不了 build → app.config.js 注入空 key
+      # → 原生 Maps 瓦片空白（OAuth client ID 因为本来就在 eas.json env 里所以没事）。
+      # 这里在 runner 上把 Secret 临时写进 eas.json 的 env（不提交、构建完即弃），
+      # 让 --local 构建真正拿到它。
+      - name: Inject Maps key into eas.json env (eas-cli #3248 workaround)
+        run: |
+          node -e '
+            const fs = require("fs");
+            const j = JSON.parse(fs.readFileSync("eas.json", "utf8"));
+            const k = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+            for (const p of ["development", "preview", "production"]) {
+              j.build[p].env = j.build[p].env || {};
+              j.build[p].env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY = k;
+            }
+            fs.writeFileSync("eas.json", JSON.stringify(j, null, 2) + "\n");
+          '
+          echo "Injected EXPO_PUBLIC_GOOGLE_MAPS_API_KEY into eas.json env (CI-only, length ${#EXPO_PUBLIC_GOOGLE_MAPS_API_KEY})"
+
       # ── 9. 跑 EAS Build (local mode) ─────────────────────────────────
       - name: Build Android (eas build --local)
         run: |
