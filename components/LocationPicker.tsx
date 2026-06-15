@@ -3,7 +3,8 @@
  * with a real interactive Google Map + autocomplete, modelled on the avatar
  * editors from Twitter / Instagram:
  *
- *  - Top: GooglePlacesAutocomplete search box (overlays the map)
+ *  - Top: search box → Places API (New) autocomplete, biased to the map
+ *    centre; tapping a suggestion fetches Place Details and drops a pin
  *  - Middle: MapView, animates + drops a Marker when a place is picked
  *  - Bottom: selected-place card + Confirm pill
  *
@@ -19,14 +20,15 @@ import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
+  Keyboard,
   Platform,
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE, type Region } from 'react-native-maps';
-import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -71,6 +73,30 @@ const DEFAULT_REGION: Region = {
 
 const ZOOMED_DELTA = 0.01;
 
+// Places API (New) endpoints. The old react-native-google-places-autocomplete
+// lib called the *legacy* Places API (places-backend.googleapis.com), which
+// Google froze to new projects in 2025-03 — our 2026 project (novaku-dev)
+// can't enable it, so autocomplete silently returned nothing. We hit
+// places.googleapis.com (Places API New) directly instead.
+const PLACES_AUTOCOMPLETE_URL = 'https://places.googleapis.com/v1/places:autocomplete';
+const PLACES_DETAILS_URL = 'https://places.googleapis.com/v1/places';
+// Bias suggestions to a 50km circle around the map centre — covers the Berlin
+// metro, our launch city, so a query like "Mr. Noodle Chen" surfaces the local
+// shop instead of a same-named place across the world.
+const PLACES_BIAS_RADIUS_M = 50000;
+
+interface Prediction {
+  placeId: string;
+  mainText: string;
+  secondaryText: string;
+}
+
+// Autocomplete + the follow-up Details lookup bill as one "session" when they
+// share a token; mint one per search, retire it after a pick.
+function newSessionToken(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
 export interface LocationPickerProps {
   initialLatitude?: number | null;
   initialLongitude?: number | null;
@@ -90,6 +116,9 @@ interface SelectedDraft {
   latitude: number;
   longitude: number;
   placeId: string | null;
+  rating?: number | null;
+  ratingCount?: number | null;
+  openNow?: boolean | null;
 }
 
 export function LocationPicker({
@@ -113,6 +142,7 @@ export function LocationPicker({
   const mapRef = useRef<MapView | null>(null);
   const [selected, setSelected] = useState<SelectedDraft | null>(null);
   const [locatingMe, setLocatingMe] = useState(false);
+  const poiCacheRef = useRef<Map<string, SelectedDraft>>(new Map());
 
   // Mount breadcrumb. Confirms React committed the component to the tree.
   // If body_evaluated fires but mounted doesn't, a child component threw
@@ -135,6 +165,22 @@ export function LocationPicker({
         }
       : DEFAULT_REGION;
 
+  const [query, setQuery] = useState('');
+  const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [searching, setSearching] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sessionTokenRef = useRef<string>(newSessionToken());
+  // Tracks the map's live centre so autocomplete biases to wherever the user
+  // is looking; seeded from initialRegion, updated on every pan/zoom settle.
+  const regionRef = useRef<Region>(initialRegion);
+
+  // Cancel any pending debounced search on unmount.
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
   const animateTo = (lat: number, lng: number) => {
     mapRef.current?.animateToRegion(
       {
@@ -150,6 +196,94 @@ export function LocationPicker({
   const handlePlacePick = (place: SelectedDraft) => {
     setSelected(place);
     animateTo(place.latitude, place.longitude);
+  };
+
+  const runAutocomplete = async (input: string) => {
+    setSearching(true);
+    try {
+      const res = await fetch(PLACES_AUTOCOMPLETE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': GOOGLE_MAPS_API_KEY,
+        },
+        body: JSON.stringify({
+          input,
+          languageCode: 'en',
+          sessionToken: sessionTokenRef.current,
+          locationBias: {
+            circle: {
+              center: {
+                latitude: regionRef.current.latitude,
+                longitude: regionRef.current.longitude,
+              },
+              radius: PLACES_BIAS_RADIUS_M,
+            },
+          },
+        }),
+      });
+      const json = await res.json();
+      const list: Prediction[] = (json.suggestions ?? [])
+        .map((s: { placePrediction?: any }) => s.placePrediction)
+        .filter(Boolean)
+        .map((p: any) => ({
+          placeId: p.placeId as string,
+          mainText: p.structuredFormat?.mainText?.text ?? p.text?.text ?? '',
+          secondaryText: p.structuredFormat?.secondaryText?.text ?? '',
+        }));
+      setPredictions(list);
+    } catch {
+      // Network/API failure: clear rather than show stale suggestions.
+      setPredictions([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleQueryChange = (text: string) => {
+    setQuery(text);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    const trimmed = text.trim();
+    if (trimmed.length < 2) {
+      setPredictions([]);
+      return;
+    }
+    debounceRef.current = setTimeout(() => runAutocomplete(trimmed), 250);
+  };
+
+  const handlePredictionPick = async (prediction: Prediction) => {
+    Keyboard.dismiss();
+    setPredictions([]);
+    setQuery(prediction.mainText);
+    try {
+      const res = await fetch(
+        `${PLACES_DETAILS_URL}/${prediction.placeId}?languageCode=en&sessionToken=${sessionTokenRef.current}`,
+        {
+          headers: {
+            'X-Goog-Api-Key': GOOGLE_MAPS_API_KEY,
+            'X-Goog-FieldMask': 'id,location,displayName,formattedAddress,rating,userRatingCount,currentOpeningHours.openNow',
+          },
+        },
+      );
+      const json = await res.json();
+      const loc = json.location as { latitude: number; longitude: number } | undefined;
+      if (!loc) return;
+      handlePlacePick({
+        name: json.displayName?.text || prediction.mainText,
+        subtitle: json.formattedAddress || prediction.secondaryText,
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        placeId: json.id || prediction.placeId,
+        rating: typeof json.rating === 'number' ? json.rating : null,
+        ratingCount: typeof json.userRatingCount === 'number' ? json.userRatingCount : null,
+        openNow: json.currentOpeningHours?.openNow ?? null,
+      });
+    } catch {
+      // Details lookup failed; box stays usable for a retry.
+    } finally {
+      // Session closes after a Details call — mint a fresh token for next time.
+      sessionTokenRef.current = newSessionToken();
+    }
   };
 
   const handleUseMyLocation = async () => {
@@ -210,6 +344,56 @@ export function LocationPicker({
     handlePlacePick({ name, subtitle, latitude, longitude, placeId: null });
   };
 
+  // Tapping a labelled POI (e.g. Brandenburger Tor) fires onPoiClick, NOT
+  // onPress — the POI consumes the normal tap. We drop the marker immediately,
+  // then enrich it with name / address / rating / hours from Places Details.
+  const handlePoiClick = async (event: {
+    nativeEvent: { placeId?: string; name?: string; coordinate: { latitude: number; longitude: number } };
+  }) => {
+    const { placeId, name, coordinate } = event.nativeEvent;
+    if (!placeId) {
+      handleMapPress(event);
+      return;
+    }
+    handlePlacePick({
+      name: name ?? '',
+      subtitle: '',
+      latitude: coordinate.latitude,
+      longitude: coordinate.longitude,
+      placeId,
+    });
+    const cached = poiCacheRef.current.get(placeId);
+    if (cached) {
+      setSelected(cached);
+      return;
+    }
+    try {
+      const res = await fetch(`${PLACES_DETAILS_URL}/${placeId}?languageCode=en`, {
+        headers: {
+          'X-Goog-Api-Key': GOOGLE_MAPS_API_KEY,
+          'X-Goog-FieldMask':
+            'id,location,displayName,formattedAddress,rating,userRatingCount,currentOpeningHours.openNow',
+        },
+      });
+      const json = await res.json();
+      const loc = json.location as { latitude: number; longitude: number } | undefined;
+      const draft: SelectedDraft = {
+        name: json.displayName?.text || name || '',
+        subtitle: json.formattedAddress || '',
+        latitude: loc?.latitude ?? coordinate.latitude,
+        longitude: loc?.longitude ?? coordinate.longitude,
+        placeId: json.id || placeId,
+        rating: typeof json.rating === 'number' ? json.rating : null,
+        ratingCount: typeof json.userRatingCount === 'number' ? json.userRatingCount : null,
+        openNow: json.currentOpeningHours?.openNow ?? null,
+      };
+      poiCacheRef.current.set(placeId, draft);
+      setSelected(draft);
+    } catch {
+      // Keep the immediate marker; the card just won't show rating / hours.
+    }
+  };
+
   const handleConfirm = () => {
     if (!selected) return;
     onConfirm({
@@ -229,6 +413,10 @@ export function LocationPicker({
         style={StyleSheet.absoluteFill}
         initialRegion={initialRegion}
         onPress={handleMapPress}
+        onPoiClick={handlePoiClick}
+        onRegionChangeComplete={(r) => {
+          regionRef.current = r;
+        }}
         onMapReady={() => {
           // Fires once native GMSMapView finishes its first layout. Presence
           // of this breadcrumb in Sentry proves Google Maps SDK booted. If
@@ -279,50 +467,60 @@ export function LocationPicker({
         </View>
 
         <View style={styles.searchWrapper}>
-          <GooglePlacesAutocomplete
-            placeholder={t.plaza.location_picker_search_placeholder}
-            fetchDetails
-            debounce={250}
-            minLength={2}
-            keyboardShouldPersistTaps="handled"
-            // Hide the powered-by-Google row (it duplicates the marker
-            // attribution that's already on the map). Required by ToS only
-            // if maps tiles aren't visible; we always show maps, so OK.
-            enablePoweredByContainer={false}
-            query={{
-              key: GOOGLE_MAPS_API_KEY,
-              language: 'en',
-            }}
-            onPress={(data, details) => {
-              if (!details || !details.geometry) return;
-              const { lat, lng } = details.geometry.location;
-              const name =
-                details.name ||
-                data.structured_formatting?.main_text ||
-                data.description ||
-                '';
-              const subtitle =
-                details.formatted_address ||
-                data.structured_formatting?.secondary_text ||
-                '';
-              handlePlacePick({
-                name,
-                subtitle,
-                latitude: lat,
-                longitude: lng,
-                placeId: details.place_id || data.place_id || null,
-              });
-            }}
-            styles={{
-              container: styles.autocompleteContainer,
-              textInputContainer: styles.autocompleteInputContainer,
-              textInput: styles.autocompleteInput,
-              listView: styles.autocompleteList,
-              row: styles.autocompleteRow,
-              separator: styles.autocompleteSeparator,
-              description: styles.autocompleteDescription,
-            }}
-          />
+          <View style={styles.searchInputRow}>
+            <Ionicons name="search" size={18} color="#999" style={{ marginLeft: 16 }} />
+            <TextInput
+              value={query}
+              onChangeText={handleQueryChange}
+              placeholder={t.plaza.location_picker_search_placeholder}
+              placeholderTextColor="#999"
+              style={styles.searchInput}
+              returnKeyType="search"
+              autoCorrect={false}
+            />
+            {searching ? (
+              <ActivityIndicator
+                size="small"
+                color={colors.brandCoral}
+                style={{ marginRight: 16 }}
+              />
+            ) : query.length > 0 ? (
+              <Pressable
+                onPress={() => {
+                  setQuery('');
+                  setPredictions([]);
+                }}
+                hitSlop={8}
+                style={{ marginRight: 14 }}
+              >
+                <Ionicons name="close-circle" size={18} color="#BBB" />
+              </Pressable>
+            ) : null}
+          </View>
+
+          {predictions.length > 0 ? (
+            <View style={styles.autocompleteList}>
+              {predictions.map((p, i) => (
+                <Pressable
+                  key={p.placeId}
+                  onPress={() => handlePredictionPick(p)}
+                  style={[
+                    styles.autocompleteRow,
+                    i < predictions.length - 1 && styles.autocompleteRowBorder,
+                  ]}
+                >
+                  <Text style={styles.predictionMain} numberOfLines={1}>
+                    {p.mainText}
+                  </Text>
+                  {p.secondaryText ? (
+                    <Text style={styles.predictionSecondary} numberOfLines={1}>
+                      {p.secondaryText}
+                    </Text>
+                  ) : null}
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
         </View>
       </View>
 
@@ -334,6 +532,30 @@ export function LocationPicker({
               <Text style={styles.selectedName} numberOfLines={1}>
                 {selected.name || initialPlaceName || ''}
               </Text>
+              {selected.rating != null ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginTop: 3 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#F5A623' }}>
+                    {'★'} {selected.rating.toFixed(1)}
+                  </Text>
+                  {selected.ratingCount != null ? (
+                    <Text style={{ fontSize: 12, color: '#888', marginLeft: 6 }}>
+                      {t.plaza.location_picker_reviews.replace('{count}', String(selected.ratingCount))}
+                    </Text>
+                  ) : null}
+                  {selected.openNow != null ? (
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '600',
+                        marginLeft: 8,
+                        color: selected.openNow ? '#2E9E5B' : '#D0463B',
+                      }}
+                    >
+                      {selected.openNow ? t.plaza.location_picker_open : t.plaza.location_picker_closed}
+                    </Text>
+                  ) : null}
+                </View>
+              ) : null}
               {selected.subtitle ? (
                 <Text style={styles.selectedSubtitle} numberOfLines={2}>
                   {selected.subtitle}
@@ -410,26 +632,24 @@ const styles = StyleSheet.create({
     // Pull the autocomplete dropdown above the rest of the screen.
     zIndex: 10,
   },
-  autocompleteContainer: {
-    flex: 0,
-  },
-  autocompleteInputContainer: {
-    backgroundColor: 'transparent',
-    borderTopWidth: 0,
-    borderBottomWidth: 0,
-  },
-  autocompleteInput: {
+  searchInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     height: 48,
     borderRadius: 24,
-    paddingHorizontal: 18,
     backgroundColor: '#FFFFFF',
-    fontSize: 16,
-    color: '#111',
     shadowColor: '#000',
     shadowOpacity: 0.12,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
+  },
+  searchInput: {
+    flex: 1,
+    height: 48,
+    paddingHorizontal: 10,
+    fontSize: 16,
+    color: '#111',
   },
   autocompleteList: {
     marginTop: 6,
@@ -447,13 +667,19 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: '#FFFFFF',
   },
-  autocompleteSeparator: {
-    height: 1,
-    backgroundColor: '#EFEFEF',
+  autocompleteRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#EFEFEF',
   },
-  autocompleteDescription: {
+  predictionMain: {
     fontSize: 15,
+    fontWeight: '600',
     color: '#1A1A1A',
+  },
+  predictionSecondary: {
+    marginTop: 2,
+    fontSize: 13,
+    color: '#7B7B7B',
   },
   footerLayer: {
     position: 'absolute',
