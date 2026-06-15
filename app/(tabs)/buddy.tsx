@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BuddyPostCard } from '../../components/buddy/BuddyPostCard';
@@ -79,7 +79,7 @@ export default function BuddyTabScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FFFAF2' }}>
+    <View testID="screen.buddy" style={{ flex: 1, backgroundColor: '#FFFAF2' }}>
       {/* Yellow header */}
       <View
         style={{
@@ -200,22 +200,18 @@ export default function BuddyTabScreen() {
           <View className="flex-1 items-center justify-center">
             <ActivityIndicator size="large" color={colors.brandCoral} />
           </View>
-        ) : items.length === 0 ? (
-          <View className="flex-1 items-center justify-center px-8">
-            <Ionicons name="paper-plane-outline" size={42} color="#CBD5E1" />
-            <Text className="mt-3 text-[15px] font-semibold text-neutral-700">
-              {t.buddy.feed_empty_title}
-            </Text>
-            <Text className="mt-1 text-center text-[13px] text-neutral-400">
-              {t.buddy.feed_empty_hint}
-            </Text>
-          </View>
         ) : (
           <FlatList
             data={items}
             keyExtractor={(p) => p.id}
             renderItem={({ item }) => <BuddyPostCard post={item} onPress={handlePress} />}
-            contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 100 }}
+            contentContainerStyle={{
+              paddingHorizontal: 16,
+              paddingTop: items.length === 0 ? 0 : 14,
+              paddingBottom: 100,
+              flexGrow: items.length === 0 ? 1 : undefined,
+              justifyContent: items.length === 0 ? 'center' : undefined,
+            }}
             onEndReached={() => {
               if (feed.hasNextPage && !feed.isFetchingNextPage) {
                 feed.fetchNextPage();
@@ -229,8 +225,25 @@ export default function BuddyTabScreen() {
                 </View>
               ) : null
             }
-            refreshing={feed.isRefetching}
-            onRefresh={() => feed.refetch()}
+            ListEmptyComponent={
+              <View className="items-center justify-center px-8">
+                <Ionicons name="paper-plane-outline" size={42} color="#CBD5E1" />
+                <Text className="mt-3 text-[15px] font-semibold text-neutral-700">
+                  {t.buddy.feed_empty_title}
+                </Text>
+                <Text className="mt-1 text-center text-[13px] text-neutral-400">
+                  {t.buddy.feed_empty_hint}
+                </Text>
+              </View>
+            }
+            refreshControl={
+              <RefreshControl
+                refreshing={feed.isRefetching}
+                onRefresh={() => feed.refetch()}
+                tintColor={colors.brandCoral}
+                colors={[colors.brandCoral]}
+              />
+            }
           />
         )}
       </View>
