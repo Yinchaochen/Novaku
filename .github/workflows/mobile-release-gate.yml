@@ -1,0 +1,86 @@
+name: Mobile Release Attestation Gate
+
+# Enforces the staged-rollout policy on operator-attested values. The crash-free,
+# incident, and observation numbers are read off Sentry / the incident tracker by
+# the operator and entered here; the gate does not yet pull them automatically.
+on:
+  workflow_dispatch:
+    inputs:
+      release_name:
+        description: App version or EAS update group being promoted
+        required: true
+        type: string
+      rollout_stage:
+        description: Target Google Play rollout percentage
+        required: true
+        type: choice
+        options:
+          - "10"
+          - "50"
+          - "100"
+      crash_free_sessions:
+        description: Sentry crash-free sessions percentage
+        required: true
+        type: string
+      open_p0_p1:
+        description: Number of unresolved P0/P1 incidents
+        required: true
+        default: "0"
+        type: string
+      observation_hours:
+        description: Hours observed at the previous rollout stage
+        required: true
+        type: string
+      backend_ci_url:
+        description: Successful backend CI run URL, including Schemathesis
+        required: true
+        type: string
+      maestro_run_url:
+        description: Successful Maestro Android run URL
+        required: true
+        type: string
+      sentry_release_url:
+        description: Sentry release health URL
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-release-gate-${{ inputs.release_name }}
+  cancel-in-progress: false
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      RELEASE_NAME: ${{ inputs.release_name }}
+      RELEASE_STAGE: ${{ inputs.rollout_stage }}
+      CRASH_FREE_SESSIONS: ${{ inputs.crash_free_sessions }}
+      OPEN_P0_P1: ${{ inputs.open_p0_p1 }}
+      OBSERVATION_HOURS: ${{ inputs.observation_hours }}
+      BACKEND_CI_URL: ${{ inputs.backend_ci_url }}
+      MAESTRO_RUN_URL: ${{ inputs.maestro_run_url }}
+      SENTRY_RELEASE_URL: ${{ inputs.sentry_release_url }}
+      RELEASE_GATE_REPORT: release-gate-report.md
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Evaluate rollout attestation
+        run: node scripts/validate-release-gate.mjs
+
+      - name: Upload gate evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-release-gate-${{ github.run_number }}
+          path: release-gate-report.md
+          retention-days: 90
+          if-no-files-found: warn
