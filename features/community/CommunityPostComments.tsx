@@ -8,6 +8,8 @@ import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
 import { useLanguage } from '../../context/LanguageContext';
 import { resolveMediaUrl } from '../../lib/media';
 import { useAuthStore } from '../../store/authStore';
+import { LinkText } from '../../components/LinkText';
+import { ActionSheet } from '../../components/ActionSheet';
 import { ReportSheet } from '../../components/ReportSheet';
 import {
   CommunityComment,
@@ -76,6 +78,7 @@ export function CommunityPostComments({ post, onReplyToComment, onEditComment }:
   const [translateOverrides, setTranslateOverrides] = useState<Record<string, boolean>>({});
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set());
   const [reportingCommentId, setReportingCommentId] = useState<string | null>(null);
+  const [menuTarget, setMenuTarget] = useState<{ comment: CommunityComment; own: boolean } | null>(null);
 
   const removeCommentFromCache = (commentId: string) => {
     qc.setQueriesData<CommunityComment[]>(
@@ -88,59 +91,20 @@ export function CommunityPostComments({ post, onReplyToComment, onEditComment }:
     );
   };
 
-  const handleOwnCommentMenu = (comment: CommunityComment) => {
-    Alert.alert(t.plaza.more_actions_title, undefined, [
-      {
-        text: t.comments.edit,
-        onPress: () => onEditComment?.(comment),
-      },
-      {
-        text: t.comments.delete,
-        style: 'destructive',
-        onPress: () => {
-          Alert.alert(t.comments.delete_confirm_title, t.comments.delete_confirm_body, [
-            { text: t.common.cancel, style: 'cancel' },
-            {
-              text: t.comments.delete,
-              style: 'destructive',
-              onPress: () => deleteComment.mutate(comment.id),
-            },
-          ]);
-        },
-      },
+  const confirmDeleteComment = (comment: CommunityComment) => {
+    Alert.alert(t.comments.delete_confirm_title, t.comments.delete_confirm_body, [
       { text: t.common.cancel, style: 'cancel' },
+      { text: t.comments.delete, style: 'destructive', onPress: () => deleteComment.mutate(comment.id) },
     ]);
   };
 
-  const handleReportOrHide = (comment: CommunityComment) => {
-    Alert.alert(t.plaza.more_actions_title, undefined, [
+  const handleOwnCommentMenu = (comment: CommunityComment) => setMenuTarget({ comment, own: true });
+
+  const confirmHideComment = (comment: CommunityComment) => {
+    Alert.alert(t.plaza.hide_comment_title, t.plaza.hide_comment_confirm_body, [
+      { text: t.common.cancel, style: 'cancel' },
       {
         text: t.plaza.hide_comment_action,
-        onPress: () => {
-          Alert.alert(t.plaza.hide_comment_title, t.plaza.hide_comment_confirm_body, [
-            { text: t.common.cancel, style: 'cancel' },
-            {
-              text: t.plaza.hide_comment_action,
-              style: 'destructive',
-              onPress: () => {
-                trackCommunityEvents([
-                  {
-                    event_name: 'plaza_report_comment',
-                    session_id: getCommunitySessionId(),
-                    surface: 'plaza_detail',
-                    post_id: post.id,
-                    comment_id: comment.id,
-                    metadata_json: { kind: 'hide' },
-                  },
-                ]);
-                removeCommentFromCache(comment.id);
-              },
-            },
-          ]);
-        },
-      },
-      {
-        text: t.plaza.report_comment_action,
         style: 'destructive',
         onPress: () => {
           trackCommunityEvents([
@@ -150,15 +114,30 @@ export function CommunityPostComments({ post, onReplyToComment, onEditComment }:
               surface: 'plaza_detail',
               post_id: post.id,
               comment_id: comment.id,
-              metadata_json: { kind: 'report' },
+              metadata_json: { kind: 'hide' },
             },
           ]);
-          setReportingCommentId(comment.id);
+          removeCommentFromCache(comment.id);
         },
       },
-      { text: t.common.cancel, style: 'cancel' },
     ]);
   };
+
+  const reportComment = (comment: CommunityComment) => {
+    trackCommunityEvents([
+      {
+        event_name: 'plaza_report_comment',
+        session_id: getCommunitySessionId(),
+        surface: 'plaza_detail',
+        post_id: post.id,
+        comment_id: comment.id,
+        metadata_json: { kind: 'report' },
+      },
+    ]);
+    setReportingCommentId(comment.id);
+  };
+
+  const handleReportOrHide = (comment: CommunityComment) => setMenuTarget({ comment, own: false });
 
   // Optimistic updates flip comment.viewer_marked_helpful in cache the moment
   // the tap fires, so we branch on the cached flag directly without waiting on
@@ -255,6 +234,43 @@ export function CommunityPostComments({ post, onReplyToComment, onEditComment }:
         contentType="comment"
         contentId={reportingCommentId}
         onClose={() => setReportingCommentId(null)}
+      />
+
+      <ActionSheet
+        visible={menuTarget !== null}
+        title={t.plaza.more_actions_title}
+        onClose={() => setMenuTarget(null)}
+        actions={
+          menuTarget
+            ? menuTarget.own
+              ? [
+                  {
+                    label: t.comments.edit,
+                    icon: 'create-outline',
+                    onPress: () => onEditComment?.(menuTarget.comment),
+                  },
+                  {
+                    label: t.comments.delete,
+                    icon: 'trash-outline',
+                    destructive: true,
+                    onPress: () => confirmDeleteComment(menuTarget.comment),
+                  },
+                ]
+              : [
+                  {
+                    label: t.plaza.hide_comment_action,
+                    icon: 'eye-off-outline',
+                    onPress: () => confirmHideComment(menuTarget.comment),
+                  },
+                  {
+                    label: t.plaza.report_comment_action,
+                    icon: 'flag-outline',
+                    destructive: true,
+                    onPress: () => reportComment(menuTarget.comment),
+                  },
+                ]
+            : []
+        }
       />
     </View>
   );
@@ -377,7 +393,7 @@ function CommentRow({
 
         <Text className="mt-1 text-[15px] leading-6 text-neutral-800">
           {replyPrefix}
-          {bodyToShow}
+          <LinkText text={bodyToShow} />
         </Text>
 
         <View className="mt-2 flex-row flex-wrap items-center gap-3">

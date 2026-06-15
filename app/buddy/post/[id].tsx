@@ -12,6 +12,7 @@ import {
   useChatByBuddyPost,
   useDeleteBuddyPost,
 } from '../../../features/buddyPosts/useBuddyPosts';
+import { LinkText } from '../../../components/LinkText';
 import { resolveMediaUrl } from '../../../lib/media';
 import { useSearchIntentStore } from '../../../store/searchIntentStore';
 
@@ -216,7 +217,7 @@ export default function BuddyPostDetailScreen() {
             </Text>
           </View>
           <Text className="text-[19px] font-extrabold text-black">{post.title}</Text>
-          <Text className="mt-2 text-[14px] leading-6 text-neutral-700">{post.body}</Text>
+          <LinkText className="mt-2 text-[14px] leading-6 text-neutral-700" text={post.body} />
         </View>
 
         {/* Time */}
@@ -281,6 +282,7 @@ export default function BuddyPostDetailScreen() {
           style={{ paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 24) : 24 }}
         >
           <Pressable
+            testID="buddy.contact"
             onPress={() => void handleContact()}
             disabled={startChat.isPending}
             className="items-center justify-center rounded-full bg-[#111827] py-3.5"

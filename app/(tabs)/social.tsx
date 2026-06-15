@@ -13,6 +13,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -22,6 +23,8 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppBackground } from '../../components/AppBackground';
+import { LinkPreviewCard } from '../../components/LinkPreviewCard';
+import { LinkText } from '../../components/LinkText';
 import { ChalkIcon } from '../../components/ChalkIcon';
 import { DateTimeRangePicker } from '../../components/datetime/DateTimeRangePicker';
 import { PlacePicker, type PickedPlace } from '../../components/places/PlacePicker';
@@ -29,6 +32,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useAuthStore } from '../../store/authStore';
 import { colors, shadows } from '../../theme/tokens';
 import { formatDisplayLocation } from '../../lib/displayLocation';
+import { firstUrl } from '../../lib/links';
 import { resolveMediaUrl } from '../../lib/media';
 import { reportToSentry } from '../../lib/sentry';
 import {
@@ -333,11 +337,18 @@ function MessageBubble({
           }}
         >
           {quotedPreview}
-          <Text style={{ color: '#374151', fontSize: 14, lineHeight: 22 }}>{message.body ?? ''}</Text>
+          <LinkText
+            style={{ color: '#374151', fontSize: 14, lineHeight: 22 }}
+            text={message.body ?? ''}
+            onLinkLongPress={(e) => {
+              if (!isMultiSelect) onLongPress(message, isMe, e.nativeEvent.pageY, e.nativeEvent.pageX);
+            }}
+          />
         </Pressable>
       );
     }
     // text
+    const previewUrl = firstUrl(message.body);
     return (
       <Pressable
         onLongPress={(e) => !isMultiSelect && onLongPress(message, isMe, e.nativeEvent.pageY, e.nativeEvent.pageX)}
@@ -359,9 +370,15 @@ function MessageBubble({
         }}
       >
         {quotedPreview}
-        <Text style={{ color: isMe ? '#FFFFFF' : '#1F2937', fontSize: 15, lineHeight: 22 }}>
-          {message.body ?? ''}
-        </Text>
+        {previewUrl ? <LinkPreviewCard url={previewUrl} isMe={isMe} /> : null}
+        <LinkText
+          style={{ color: isMe ? '#FFFFFF' : '#1F2937', fontSize: 15, lineHeight: 22 }}
+          text={message.body ?? ''}
+          linkStyle={{ color: isMe ? '#FFFFFF' : '#2F80ED', textDecorationLine: 'underline', fontWeight: '600' }}
+          onLinkLongPress={(e) => {
+            if (!isMultiSelect) onLongPress(message, isMe, e.nativeEvent.pageY, e.nativeEvent.pageX);
+          }}
+        />
         {message.meta?.edited || isFavorited ? (
           <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginTop: 3, gap: 4 }}>
             {isFavorited ? <Ionicons name="star" size={10} color={isMe ? 'rgba(255,235,59,0.9)' : '#F59E0B'} /> : null}
@@ -542,6 +559,13 @@ export default function SocialScreen() {
   const [highlightMessageId, setHighlightMessageId] = useState<string | null>(null);
   const messagesQuery = useChatMessages(activeConversationId, { atMessageId: scrollToMessageId });
   const notificationsQuery = useNotifications(true, 'social');
+
+  const handleRefresh = useCallback(() => {
+    void socialQuery.refetch();
+    void conversationsQuery.refetch();
+    void notificationsQuery.refetch();
+  }, [socialQuery, conversationsQuery, notificationsQuery]);
+
   const sendMessage = useSendMessage(activeConversationId ?? '');
   const markRead = useMarkRead();
   const uploadMedia = useUploadChatMedia(activeConversationId ?? '');
@@ -1155,7 +1179,23 @@ export default function SocialScreen() {
           </Text>
         ) : null}
 
-        <ScrollView className="mt-3 flex-1" keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 130 }}>
+        <ScrollView
+          className="mt-3 flex-1"
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: 130 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={
+                socialQuery.isRefetching ||
+                conversationsQuery.isRefetching ||
+                notificationsQuery.isRefetching
+              }
+              onRefresh={handleRefresh}
+              tintColor={colors.brandCoral}
+              colors={[colors.brandCoral]}
+            />
+          }
+        >
           {socialQuery.isLoading && !socialQuery.data ? (
             <View className="px-5 pt-8">
               <ActivityIndicator size="small" color={colors.brandCoral} />
@@ -1915,6 +1955,7 @@ export default function SocialScreen() {
                 }}
               >
                 <TextInput
+                  testID="chat.composer.input"
                   value={draftMessage}
                   onChangeText={setDraftMessage}
                   placeholder={

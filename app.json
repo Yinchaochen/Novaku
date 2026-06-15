@@ -16,8 +16,10 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "app.novaku.mobile",
+      "associatedDomains": ["applinks:postervia.app"],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
+        "LSApplicationQueriesSchemes": ["instagram-stories", "instagram"],
         "_comment_uiscene": "Build 28 (2026-05-25 IOS-LOGIN-106): explicit single-scene UIScene manifest. iOS 26 strictly enforces scene lifecycle (warning: 'UIScene lifecycle will soon be required. Failure to adopt will result in an assert'). Without UIApplicationSceneManifest, SpringBoardUI's SBCrossfadeView fails to find the RCTRootView in expected container during launch-storyboard crossfade -> frame not updated -> white screen.",
         "UIApplicationSceneManifest": {
           "UIApplicationSupportsMultipleScenes": false
@@ -30,11 +32,19 @@
         "backgroundColor": "#F67673"
       },
       "edgeToEdgeEnabled": true,
-      "package": "app.novaku.mobile"
+      "package": "app.novaku.mobile",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [{ "scheme": "https", "host": "postervia.app", "pathPrefix": "/p" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "bundler": "metro",
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/icon.png"
     },
     "plugins": [
       [
@@ -101,6 +111,13 @@
       "expo-apple-authentication",
       "expo-web-browser",
       "expo-font",
+      [
+        "react-native-share",
+        {
+          "ios": ["instagram-stories", "instagram"],
+          "android": ["com.instagram.android"]
+        }
+      ],
       [
         "react-native-maps",
         {

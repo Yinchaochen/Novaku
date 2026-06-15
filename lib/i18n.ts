@@ -186,6 +186,9 @@ export type Translations = {
     location_picker_title: string;
     location_picker_prompt: string;
     location_picker_hint: string;
+    location_picker_reviews: string;
+    location_picker_open: string;
+    location_picker_closed: string;
     location_picker_search_placeholder: string;
     location_picker_empty: string;
     composer_visibility_row: string;
@@ -248,6 +251,11 @@ export type Translations = {
     add_to_odyssey_success: string;
     add_to_odyssey_already_active: string;
     more_actions_title: string;
+    shared_post_unavailable: string;
+    shared_post_go_home: string;
+    share_to_story: string;
+    share_other: string;
+    share_link_copied: string;
     hide_post_confirm_body: string;
     post_reported_toast: string;
     hide_comment_title: string;

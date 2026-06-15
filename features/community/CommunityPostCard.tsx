@@ -1,12 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 
 import { colors, shadows } from '../../theme/tokens';
 import { useLanguage } from '../../context/LanguageContext';
 import { resolveMediaUrl } from '../../lib/media';
 import { useAuthStore } from '../../store/authStore';
+import { ActionSheet } from '../../components/ActionSheet';
 import { TranslatedText } from './TranslatedText';
 import {
   CommunityPost,
@@ -114,26 +116,19 @@ export function CommunityPostCard({ post, onPress }: Props) {
     }
   };
 
+  const [cardActionsVisible, setCardActionsVisible] = useState(false);
+
   // Card-level "..." menu: per-user hide so the post stops showing on this user's feed.
   // Own posts skip this entry — you can't hide yourself from yourself.
   const openCardActions = () => {
     if (isOwnPost) return;
-    Alert.alert(t.plaza.more_actions_title, undefined, [
-      {
-        text: t.plaza.hide_post,
-        style: 'destructive',
-        onPress: () => {
-          Alert.alert(t.plaza.hide_post, t.plaza.hide_post_confirm_body, [
-            { text: t.common.cancel, style: 'cancel' },
-            {
-              text: t.plaza.hide_post,
-              style: 'destructive',
-              onPress: () => hidePost.mutate(post.id),
-            },
-          ]);
-        },
-      },
+    setCardActionsVisible(true);
+  };
+
+  const confirmHidePost = () => {
+    Alert.alert(t.plaza.hide_post, t.plaza.hide_post_confirm_body, [
       { text: t.common.cancel, style: 'cancel' },
+      { text: t.plaza.hide_post, style: 'destructive', onPress: () => hidePost.mutate(post.id) },
     ]);
   };
 
@@ -266,6 +261,20 @@ export function CommunityPostCard({ post, onPress }: Props) {
           ) : null}
         </View>
       </View>
+
+      <ActionSheet
+        visible={cardActionsVisible}
+        title={t.plaza.more_actions_title}
+        onClose={() => setCardActionsVisible(false)}
+        actions={[
+          {
+            label: t.plaza.hide_post,
+            icon: 'eye-off-outline',
+            destructive: true,
+            onPress: confirmHidePost,
+          },
+        ]}
+      />
     </View>
   );
 }

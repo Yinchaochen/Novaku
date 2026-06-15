@@ -20,6 +20,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import ViewShot from 'react-native-view-shot';
 
 import { useLanguage } from '../../context/LanguageContext';
 import { formatDisplayLocation } from '../../lib/displayLocation';
@@ -27,6 +28,9 @@ import { normalizeMapUrl } from '../../lib/maps';
 import { resolveMediaUrl } from '../../lib/media';
 import { useAuthStore } from '../../store/authStore';
 import { useBlockUser } from '../../features/social/useSocial';
+import { ActionSheet } from '../../components/ActionSheet';
+import { StoryShareCard } from '../../components/StoryShareCard';
+import { shareToInstagramStory } from '../../lib/instagramStory';
 import { ReportSheet } from '../../components/ReportSheet';
 import { Toast, type ToastMessage } from '../../components/Toast';
 import { CommentComposerSheet, type CommentComposerInput } from './CommentComposerSheet';
@@ -222,6 +226,8 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
   const [editTarget, setEditTarget] = useState<{ commentId: string; initialBody: string } | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [reportSheetVisible, setReportSheetVisible] = useState(false);
+  const [moreActionsVisible, setMoreActionsVisible] = useState(false);
+  const [shareSheetVisible, setShareSheetVisible] = useState(false);
   const followUser = useFollowUser();
   const unfollowUser = useUnfollowUser();
   const editComment = useEditComment(seedPost?.id ?? '');
@@ -229,6 +235,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
   const detailKeyRef = useRef<string | null>(null);
   const hadDownstreamSignalRef = useRef(false);
   const scrollViewRef = useRef<ScrollView>(null);
+  const storyShotRef = useRef<ViewShot>(null);
   const mediaScrollRef = useRef<ScrollView>(null);
   const commentsSectionYRef = useRef(0);
   const scrollX = useRef(new Animated.Value(0)).current;
@@ -479,14 +486,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
 
   const handleOpenMoreActions = () => {
     if (!post) return;
-    Alert.alert(t.plaza.more_actions_title, undefined, [
-      { text: t.plaza.hide_post, onPress: handleHidePost },
-      { text: t.plaza.report_post, style: 'destructive' as const, onPress: handleReportPost },
-      ...(!canEditPost
-        ? [{ text: t.chat.menu_block, style: 'destructive' as const, onPress: handleBlockAuthor }]
-        : []),
-      { text: t.common.cancel, style: 'cancel' as const },
-    ]);
+    setMoreActionsVisible(true);
   };
 
   const handleOpenSource = (
@@ -523,6 +523,25 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
       await Share.share({ message });
     } catch {
       // Ignore share cancellation/errors here; this is a convenience action.
+    }
+  };
+
+  const handleShareToStory = async () => {
+    if (!post) return;
+    try {
+      const uri = await storyShotRef.current?.capture?.();
+      if (!uri) return;
+      const result = await shareToInstagramStory({
+        imageUri: uri,
+        linkUrl: `https://postervia.app/p/${post.id}`,
+        onLinkCopied: () =>
+          setToast({ id: Date.now(), tone: 'success', text: t.plaza.share_link_copied, durationMs: 3000 }),
+      });
+      if (result === 'failed') {
+        Alert.alert(t.common.error);
+      }
+    } catch {
+      Alert.alert(t.common.error);
     }
   };
 
@@ -686,7 +705,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
                   {t.plaza[`type_${post.post_type}`]}
                 </Text>
               </View>
-              <Pressable onPress={handleSharePost}>
+              <Pressable onPress={() => setShareSheetVisible(true)}>
                 <Ionicons name="share-social-outline" size={22} color="#111111" />
               </Pressable>
               {!canEditPost ? (
@@ -799,6 +818,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
                 translatedText={post.translated_body}
                 sourceLanguage={post.source_language}
                 textClassName="mt-4 text-[16px] leading-8 text-neutral-800"
+                linkify
               />
 
               {post.extracted_summary ? (
@@ -1063,6 +1083,48 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
         contentId={post?.id ?? null}
         onClose={() => setReportSheetVisible(false)}
       />
+
+      <ActionSheet
+        visible={moreActionsVisible}
+        title={t.plaza.more_actions_title}
+        onClose={() => setMoreActionsVisible(false)}
+        actions={[
+          { label: t.plaza.hide_post, icon: 'eye-off-outline', onPress: handleHidePost },
+          {
+            label: t.plaza.report_post,
+            icon: 'flag-outline',
+            destructive: true,
+            onPress: handleReportPost,
+          },
+          ...(!canEditPost
+            ? [
+                {
+                  label: t.chat.menu_block,
+                  icon: 'person-remove-outline' as const,
+                  destructive: true,
+                  onPress: handleBlockAuthor,
+                },
+              ]
+            : []),
+        ]}
+      />
+
+      <ActionSheet
+        visible={shareSheetVisible}
+        onClose={() => setShareSheetVisible(false)}
+        actions={[
+          { label: t.plaza.share_to_story, icon: 'logo-instagram', onPress: handleShareToStory },
+          { label: t.plaza.share_other, icon: 'share-social-outline', onPress: handleSharePost },
+        ]}
+      />
+
+      <View style={{ position: 'absolute', top: -10000, left: 0 }} pointerEvents="none">
+        {post ? (
+          <ViewShot ref={storyShotRef} options={{ format: 'png', quality: 1, result: 'tmpfile' }}>
+            <StoryShareCard post={post} langCode={langCode} />
+          </ViewShot>
+        ) : null}
+      </View>
     </Modal>
   );
 }

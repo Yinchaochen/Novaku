@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import { useLanguage } from '../../context/LanguageContext';
 import { findLanguage } from '../../lib/languages';
+import { LinkText } from '../../components/LinkText';
 
 interface Props {
   originalText?: string | null;
@@ -11,6 +12,7 @@ interface Props {
   textClassName?: string;
   textStyle?: TextStyle;
   numberOfLines?: number;
+  linkify?: boolean;
 }
 
 export function TranslatedText({
@@ -20,6 +22,7 @@ export function TranslatedText({
   textClassName,
   textStyle,
   numberOfLines,
+  linkify = false,
 }: Props) {
   const { t } = useLanguage();
   const [showOriginal, setShowOriginal] = useState(false);
@@ -32,9 +35,18 @@ export function TranslatedText({
 
   return (
     <View>
-      <Text className={textClassName} style={textStyle} numberOfLines={numberOfLines}>
-        {displayText}
-      </Text>
+      {linkify ? (
+        <LinkText
+          text={displayText}
+          className={textClassName}
+          style={textStyle}
+          numberOfLines={numberOfLines}
+        />
+      ) : (
+        <Text className={textClassName} style={textStyle} numberOfLines={numberOfLines}>
+          {displayText}
+        </Text>
+      )}
       {canToggle ? (
         <Text
           className="mt-1 text-[11px] font-semibold text-primary"
