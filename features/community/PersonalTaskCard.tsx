@@ -77,14 +77,14 @@ function LocationQuestCard({ task, t }: { task: PersonalOdyssey; t: ReturnType<t
             <TranslatedText
               originalText={task.title}
               translatedText={task.translated_title}
-              sourceLanguage={task.source_language}
+              sourceLanguage={task.title_source_language ?? task.source_language}
               textClassName="text-[17px] font-extrabold leading-6 text-gray-900"
             />
             {task.description ? (
               <TranslatedText
                 originalText={task.description}
                 translatedText={task.translated_description}
-                sourceLanguage={task.source_language}
+                sourceLanguage={task.description_source_language ?? task.source_language}
                 textClassName="mt-2 text-sm leading-6 text-gray-500"
               />
             ) : null}
@@ -219,14 +219,14 @@ function SocialEventCard({
             <TranslatedText
               originalText={task.title}
               translatedText={task.translated_title}
-              sourceLanguage={task.source_language}
+              sourceLanguage={task.title_source_language ?? task.source_language}
               textClassName="text-[17px] font-extrabold leading-6 text-gray-900"
             />
             {task.description ? (
               <TranslatedText
                 originalText={task.description}
                 translatedText={task.translated_description}
-                sourceLanguage={task.source_language}
+                sourceLanguage={task.description_source_language ?? task.source_language}
                 textClassName="mt-2 text-sm leading-6 text-gray-500"
               />
             ) : null}

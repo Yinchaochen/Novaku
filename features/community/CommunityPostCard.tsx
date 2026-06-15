@@ -178,7 +178,7 @@ export function CommunityPostCard({ post, onPress }: Props) {
             <TranslatedText
               originalText={post.body}
               translatedText={post.translated_body}
-              sourceLanguage={post.source_language}
+              sourceLanguage={post.body_source_language ?? post.source_language}
               numberOfLines={4}
               textStyle={{ color: colors.textMain, fontSize: 16, fontWeight: '700', lineHeight: 22 }}
             />
@@ -191,7 +191,7 @@ export function CommunityPostCard({ post, onPress }: Props) {
           <TranslatedText
             originalText={post.title}
             translatedText={post.translated_title}
-            sourceLanguage={post.source_language}
+            sourceLanguage={post.title_source_language ?? post.source_language}
             numberOfLines={2}
             textStyle={{
               fontSize: 14.5,

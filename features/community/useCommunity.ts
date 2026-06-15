@@ -44,6 +44,8 @@ export interface CommunityActionCandidate {
   next_verify_at?: string | null;
   metadata_json?: Record<string, unknown> | null;
   source_language: string;
+  title_source_language: string;
+  description_source_language?: string | null;
   translated_title?: string | null;
   translated_description?: string | null;
   is_translated: boolean;
@@ -138,6 +140,9 @@ export interface CommunityPost {
   odyssey_slug?: string | null;
   language: string;
   source_language: string;
+  title_source_language: string;
+  body_source_language: string;
+  extracted_summary_source_language?: string | null;
   source_url?: string | null;
   extracted_summary?: string | null;
   translated_title?: string | null;
@@ -172,6 +177,8 @@ export interface PersonalOdyssey {
   description?: string | null;
   metadata_json?: Record<string, unknown> | null;
   source_language: string;
+  title_source_language: string;
+  description_source_language?: string | null;
   translated_title?: string | null;
   translated_description?: string | null;
   is_translated: boolean;
@@ -261,19 +268,33 @@ export interface CommunityFeedPage {
   exhausted?: boolean;
 }
 
+type CommunityFeedUser = {
+  id?: string | null;
+  city?: string | null;
+  identity?: string | null;
+  intent_tags?: string[] | null;
+};
+
+export function communityFeedQueryKey(
+  user: CommunityFeedUser | null | undefined,
+  langCode: string,
+) {
+  return [
+    'community',
+    'feed',
+    user?.id,
+    user?.city,
+    user?.identity,
+    user?.intent_tags?.join('|') ?? '',
+    langCode,
+  ] as const;
+}
+
 export function useCommunityFeed() {
   const { langCode } = useLanguage();
   const user = useAuthStore((state) => state.user);
   return useInfiniteQuery({
-    queryKey: [
-      'community',
-      'feed',
-      user?.id,
-      user?.city,
-      user?.identity,
-      user?.intent_tags?.join('|') ?? '',
-      langCode,
-    ],
+    queryKey: communityFeedQueryKey(user, langCode),
     queryFn: async ({ pageParam }): Promise<CommunityFeedPage> => {
       const res = await api.get('/community/feed', {
         params: {
@@ -298,6 +319,7 @@ export function useCommunityFeed() {
 
 export function useRefillFeedSnapshot() {
   const qc = useQueryClient();
+  const { langCode } = useLanguage();
   const user = useAuthStore((state) => state.user);
   return useMutation({
     mutationFn: async () => {
@@ -313,8 +335,8 @@ export function useRefillFeedSnapshot() {
       };
     },
     onSuccess: (newPage) => {
-      qc.setQueriesData<InfiniteData<CommunityFeedPage>>(
-        { queryKey: ['community', 'feed'] },
+      qc.setQueryData<InfiniteData<CommunityFeedPage>>(
+        communityFeedQueryKey(user, langCode),
         (old) => {
           if (!old) return old;
           const seenIds = new Set(
@@ -396,6 +418,7 @@ export function useCreateCommunityPost() {
 
 export function useUpdatePostVisibility() {
   const qc = useQueryClient();
+  const { langCode } = useLanguage();
   return useMutation({
     mutationFn: async ({
       postId,
@@ -409,8 +432,8 @@ export function useUpdatePostVisibility() {
     },
     onSuccess: (data) => {
       // Update detail query so the open detail modal reflects the new visibility immediately.
-      qc.setQueriesData<CommunityPost>(
-        { queryKey: ['community', 'post', data.id] },
+      qc.setQueryData<CommunityPost>(
+        ['community', 'post', data.id, langCode],
         () => data,
       );
       // Patch every "my posts" cache entry so the Profile tabs split correctly.
@@ -606,6 +629,7 @@ export interface CreateCommentInput {
 
 export function useCreateCommunityComment(postId: string) {
   const qc = useQueryClient();
+  const { langCode } = useLanguage();
   return useMutation({
     mutationFn: async (input: string | CreateCommentInput) => {
       const payload = typeof input === 'string' ? { body: input } : input;
@@ -616,8 +640,8 @@ export function useCreateCommunityComment(postId: string) {
       // Top-level comment: prepend to comments cache. Reply: also handled below
       // by either invalidating replies cache or letting the consumer setQueryData.
       const isReply = Boolean(created.parent_comment_id);
-      qc.setQueriesData<CommunityComment[]>(
-        { queryKey: ['community', 'comments', postId] },
+      qc.setQueryData<CommunityComment[]>(
+        ['community', 'comments', postId, langCode],
         (old) => {
           if (!old) return old;
           if (isReply) return old;
@@ -625,16 +649,23 @@ export function useCreateCommunityComment(postId: string) {
         },
       );
       if (isReply) {
-        qc.setQueriesData<CommunityComment[]>(
-          { queryKey: ['community', 'comments', postId, 'replies', created.parent_comment_id] },
+        qc.setQueryData<CommunityComment[]>(
+          [
+            'community',
+            'comments',
+            postId,
+            'replies',
+            created.parent_comment_id,
+            langCode,
+          ],
           (old) => {
             if (!old) return [created];
             return [...old, created];
           },
         );
         // Bump reply_count on the parent comment in the top-level cache.
-        qc.setQueriesData<CommunityComment[]>(
-          { queryKey: ['community', 'comments', postId] },
+        qc.setQueryData<CommunityComment[]>(
+          ['community', 'comments', postId, langCode],
           (old) => {
             if (!old) return old;
             return old.map((c) =>
@@ -650,7 +681,7 @@ export function useCreateCommunityComment(postId: string) {
         ...post,
         comment_count: post.comment_count + 1,
       }));
-      qc.setQueriesData<CommunityPost>({ queryKey: ['community', 'post', postId] }, (old) => {
+      qc.setQueryData<CommunityPost>(['community', 'post', postId, langCode], (old) => {
         if (!old) return old;
         return { ...old, comment_count: old.comment_count + 1 };
       });
@@ -677,7 +708,26 @@ function patchCommentInCaches(
   postId: string,
   commentId: string,
   patch: (comment: CommunityComment) => CommunityComment,
+  langCode?: string,
 ) {
+  if (langCode) {
+    qc.setQueriesData<CommunityComment[]>(
+      {
+        predicate: (query) => {
+          const key = query.queryKey;
+          return (
+            key[0] === 'community' &&
+            key[1] === 'comments' &&
+            key[2] === postId &&
+            key[key.length - 1] === langCode
+          );
+        },
+      },
+      (old) => (old ? old.map((c) => (c.id === commentId ? patch(c) : c)) : old),
+    );
+    return;
+  }
+
   qc.setQueriesData<CommunityComment[]>(
     { queryKey: ['community', 'comments', postId] },
     (old) => (old ? old.map((c) => (c.id === commentId ? patch(c) : c)) : old),
@@ -691,13 +741,14 @@ function patchCommentInCaches(
 
 export function useEditComment(postId: string) {
   const qc = useQueryClient();
+  const { langCode } = useLanguage();
   return useMutation({
     mutationFn: async (input: { commentId: string; body: string }) => {
       const res = await api.patch(`/community/comments/${input.commentId}`, { body: input.body });
       return res.data.data as CommunityComment;
     },
     onSuccess: (updated) => {
-      patchCommentInCaches(qc, postId, updated.id, () => updated);
+      patchCommentInCaches(qc, postId, updated.id, () => updated, langCode);
     },
   });
 }

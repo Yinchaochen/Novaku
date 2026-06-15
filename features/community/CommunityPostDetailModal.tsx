@@ -809,14 +809,14 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
               <TranslatedText
                 originalText={post.title}
                 translatedText={post.translated_title}
-                sourceLanguage={post.source_language}
+                sourceLanguage={post.title_source_language ?? post.source_language}
                 textClassName="text-[21px] font-bold leading-8 text-black"
               />
 
               <TranslatedText
                 originalText={post.body}
                 translatedText={post.translated_body}
-                sourceLanguage={post.source_language}
+                sourceLanguage={post.body_source_language ?? post.source_language}
                 textClassName="mt-4 text-[16px] leading-8 text-neutral-800"
                 linkify
               />
@@ -826,7 +826,9 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
                   <TranslatedText
                     originalText={post.extracted_summary}
                     translatedText={post.translated_extracted_summary}
-                    sourceLanguage={post.source_language}
+                    sourceLanguage={
+                      post.extracted_summary_source_language ?? post.source_language
+                    }
                     textStyle={{ color: '#C81E3A', fontSize: 13, fontWeight: '600', lineHeight: 18 }}
                   />
                 </View>

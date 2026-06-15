@@ -2,13 +2,13 @@ import { Text, TextStyle, View } from 'react-native';
 import { useState } from 'react';
 
 import { useLanguage } from '../../context/LanguageContext';
-import { findLanguage } from '../../lib/languages';
+import { LANGUAGES } from '../../lib/languages';
 import { LinkText } from '../../components/LinkText';
 
 interface Props {
   originalText?: string | null;
   translatedText?: string | null;
-  sourceLanguage: string;
+  sourceLanguage?: string | null;
   textClassName?: string;
   textStyle?: TextStyle;
   numberOfLines?: number;
@@ -31,7 +31,9 @@ export function TranslatedText({
   const translated = translatedText?.trim() ? translatedText : null;
   const canToggle = Boolean(translated && translated !== original);
   const displayText = canToggle && !showOriginal ? translated : original;
-  const sourceLabel = findLanguage(sourceLanguage).name;
+  const sourceLabel = LANGUAGES.find(
+    (language) => language.code.toLowerCase() === sourceLanguage?.toLowerCase(),
+  )?.name;
 
   return (
     <View>
@@ -54,7 +56,9 @@ export function TranslatedText({
         >
           {showOriginal
             ? t.plaza.show_translation
-            : `${t.plaza.translated_from} ${sourceLabel} · ${t.plaza.show_original}`}
+            : sourceLabel
+              ? `${t.plaza.translated_from} ${sourceLabel} · ${t.plaza.show_original}`
+              : t.plaza.show_original}
         </Text>
       ) : null}
     </View>
