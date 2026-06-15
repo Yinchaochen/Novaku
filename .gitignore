@@ -37,6 +37,12 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# Maestro
+maestro-output/
+
+# Workspace knowledge graph is generated at F:/Yolu/graphify-out.
+/graphify-out/
+
 # generated native folders
 /ios
 /android

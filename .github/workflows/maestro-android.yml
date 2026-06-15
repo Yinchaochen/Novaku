@@ -1,0 +1,116 @@
+name: Maestro Android Smoke
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: maestro-android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      E2E_API_URL: ${{ secrets.E2E_API_URL }}
+      E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
+      E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ALLOW_FAILURE: "true"
+      CI: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Verify isolated E2E configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in E2E_API_URL E2E_TEST_EMAIL E2E_TEST_PASSWORD EXPO_TOKEN; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::$name secret is required"
+              exit 1
+            fi
+          done
+          host=$(printf '%s' "$E2E_API_URL" | awk -F/ '{print $3}')
+          case "$host" in
+            api.postervia.app|postervia.app|www.postervia.app|api.novaku.app|novaku.app)
+              echo "::error::Maestro destructive flows must not target production host: $host"
+              exit 1
+              ;;
+          esac
+
+      - name: Install app dependencies and build tools
+        run: |
+          npm ci --prefer-offline --no-audit --no-fund
+          npm install --global eas-cli
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Inject the E2E API URL into the local build profile
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const config = JSON.parse(fs.readFileSync('eas.json', 'utf8'));
+          config.build.e2e.env.EXPO_PUBLIC_API_URL = process.env.E2E_API_URL;
+          config.build.e2e.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY =
+            process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+          fs.writeFileSync('eas.json', `${JSON.stringify(config, null, 2)}\n`);
+          NODE
+
+      - name: Build E2E APK
+        run: >
+          eas build
+          --platform android
+          --profile e2e
+          --local
+          --non-interactive
+          --output ./postervia-e2e.apk
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' |
+            sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run Maestro smoke suite
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          script: |
+            adb install -r ./postervia-e2e.apk
+            maestro test \
+              --format junit \
+              --output maestro-output/results.xml \
+              -e TEST_EMAIL="$E2E_TEST_EMAIL" \
+              -e TEST_PASSWORD="$E2E_TEST_PASSWORD" \
+              -e RUN_SUFFIX="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+              .maestro
+
+      - name: Upload Maestro evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-android-${{ github.run_number }}
+          path: |
+            maestro-output/
+            /home/runner/.maestro/tests/
+          retention-days: 14
+          if-no-files-found: warn

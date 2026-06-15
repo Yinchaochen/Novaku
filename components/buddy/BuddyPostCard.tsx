@@ -106,6 +106,7 @@ export function BuddyPostCard({ post, onPress }: BuddyPostCardProps) {
 
   return (
     <Pressable
+      testID={post.is_owner ? 'buddy.post.owner' : 'buddy.post.contactable'}
       onPress={() => onPress(post)}
       className="mb-3 overflow-hidden rounded-3xl bg-white px-4 py-3"
       style={{ shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}

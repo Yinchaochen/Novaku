@@ -213,7 +213,7 @@ export default function RegisterScreen() {
   } as const;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FFFAF2' }}>
+    <View testID="auth.register.screen" style={{ flex: 1, backgroundColor: '#FFFAF2' }}>
       {/* Status bar text light over the saturated yellow hero. */}
       <StatusBar style="light" />
 
@@ -282,6 +282,7 @@ export default function RegisterScreen() {
           name="display_name"
           render={({ field: { onChange, value } }) => (
             <TextInput
+              testID="auth.register.displayName"
               style={inputBoxStyle}
               placeholder={t.auth.display_name}
               placeholderTextColor="#A89A92"
@@ -302,6 +303,7 @@ export default function RegisterScreen() {
             name="password"
             render={({ field: { onChange, value } }) => (
               <TextInput
+                testID="auth.register.password"
                 style={[inputBoxStyle, { paddingRight: 48 }]}
                 placeholder={t.auth.password}
                 placeholderTextColor="#A89A92"
@@ -342,6 +344,7 @@ export default function RegisterScreen() {
           name="email"
           render={({ field: { onChange, value } }) => (
             <TextInput
+              testID="auth.register.email"
               style={inputBoxStyle}
               placeholder="example@example.com"
               placeholderTextColor="#A89A92"
@@ -359,6 +362,7 @@ export default function RegisterScreen() {
         {/* The full date is selected locally; only the birth year is sent to the API. */}
         <Text style={[labelStyle, { marginTop: 18 }]}>{t.auth.birth_year_label}</Text>
         <DatePicker
+          testID="auth.register.birthDate"
           value={birthDate}
           onChange={handleBirthDateChange}
           placeholder={t.auth.birth_year_placeholder}
@@ -378,12 +382,22 @@ export default function RegisterScreen() {
         ) : null}
         {/* GDPR consent rows — kept (legal requirement) but compact */}
         <View style={{ marginTop: 22, gap: 10 }}>
-          <ConsentRow checked={acceptTos} onToggle={() => setAcceptTos((v) => !v)} required>
+          <ConsentRow
+            testID="auth.register.consent.tos"
+            checked={acceptTos}
+            onToggle={() => setAcceptTos((v) => !v)}
+            required
+          >
             {renderConsentLabel(t.auth.consent_tos_label, t.auth.consent_link_tos, () =>
               router.push('/legal/agb' as never),
             )}
           </ConsentRow>
-          <ConsentRow checked={acceptPrivacy} onToggle={() => setAcceptPrivacy((v) => !v)} required>
+          <ConsentRow
+            testID="auth.register.consent.privacy"
+            checked={acceptPrivacy}
+            onToggle={() => setAcceptPrivacy((v) => !v)}
+            required
+          >
             {renderConsentLabel(t.auth.consent_privacy_label, t.auth.consent_link_privacy, () =>
               router.push('/legal/datenschutz' as never),
             )}
@@ -426,6 +440,7 @@ export default function RegisterScreen() {
           }}
         >
           <Pressable
+            testID="auth.register.submit"
             onPress={() => {
               tap('medium');
               handleSubmit(onSubmit)();
@@ -548,18 +563,24 @@ function renderConsentLabel(template: string, linkLabel: string, onPress: () => 
 }
 
 function ConsentRow({
+  testID,
   checked,
   onToggle,
   required,
   children,
 }: {
+  testID?: string;
   checked: boolean;
   onToggle: () => void;
   required?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <Pressable onPress={onToggle} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+    <Pressable
+      testID={testID}
+      onPress={onToggle}
+      style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}
+    >
       <View
         style={{
           width: 20,

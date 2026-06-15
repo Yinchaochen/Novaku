@@ -1,0 +1,11 @@
+appId: app.novaku.mobile
+name: Log in with the E2E account
+tags:
+  - smoke
+---
+- runFlow:
+    file: ../subflows/login.yaml
+- assertVisible:
+    id: screen.plaza
+- assertVisible:
+    id: tab.plaza

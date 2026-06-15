@@ -152,6 +152,7 @@ export default function TabsLayout() {
           name="tasks"
           options={{
             title: t.tasks.title,
+            tabBarButtonTestID: 'tab.tasks',
             tabBarIcon: ({ focused }) => <FloatingIcon name="odyssey" focused={focused} />,
           }}
         />
@@ -159,6 +160,7 @@ export default function TabsLayout() {
           name="plaza"
           options={{
             title: t.plaza.title,
+            tabBarButtonTestID: 'tab.plaza',
             tabBarIcon: ({ focused }) => <FloatingIcon name="plaza" focused={focused} />,
           }}
         />
@@ -166,6 +168,7 @@ export default function TabsLayout() {
           name="social"
           options={{
             title: t.social.title,
+            tabBarButtonTestID: 'tab.social',
             tabBarIcon: ({ focused }) => <FloatingIcon name="social" focused={focused} />,
           }}
         />
@@ -173,6 +176,7 @@ export default function TabsLayout() {
           name="buddy"
           options={{
             title: t.buddy.title,
+            tabBarButtonTestID: 'tab.buddy',
             tabBarIcon: ({ focused }) => <FloatingIcon name="scribe" focused={focused} />,
           }}
         />
@@ -180,6 +184,7 @@ export default function TabsLayout() {
           name="profile"
           options={{
             title: t.profile.title,
+            tabBarButtonTestID: 'tab.profile',
             tabBarIcon: ({ focused }) => <FloatingIcon name="profile" focused={focused} />,
           }}
         />

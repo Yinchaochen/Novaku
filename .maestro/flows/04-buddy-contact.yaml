@@ -1,0 +1,26 @@
+appId: app.novaku.mobile
+name: Open a Buddy post and start a chat
+tags:
+  - smoke
+---
+- runFlow:
+    file: ../subflows/login.yaml
+- tapOn:
+    id: tab.buddy
+- extendedWaitUntil:
+    visible:
+      id: buddy.post.contactable
+    timeout: 30000
+- tapOn:
+    id: buddy.post.contactable
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: buddy.contact
+    timeout: 20000
+- tapOn:
+    id: buddy.contact
+- extendedWaitUntil:
+    visible:
+      id: chat.composer.input
+    timeout: 30000

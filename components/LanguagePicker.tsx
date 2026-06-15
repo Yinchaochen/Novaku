@@ -42,6 +42,7 @@ export function LanguagePicker({ currentCode, onSelect }: Props) {
   return (
     <>
       <TouchableOpacity
+        testID={`language.trigger.${current.code}`}
         onPress={() => setOpen(true)}
         className="flex-row items-center gap-1 px-3 py-1.5 rounded-xl bg-white/20 border border-white/30"
         activeOpacity={0.7}
@@ -75,6 +76,7 @@ export function LanguagePicker({ currentCode, onSelect }: Props) {
                 {t.language.select_title}
               </Text>
               <TextInput
+                testID="language.search"
                 value={query}
                 onChangeText={setQuery}
                 placeholder={t.language.search_placeholder}
@@ -94,6 +96,7 @@ export function LanguagePicker({ currentCode, onSelect }: Props) {
                 const isSelected = item.code === currentCode;
                 return (
                   <Pressable
+                    testID={`language.option.${item.code}`}
                     onPress={() => handleSelect(item)}
                     className="flex-row items-center justify-between px-5 py-3"
                     style={{

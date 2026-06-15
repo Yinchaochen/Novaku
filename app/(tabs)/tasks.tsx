@@ -132,7 +132,7 @@ export default function TasksScreen() {
   };
 
   return (
-    <AppBackground>
+    <AppBackground testID="screen.tasks">
       {/* Yellow band hero — matches the YumQuick-style consistent header
           shipped on auth pages and the Buddy tab. White title + LangPill on
           right; AppBackground cream takes over below the curved 32px corner. */}

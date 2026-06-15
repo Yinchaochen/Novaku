@@ -232,6 +232,7 @@ export function OnboardingModal({
                 </Text>
 
                 <TextInput
+                  testID="onboarding.city.input"
                   value={cityQuery}
                   onChangeText={(value) => {
                     setCityQuery(value);
@@ -269,6 +270,7 @@ export function OnboardingModal({
                       const active = selectedCity?.name === city.name && selectedCity?.subtitle === city.subtitle;
                       return (
                         <Pressable
+                          testID="onboarding.city.suggestion"
                           key={`${city.name}-${city.latitude}-${city.longitude}`}
                           onPress={() => handleSelectCity(city)}
                           className={`rounded-3xl border px-4 py-3 ${
@@ -291,6 +293,7 @@ export function OnboardingModal({
 
                 <View className="mt-5">
                   <Pressable
+                    testID="onboarding.city.continue"
                     onPress={() => setStep('persona')}
                     disabled={!canContinueFromCity}
                     className={`rounded-3xl px-4 py-3 ${canContinueFromCity ? 'bg-primary' : 'bg-gray-200'}`}
@@ -331,6 +334,7 @@ export function OnboardingModal({
                     const active = selectedIntents.includes(intent);
                     return (
                       <Pressable
+                        testID={`onboarding.intent.${intent}`}
                         key={intent}
                         onPress={() => toggleIntent(intent)}
                         className={`rounded-full px-4 py-3 ${
@@ -357,6 +361,7 @@ export function OnboardingModal({
                     const active = selectedStage === arrivalStage;
                     return (
                       <Pressable
+                        testID={`onboarding.stage.${arrivalStage}`}
                         key={arrivalStage}
                         onPress={() => setSelectedStage(arrivalStage)}
                         className={`rounded-3xl border px-4 py-4 ${
@@ -376,6 +381,7 @@ export function OnboardingModal({
                     <Text className="text-center text-base font-semibold text-gray-600">{t.common.back}</Text>
                   </Pressable>
                   <Pressable
+                    testID="onboarding.finish"
                     onPress={handleSubmit}
                     disabled={!canSubmit}
                     className={`flex-1 rounded-3xl px-4 py-3 ${canSubmit ? 'bg-primary' : 'bg-gray-200'}`}

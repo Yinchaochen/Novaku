@@ -1,0 +1,84 @@
+appId: app.novaku.mobile
+name: Register, complete onboarding, and open Tasks
+tags:
+  - smoke
+  - staging-destructive
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: auth.login.register
+    timeout: 30000
+- tapOn:
+    id: auth.login.register
+- extendedWaitUntil:
+    visible:
+      id: auth.register.displayName
+    timeout: 10000
+- tapOn:
+    id: auth.register.displayName
+- inputRandomPersonName
+- tapOn:
+    id: auth.register.password
+- inputText: ${TEST_PASSWORD}
+- tapOn:
+    id: auth.register.email
+- inputRandomEmail
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: auth.register.birthDate
+    direction: DOWN
+- tapOn:
+    id: auth.register.birthDate
+- tapOn:
+    id: datetime.day.1
+- scrollUntilVisible:
+    element:
+      id: auth.register.consent.tos
+    direction: DOWN
+- tapOn:
+    id: auth.register.consent.tos
+- tapOn:
+    id: auth.register.consent.privacy
+- scrollUntilVisible:
+    element:
+      id: auth.register.submit
+    direction: DOWN
+- tapOn:
+    id: auth.register.submit
+- extendedWaitUntil:
+    visible:
+      id: onboarding.city.input
+    timeout: 30000
+- tapOn:
+    id: onboarding.city.input
+- eraseText
+- inputText: Berlin
+- hideKeyboard
+- extendedWaitUntil:
+    visible:
+      id: onboarding.city.suggestion
+    timeout: 20000
+- tapOn:
+    id: onboarding.city.suggestion
+    index: 0
+- tapOn:
+    id: onboarding.city.continue
+- tapOn:
+    id: onboarding.intent.work
+- tapOn:
+    id: onboarding.stage.just_arrived
+- tapOn:
+    id: onboarding.finish
+- extendedWaitUntil:
+    visible:
+      id: screen.plaza
+    timeout: 30000
+- tapOn:
+    id: tab.tasks
+- extendedWaitUntil:
+    visible:
+      id: screen.tasks
+    timeout: 30000

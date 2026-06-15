@@ -1,0 +1,35 @@
+appId: app.novaku.mobile
+name: Switch language and restore English
+tags:
+  - smoke
+---
+- runFlow:
+    file: ../subflows/login.yaml
+- tapOn:
+    id: tab.profile
+- extendedWaitUntil:
+    visible:
+      id: language.trigger..*
+    timeout: 20000
+- tapOn:
+    id: language.trigger..*
+- tapOn:
+    id: language.search
+- inputText: Deutsch
+- tapOn:
+    id: language.option.de
+- extendedWaitUntil:
+    visible:
+      id: language.trigger.de
+    timeout: 20000
+- tapOn:
+    id: language.trigger.de
+- tapOn:
+    id: language.search
+- inputText: English
+- tapOn:
+    id: language.option.en
+- extendedWaitUntil:
+    visible:
+      id: language.trigger.en
+    timeout: 20000

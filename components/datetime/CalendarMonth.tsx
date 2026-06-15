@@ -151,6 +151,7 @@ export function CalendarMonth({
 
           return (
             <Pressable
+              testID={`datetime.day.${d.getDate()}`}
               key={d.toISOString()}
               onPress={() => !disabled && onSelect(d)}
               disabled={!!disabled}

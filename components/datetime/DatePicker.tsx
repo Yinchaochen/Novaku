@@ -6,6 +6,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { CalendarMonth } from './CalendarMonth';
 
 export interface DatePickerProps {
+  testID?: string;
   value: Date | null;
   onChange: (next: Date | null) => void;
   placeholder?: string;
@@ -19,6 +20,7 @@ export interface DatePickerProps {
 }
 
 export function DatePicker({
+  testID,
   value,
   onChange,
   placeholder,
@@ -57,6 +59,7 @@ export function DatePicker({
   return (
     <>
       <Pressable
+        testID={testID}
         onPress={() => {
           setViewMonth(value ?? initialViewDate ?? new Date());
           setVisible(true);

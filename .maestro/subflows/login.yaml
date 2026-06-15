@@ -1,0 +1,21 @@
+appId: app.novaku.mobile
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: auth.login.email
+    timeout: 30000
+- tapOn:
+    id: auth.login.email
+- inputText: ${TEST_EMAIL}
+- tapOn:
+    id: auth.login.password
+- inputText: ${TEST_PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: auth.login.submit
+- extendedWaitUntil:
+    visible:
+      id: screen.plaza
+    timeout: 30000

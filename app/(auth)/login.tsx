@@ -133,7 +133,7 @@ export default function LoginScreen() {
   } as const;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FFFAF2' }}>
+    <View testID="auth.login.screen" style={{ flex: 1, backgroundColor: '#FFFAF2' }}>
       <StatusBar style="light" />
 
       {/* Yellow hero band */}
@@ -217,6 +217,7 @@ export default function LoginScreen() {
           name="email"
           render={({ field: { onChange, value } }) => (
             <TextInput
+              testID="auth.login.email"
               style={inputBoxStyle}
               placeholder="example@example.com"
               placeholderTextColor="#A89A92"
@@ -239,6 +240,7 @@ export default function LoginScreen() {
             name="password"
             render={({ field: { onChange, value } }) => (
               <TextInput
+                testID="auth.login.password"
                 style={[inputBoxStyle, { paddingRight: 48 }]}
                 placeholder={t.auth.password}
                 placeholderTextColor="#A89A92"
@@ -326,6 +328,7 @@ export default function LoginScreen() {
           }}
         >
           <Pressable
+            testID="auth.login.submit"
             onPress={() => {
               tap('medium');
               handleSubmit(onSubmit)();
@@ -449,7 +452,11 @@ export default function LoginScreen() {
           }}
         >
           <Text style={{ fontSize: 13.5, color: colors.textMuted }}>{t.auth.dont_have_account}</Text>
-          <Pressable onPress={() => router.replace('/register')} hitSlop={6}>
+          <Pressable
+            testID="auth.login.register"
+            onPress={() => router.replace('/register')}
+            hitSlop={6}
+          >
             <Text style={{ fontSize: 13.5, color: colors.brandCoral, fontWeight: '700' }}>
               {' '}
               {t.auth.register}

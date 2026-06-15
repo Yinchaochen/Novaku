@@ -1,0 +1,27 @@
+appId: app.novaku.mobile
+name: Publish a Plaza post
+tags:
+  - smoke
+  - staging-destructive
+---
+- runFlow:
+    file: ../subflows/login.yaml
+- tapOn:
+    id: plaza.composer.open
+- extendedWaitUntil:
+    visible:
+      id: plaza.composer.title
+    timeout: 10000
+- tapOn:
+    id: plaza.composer.title
+- inputText: Maestro smoke ${RUN_SUFFIX}
+- tapOn:
+    id: plaza.composer.body
+- inputText: Automated staging post for the critical Plaza publishing journey.
+- hideKeyboard
+- tapOn:
+    id: plaza.composer.publish
+- extendedWaitUntil:
+    visible:
+      id: plaza.banner
+    timeout: 30000

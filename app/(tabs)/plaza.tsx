@@ -445,7 +445,7 @@ export default function PlazaScreen() {
 
   return (
     <AppBackground>
-    <SafeAreaView className="flex-1" edges={[]}>
+    <SafeAreaView testID="screen.plaza" className="flex-1" edges={[]}>
       {/* Yellow band hero — same YumQuick treatment as Tasks/Buddy/auth. */}
       <View
         style={{
@@ -481,6 +481,7 @@ export default function PlazaScreen() {
           style={{ marginHorizontal: 14, marginTop: 8 }}
         >
           <Text
+            testID="plaza.banner"
             style={{
               fontSize: 13,
               fontWeight: '600',
@@ -606,6 +607,7 @@ export default function PlazaScreen() {
             {t.plaza.publish_note}
           </Text>
           <Pressable
+            testID="plaza.composer.open"
             onPress={openComposerForCreate}
             accessibilityRole="button"
             accessibilityLabel={t.plaza.publish_note}
@@ -734,6 +736,7 @@ export default function PlazaScreen() {
                 name="title"
                 render={({ field: { onChange, value } }) => (
                   <TextInput
+                    testID="plaza.composer.title"
                     placeholder={t.plaza.title_placeholder}
                     placeholderTextColor="#B9B9B9"
                     value={value}
@@ -755,6 +758,7 @@ export default function PlazaScreen() {
                 name="body"
                 render={({ field: { onChange, value } }) => (
                   <TextInput
+                    testID="plaza.composer.body"
                     placeholder={t.plaza.body_placeholder}
                     placeholderTextColor="#C4C4C4"
                     value={value}
@@ -963,6 +967,7 @@ export default function PlazaScreen() {
                     </Text>
                   )}
                   <Pressable
+                    testID="plaza.composer.publish"
                     onPress={handleSubmit(onSubmit)}
                     disabled={isSubmitting || isUploadingMedia}
                     accessibilityRole="button"
