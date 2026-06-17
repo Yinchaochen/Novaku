@@ -61,7 +61,7 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 const POST_TYPES: FormData['post_type'][] = ['experience', 'question', 'guide', 'warning', 'recommendation'];
-const MAX_MEDIA_ITEMS = 4;
+const MAX_MEDIA_ITEMS = 9;
 const POST_BUTTON_WIDTH = 130;
 const POST_BUTTON_HEIGHT = 55;
 const POST_BUTTON_RADIUS = POST_BUTTON_HEIGHT / 2;
