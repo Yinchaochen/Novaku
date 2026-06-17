@@ -583,7 +583,7 @@ export default function ProfileScreen() {
     // its own Confirm-button spinner; on success we close both modals and the
     // profile picture refreshes via the `me` query invalidation in
     // useUploadAvatar.
-    const fileName = cropperAsset?.fileName ?? `avatar-${Date.now()}.jpg`;
+    const fileName = `avatar-${Date.now()}.jpg`;
     try {
       await uploadAvatar.mutateAsync({
         uri: croppedUri,
@@ -655,6 +655,8 @@ export default function ProfileScreen() {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: false,
         allowsMultipleSelection: false,
+        preferredAssetRepresentationMode:
+          ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
         quality: 0.92,
       });
 

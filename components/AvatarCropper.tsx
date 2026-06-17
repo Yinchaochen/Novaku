@@ -42,6 +42,7 @@ import { colors } from '../theme/tokens';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CROP_SIZE = Math.min(SCREEN_WIDTH - 64, 320);
+const AVATAR_OUTPUT_SIZE = 512;
 
 const MIN_SCALE = 1.0; // can't zoom out past cover-fit or empty pixels show
 const MAX_SCALE = 4.0; // generous enough to crop a face out of a group shot
@@ -88,6 +89,7 @@ export function AvatarCropper({
 }: AvatarCropperProps) {
   const { t } = useLanguage();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingError, setProcessingError] = useState(false);
   const safeTopInset = Math.max(topInset, 20);
   const safeBottomInset = Math.max(bottomInset, 0);
 
@@ -276,8 +278,9 @@ export function AvatarCropper({
 
   const handleConfirm = async () => {
     setIsProcessing(true);
+    setProcessingError(false);
 
-    let croppedUri = uri;
+    let croppedUri: string;
     try {
       // Convert screen-space transform back into original-image pixel coords.
       // totalScale = baseScale * userScale; crop area is centered on the
@@ -312,18 +315,27 @@ export function AvatarCropper({
               height: safeSize,
             },
           },
+          {
+            resize: {
+              width: AVATAR_OUTPUT_SIZE,
+              height: AVATAR_OUTPUT_SIZE,
+            },
+          },
         ],
-        { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG },
+        { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG },
       );
       croppedUri = result.uri;
     } catch (_err) {
-      // Local crop failed — fall through to upload raw so user isn't blocked.
+      setIsProcessing(false);
+      setProcessingError(true);
+      return;
     }
 
     try {
       await onConfirm(croppedUri);
     } catch (_err) {
       setIsProcessing(false);
+      setProcessingError(true);
     }
   };
 
@@ -333,6 +345,7 @@ export function AvatarCropper({
     currentX.current = 0;
     currentY.current = 0;
     currentScale.current = 1;
+    setProcessingError(false);
     translateX.setValue(0);
     translateY.setValue(0);
     scaleAnim.setValue(1);
@@ -416,6 +429,21 @@ export function AvatarCropper({
           }}
         />
       </View>
+
+      {processingError ? (
+        <Text
+          style={{
+            color: '#FFD7D0',
+            fontSize: 14,
+            fontWeight: '600',
+            paddingHorizontal: 24,
+            paddingTop: 8,
+            textAlign: 'center',
+          }}
+        >
+          {t.common.error}
+        </Text>
+      ) : null}
 
       {/* Bottom actions */}
       <View
