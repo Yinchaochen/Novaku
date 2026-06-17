@@ -161,6 +161,12 @@ export default function SettingsHubScreen() {
               hint={t.settings.admin_buddy_applications_hint}
               onPress={() => router.push('/admin/buddy-applications' as never)}
             />
+            <SettingsRow
+              icon="alert-circle-outline"
+              label={t.settings.admin_moderation}
+              hint={t.settings.admin_moderation_hint}
+              onPress={() => router.push('/admin/moderation' as never)}
+            />
           </SettingsSection>
         ) : null}
       </ScrollView>

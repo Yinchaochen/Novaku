@@ -943,6 +943,8 @@
     "section_admin": "Admin",
     "admin_buddy_applications": "Buddy applications",
     "admin_buddy_applications_hint": "Review pending Buddy applications.",
+    "admin_moderation": "Content moderation",
+    "admin_moderation_hint": "Handle user reports and auto-flagged content.",
     "section_labs": "Labs",
     "labs_entry": "Labs",
     "labs_entry_hint": "Experimental and legacy tools."
@@ -983,5 +985,23 @@
     "cookies_title": "Cookies & tracking",
     "pending_review_title": "Awaiting legal review",
     "pending_review_body": "This document is being reviewed by a German lawyer. Do not publish until the final version ships. For compliance questions, email dpo@novaku.app."
+  },
+  "admin": {
+    "moderation_title": "Content Moderation",
+    "moderation_tab_reports": "User Reports",
+    "moderation_tab_flagged": "Auto Flagged",
+    "moderation_report_type": "Type: {type}",
+    "moderation_reason": "Reason: {reason}",
+    "moderation_description": "Description",
+    "moderation_reporter": "Reporter: {reporter}",
+    "moderation_action_remove": "Remove Content",
+    "moderation_action_dismiss": "Dismiss Report",
+    "moderation_action_approve": "Approve",
+    "moderation_action_reject": "Reject",
+    "moderation_empty_reports": "No pending reports.",
+    "moderation_empty_flagged": "No auto-flagged content.",
+    "moderation_toast_resolved": "Resolved successfully.",
+    "moderation_confirm_remove_title": "Remove Content?",
+    "moderation_confirm_remove_body": "This will hide the content from all users."
   }
 }

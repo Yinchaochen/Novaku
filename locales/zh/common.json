@@ -943,6 +943,8 @@
     "section_admin": "管理员",
     "admin_buddy_applications": "搭子申请审核",
     "admin_buddy_applications_hint": "审核待处理的搭子申请。",
+    "admin_moderation": "内容审核",
+    "admin_moderation_hint": "处理用户举报和系统待审内容。",
     "section_labs": "实验室",
     "labs_entry": "实验室",
     "labs_entry_hint": "实验功能与即将下线的工具。"
@@ -983,5 +985,23 @@
     "cookies_title": "Cookie 与跟踪",
     "pending_review_title": "正在律师审核中",
     "pending_review_body": "这份文档正在由德国持牌律师审核。最终版本上线前请勿对外发布。如需联系合规事宜，请发邮件至 dpo@novaku.app。"
+  },
+  "admin": {
+    "moderation_title": "内容审核",
+    "moderation_tab_reports": "用户举报",
+    "moderation_tab_flagged": "机审待复核",
+    "moderation_report_type": "类型: {type}",
+    "moderation_reason": "原因: {reason}",
+    "moderation_description": "描述",
+    "moderation_reporter": "举报人: {reporter}",
+    "moderation_action_remove": "下架内容",
+    "moderation_action_dismiss": "驳回举报",
+    "moderation_action_approve": "审核通过",
+    "moderation_action_reject": "拒绝发布",
+    "moderation_empty_reports": "暂无待处理举报。",
+    "moderation_empty_flagged": "暂无系统待审内容。",
+    "moderation_toast_resolved": "处理成功。",
+    "moderation_confirm_remove_title": "下架内容？",
+    "moderation_confirm_remove_body": "这会向所有用户隐藏此内容。"
   }
 }

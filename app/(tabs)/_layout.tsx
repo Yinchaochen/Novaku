@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChalkIcon, ChalkIconName } from '../../components/ChalkIcon';
 import { OnboardingModal } from '../../components/OnboardingModal';
 import { useLanguage } from '../../context/LanguageContext';
+import { useMe } from '../../features/auth/useAuth';
 import { tap } from '../../lib/haptics';
 import { useAuthStore } from '../../store/authStore';
 import { colors, gradients, shadows } from '../../theme/tokens';
@@ -53,6 +54,10 @@ export default function TabsLayout() {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const user = useAuthStore((state) => state.user);
+  // Revalidate the cached user (is_staff, is_vianter_plus, …) from /auth/me on
+  // every authenticated mount, so server-side changes reflect without a full
+  // re-login. The Settings admin gate reads user.is_staff from this store.
+  useMe();
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
 
   useEffect(() => {

@@ -687,9 +687,29 @@ export type Translations = {
     section_admin: string;
     admin_buddy_applications: string;
     admin_buddy_applications_hint: string;
+    admin_moderation: string;
+    admin_moderation_hint: string;
     section_labs: string;
     labs_entry: string;
     labs_entry_hint: string;
+  };
+  admin: {
+    moderation_title: string;
+    moderation_tab_reports: string;
+    moderation_tab_flagged: string;
+    moderation_report_type: string;
+    moderation_reason: string;
+    moderation_description: string;
+    moderation_reporter: string;
+    moderation_action_remove: string;
+    moderation_action_dismiss: string;
+    moderation_action_approve: string;
+    moderation_action_reject: string;
+    moderation_empty_reports: string;
+    moderation_empty_flagged: string;
+    moderation_toast_resolved: string;
+    moderation_confirm_remove_title: string;
+    moderation_confirm_remove_body: string;
   };
   report: {
     sheet_title: string;
