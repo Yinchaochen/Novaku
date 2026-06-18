@@ -1630,8 +1630,14 @@ export default function SocialScreen() {
       </Modal>
 
       {/* ── Conversation modal ── */}
+      {/* visible is gated on !isCreateMeetupVisible so the chat modal yields the
+          screen while the Create-Meetup modal is up. iOS cannot present two
+          sibling fullScreen modals over the root at once — the second one comes
+          up blank — so they must be mutually exclusive. isConversationVisible
+          itself stays true, so the group-detail query stays enabled and the new
+          meetup is already in the list when the chat modal re-shows. */}
       <Modal
-        visible={isConversationVisible}
+        visible={isConversationVisible && !isCreateMeetupVisible}
         animationType="slide"
         presentationStyle="fullScreen"
         supportedOrientations={['portrait']}

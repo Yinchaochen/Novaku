@@ -271,6 +271,29 @@ env:
 
 ---
 
+### 坑 #6 — 两个 `fullScreen` Modal 不能同时挂在 root 上(第二个白屏)
+
+**症状**:
+- 群聊是个 `<Modal fullScreen>`,在里面点"创建 meetup"打开**另一个** `<Modal fullScreen>` → 第二个窗口**整片白屏**,什么都不渲染。
+- 必须先退出群聊窗口,创建窗口才显示出来 → 用户感知是"顺序不对"。
+
+**根因**:
+iOS 同一个 presenter(root view controller)一次只能 present 一个 modal。两个 `presentationStyle="fullScreen"` 的 Modal 作为 **sibling**(JSX 同级、各自 `visible`)同时 `visible=true` 时,RN 让 root 先 present 第一个,第二个 present 落在"already presenting"上 → 静默失败 → React 子树挂着但 native 没 present 出来 → 白屏。
+
+跟 [坑 #3](#坑-3--ios-26-uiscene-strict-modepagesheet-不能嵌在-fullscreen-父-modal-里) 不同:#3 是**嵌套**(pageSheet 嵌在 fullScreen 内)被 UIScene strict mode 卡死;#6 是**两个 sibling fullScreen 同时 present** 撞 root presenter 的单占用。
+
+**修复(`app/(tabs)/social.tsx` meetup,2026-06-18)**:
+让两个 Modal **互斥** —— 给被覆盖的那个的 `visible` 加 `&& !另一个Visible`:
+```tsx
+// 群聊 Modal 让位给创建 Modal,二者永不同时 present
+visible={isConversationVisible && !isCreateMeetupVisible}
+```
+关键:保留底层的"逻辑可见"state(这里 `isConversationVisible` 不变),这样它驱动的 query/状态不会因为切走而被禁用——顺带修好了"创建后列表不刷新"。
+
+**规则**:**任何时刻屏幕上最多一个 `fullScreen` Modal 被 present。** 要在一个全屏 Modal 上再开全屏界面,二选一:① `visible={A && !B}` 让底层让位(最小改动);② 把上层做成底层 Modal 内的内联 View 或路由屏,而非第二个 Modal。子选择器(picker)优先做成**顺序嵌套 present**(用户点一下才开、父 Modal 已 settle)或内联,别和父 Modal 同帧 present。
+
+---
+
 ## 3. iOS vs Android 关键差异速查表
 
 ### Modal
