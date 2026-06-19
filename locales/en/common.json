@@ -69,6 +69,26 @@
       "unknown": "Something went wrong"
     }
   },
+  "laneCreator": {
+    "title": "Make a Plan",
+    "entry_title": "Let AI build a task line for you",
+    "entry_body": "Tell it what you want to do — it researches and drafts sourced steps",
+    "quota_left": "{count} left this month",
+    "quota_none": "None left this month",
+    "header": "Custom task line",
+    "input_hint": "e.g. I'm going to Munich next month, help me plan the arrival steps",
+    "start": "Start",
+    "send": "Send",
+    "thinking": "Thinking…",
+    "researching": "Researching…",
+    "composing": "Building your plan…",
+    "done_title": "Your plan is ready 🎉",
+    "done_body": "The new tasks are now in your Odyssey",
+    "view_tasks": "View tasks",
+    "failed": "Something went wrong — please try again",
+    "quota_exceeded": "You've used all your free plans this month",
+    "abandon": "Discard"
+  },
   "tasks": {
     "title": "Odyssey",
     "available": "Available",

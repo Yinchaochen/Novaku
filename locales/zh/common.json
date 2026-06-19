@@ -69,6 +69,26 @@
       "unknown": "出错了"
     }
   },
+  "laneCreator": {
+    "title": "AI 任务管家",
+    "entry_title": "让 AI 帮你定制任务线",
+    "entry_body": "说说你想做的事,AI 帮你查资料、生成带来源的步骤",
+    "quota_left": "本月还剩 {count} 次",
+    "quota_none": "本月次数已用完",
+    "header": "定制任务线",
+    "input_hint": "比如:下个月去慕尼黑,帮我规划落地手续",
+    "start": "开始",
+    "send": "发送",
+    "thinking": "AI 正在思考…",
+    "researching": "正在查资料…",
+    "composing": "正在生成任务线…",
+    "done_title": "任务线已生成 🎉",
+    "done_body": "新任务已加进你的 Odyssey",
+    "view_tasks": "去看看",
+    "failed": "生成失败,请重试",
+    "quota_exceeded": "本月免费次数已用完",
+    "abandon": "放弃"
+  },
   "tasks": {
     "title": "Odyssey",
     "available": "可进行",

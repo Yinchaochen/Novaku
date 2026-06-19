@@ -20,6 +20,7 @@ import { usePersonalOdysseys } from '../../features/community/useCommunity';
 import { OdysseyCard, OdysseyNode, OdysseyState } from '../../features/tasks/TaskCard';
 import { OdysseyDetailModal } from '../../features/tasks/OdysseyDetailModal';
 import { useDag } from '../../features/tasks/useTasks';
+import { useLaneQuota } from '../../features/laneCreator/useLaneCreator';
 import { useIsVianterPlus } from '../../features/billing/useBilling';
 import { colors } from '../../theme/tokens';
 
@@ -62,6 +63,8 @@ export default function TasksScreen() {
   const isPlus = useIsVianterPlus();
   const user = useAuthStore((s) => s.user);
   const me = useMe();
+  const laneQuota = useLaneQuota();
+  const laneRemaining = laneQuota.data ? Math.max(0, laneQuota.data.limit - laneQuota.data.used) : null;
   const [settledBannerVisible, setSettledBannerVisible] = useState(false);
 
   // When the user is settled and hasn't dismissed the welcome banner yet,
@@ -239,6 +242,47 @@ export default function TasksScreen() {
                   <Text style={{ fontSize: 12, color: colors.textMuted, lineHeight: 17 }} numberOfLines={2}>
                     {t.tasks.explore_plaza_body}
                   </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textSubtle} />
+              </View>
+            </GlassCard>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push('/lane-creator')}
+            style={({ pressed }) => [
+              { marginBottom: 14, transform: pressed ? [{ scale: 0.985 }] : [] },
+            ]}
+          >
+            <GlassCard tone="white" radiusKey="2xl" padding={16}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View
+                  style={{
+                    height: 48,
+                    width: 48,
+                    borderRadius: 16,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 14,
+                    backgroundColor: '#EDE7FF',
+                  }}
+                >
+                  <Ionicons name="sparkles-outline" size={22} color="#6269D9" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: colors.textMain, marginBottom: 2 }}>
+                    {t.laneCreator.entry_title}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: colors.textMuted, lineHeight: 17 }} numberOfLines={2}>
+                    {t.laneCreator.entry_body}
+                  </Text>
+                  {laneRemaining !== null ? (
+                    <Text style={{ fontSize: 11, color: '#6269D9', fontWeight: '700', marginTop: 3 }}>
+                      {laneRemaining > 0
+                        ? t.laneCreator.quota_left.replace('{count}', String(laneRemaining))
+                        : t.laneCreator.quota_none}
+                    </Text>
+                  ) : null}
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={colors.textSubtle} />
               </View>

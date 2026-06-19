@@ -69,6 +69,26 @@
       "unknown": "Etwas ist schiefgelaufen"
     }
   },
+  "laneCreator": {
+    "title": "Plan erstellen",
+    "entry_title": "Lass die KI eine Aufgabenlinie für dich bauen",
+    "entry_body": "Sag, was du vorhast — sie recherchiert und entwirft belegte Schritte",
+    "quota_left": "Diesen Monat noch {count} übrig",
+    "quota_none": "Diesen Monat keine übrig",
+    "header": "Eigene Aufgabenlinie",
+    "input_hint": "z. B. Ich fahre nächsten Monat nach München, hilf mir bei den Schritten",
+    "start": "Starten",
+    "send": "Senden",
+    "thinking": "Denkt nach…",
+    "researching": "Recherchiert…",
+    "composing": "Erstellt deinen Plan…",
+    "done_title": "Dein Plan ist fertig 🎉",
+    "done_body": "Die neuen Aufgaben sind jetzt in deiner Odyssey",
+    "view_tasks": "Aufgaben ansehen",
+    "failed": "Etwas ist schiefgelaufen — bitte erneut versuchen",
+    "quota_exceeded": "Du hast diesen Monat alle kostenlosen Pläne genutzt",
+    "abandon": "Verwerfen"
+  },
   "tasks": {
     "title": "Odyssey",
     "available": "Verfügbar",

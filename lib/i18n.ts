@@ -75,6 +75,26 @@ export type Translations = {
       unknown: string;
     };
   };
+  laneCreator: {
+    title: string;
+    entry_title: string;
+    entry_body: string;
+    quota_left: string;
+    quota_none: string;
+    header: string;
+    input_hint: string;
+    start: string;
+    send: string;
+    thinking: string;
+    researching: string;
+    composing: string;
+    done_title: string;
+    done_body: string;
+    view_tasks: string;
+    failed: string;
+    quota_exceeded: string;
+    abandon: string;
+  };
   tasks: {
     title: string;
     available: string;
