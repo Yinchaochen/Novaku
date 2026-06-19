@@ -1,20 +1,19 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
-import * as Google from 'expo-auth-session/providers/google';
-import * as WebBrowser from 'expo-web-browser';
+import {
+  GoogleSignin,
+  isErrorWithCode,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { useEffect, useRef } from 'react';
 
 import { useLanguage } from '../../context/LanguageContext';
 import { api } from '../../lib/api';
 import { env } from '../../lib/env';
 import { useAuthStore } from '../../store/authStore';
 
-WebBrowser.maybeCompleteAuthSession();
-
 const GOOGLE_WEB_CLIENT_ID = env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
 const GOOGLE_IOS_CLIENT_ID = env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '';
-const GOOGLE_ANDROID_CLIENT_ID = env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? '';
 
 export interface OAuthRegistrationInput {
   birth_year: number;
@@ -41,18 +40,27 @@ async function exchangeOAuthTokens(
   return me.data.data;
 }
 
+// Native Google Sign-In. Replaces the old `expo-auth-session/providers/google`
+// web flow, which hit `Error 400: invalid_request` on Android and forced a
+// manual Google-password entry on iOS (the in-app browser had no Google
+// session). The native SDK uses the device's Google account, returns an access
+// token via getTokens(), and we keep verifying it server-side via Google
+// userinfo (backend /auth/google unchanged). configure() is idempotent.
+let googleConfigured = false;
+function ensureGoogleConfigured() {
+  if (googleConfigured) return;
+  GoogleSignin.configure({
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    iosClientId: GOOGLE_IOS_CLIENT_ID,
+    scopes: ['profile', 'email'],
+  });
+  googleConfigured = true;
+}
+
 export function useGoogleLogin() {
   const { setTokens, setUser } = useAuthStore();
   const { langCode, setLangCode } = useLanguage();
   const queryClient = useQueryClient();
-  const registrationRef = useRef<OAuthRegistrationInput | null>(null);
-
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    webClientId: GOOGLE_WEB_CLIENT_ID,
-    iosClientId: GOOGLE_IOS_CLIENT_ID,
-    androidClientId: GOOGLE_ANDROID_CLIENT_ID,
-    scopes: ['profile', 'email'],
-  });
 
   const mutation = useMutation({
     mutationFn: ({
@@ -80,30 +88,41 @@ export function useGoogleLogin() {
     },
   });
 
-  useEffect(() => {
-    if (response?.type === 'success') {
-      const accessToken = response.authentication?.accessToken;
-      const registration = registrationRef.current;
-      registrationRef.current = null;
-      if (accessToken) mutation.mutate({ accessToken, registration });
-    } else if (response) {
-      registrationRef.current = null;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [response]);
-
   const signIn = async (registration?: OAuthRegistrationInput) => {
-    registrationRef.current = registration ?? null;
+    ensureGoogleConfigured();
     try {
-      return await promptAsync();
-    } catch (error) {
-      registrationRef.current = null;
-      throw error;
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const response = await GoogleSignin.signIn();
+      // v13+ returns { type: 'cancelled' } when the user backs out of the picker.
+      if (
+        response &&
+        typeof response === 'object' &&
+        'type' in response &&
+        (response as { type?: string }).type === 'cancelled'
+      ) {
+        return;
+      }
+      const { accessToken } = await GoogleSignin.getTokens();
+      if (accessToken) {
+        mutation.mutate({ accessToken, registration: registration ?? null });
+      }
+    } catch (e: unknown) {
+      // Cancellations (older SDK throws instead of returning {type:'cancelled'})
+      // and concurrent-prompt errors are not real failures.
+      if (
+        isErrorWithCode(e) &&
+        (e.code === statusCodes.SIGN_IN_CANCELLED || e.code === statusCodes.IN_PROGRESS)
+      ) {
+        return;
+      }
+      throw e;
     }
   };
 
   return {
-    request,
+    // Kept truthy so the existing screens' `disabled={!google.request}` enables
+    // the button (the native flow has no async request to wait on).
+    request: true as const,
     signIn,
     isPending: mutation.isPending,
     isError: mutation.isError,
