@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
   FlatList,
@@ -11,6 +12,7 @@ import {
 
 import { useLanguage } from '../context/LanguageContext';
 import { findLanguage, Language, LANGUAGES } from '../lib/languages';
+import { colors, fontFamily, radius, shadows, spacing } from '../theme/tokens';
 
 interface Props {
   currentCode: string;
@@ -33,10 +35,14 @@ export function LanguagePicker({ currentCode, onSelect }: Props) {
       )
     : LANGUAGES;
 
-  const handleSelect = (lang: Language) => {
-    onSelect(lang);
+  const closePicker = () => {
     setOpen(false);
     setQuery('');
+  };
+
+  const handleSelect = (lang: Language) => {
+    onSelect(lang);
+    closePicker();
   };
 
   return (
@@ -49,30 +55,47 @@ export function LanguagePicker({ currentCode, onSelect }: Props) {
       >
         <Text className="text-sm font-semibold text-white">
           {current.nativeName.length > 8
-            ? current.nativeName.slice(0, 8) + '…'
+            ? current.nativeName.slice(0, 8) + '...'
             : current.nativeName}
         </Text>
-        <Text className="text-white text-xs opacity-80">▾</Text>
+        <Ionicons name="chevron-down" size={13} color="rgba(255,255,255,0.82)" />
       </TouchableOpacity>
 
       <Modal
         visible={open}
         transparent
         animationType="fade"
-        onRequestClose={() => { setOpen(false); setQuery(''); }}
+        onRequestClose={closePicker}
       >
         <Pressable
           className="flex-1 justify-center items-center"
-          style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
-          onPress={() => { setOpen(false); setQuery(''); }}
+          style={{
+            backgroundColor: 'rgba(36, 26, 22, 0.48)',
+            paddingHorizontal: spacing.lg,
+          }}
+          onPress={closePicker}
         >
           <Pressable
-            className="w-5/6 rounded-3xl overflow-hidden"
-            style={{ backgroundColor: '#1a1a2e', maxHeight: 520 }}
+            className="w-full overflow-hidden"
+            style={{
+              maxWidth: 520,
+              maxHeight: 520,
+              borderRadius: radius['3xl'],
+              borderWidth: 1,
+              borderColor: colors.lineWarm,
+              backgroundColor: colors.bgCream,
+              ...shadows.cardLg,
+            }}
             onPress={(e) => e.stopPropagation()}
           >
             <View className="px-5 pt-5 pb-3">
-              <Text className="text-white text-lg font-bold mb-3">
+              <Text
+                className="text-lg font-bold mb-3"
+                style={{
+                  color: colors.textMain,
+                  fontFamily: fontFamily.displayBold,
+                }}
+              >
                 {t.language.select_title}
               </Text>
               <TextInput
@@ -80,9 +103,18 @@ export function LanguagePicker({ currentCode, onSelect }: Props) {
                 value={query}
                 onChangeText={setQuery}
                 placeholder={t.language.search_placeholder}
-                placeholderTextColor="rgba(255,255,255,0.4)"
-                className="rounded-xl px-4 py-2.5 text-white text-sm"
-                style={{ backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }}
+                placeholderTextColor={colors.textSubtle}
+                className="px-4 py-2.5 text-sm"
+                style={{
+                  borderRadius: radius.lg,
+                  borderWidth: 1.5,
+                  borderColor: colors.brandPeachLight,
+                  backgroundColor: colors.cardWhiteSolid,
+                  color: colors.textMain,
+                  fontFamily: fontFamily.medium,
+                }}
+                cursorColor={colors.brandCoral}
+                selectionColor={colors.brandPeachLight}
                 autoFocus
               />
             </View>
@@ -99,38 +131,73 @@ export function LanguagePicker({ currentCode, onSelect }: Props) {
                     testID={`language.option.${item.code}`}
                     onPress={() => handleSelect(item)}
                     className="flex-row items-center justify-between px-5 py-3"
-                    style={{
+                    style={({ pressed }) => ({
                       backgroundColor: isSelected
-                        ? 'rgba(91,103,202,0.35)'
-                        : 'transparent',
-                    }}
+                        ? 'rgba(246, 118, 115, 0.14)'
+                        : pressed
+                          ? colors.bgWarm
+                          : 'transparent',
+                    })}
                   >
-                    <Text className="text-white font-medium text-sm flex-1">
+                    <Text
+                      className="font-medium text-sm flex-1"
+                      numberOfLines={1}
+                      style={{
+                        color: colors.textBrown,
+                        fontFamily: fontFamily.medium,
+                      }}
+                    >
                       {item.nativeName}
                     </Text>
                     <Text
                       className="text-xs ml-3"
-                      style={{ color: 'rgba(255,255,255,0.45)' }}
+                      numberOfLines={1}
+                      style={{
+                        color: isSelected ? colors.brandCoral : colors.textMuted,
+                        fontFamily: fontFamily.medium,
+                      }}
                     >
                       {item.name}
                     </Text>
-                    {isSelected && (
-                      <Text className="text-primary ml-2 font-bold">✓</Text>
-                    )}
+                    {isSelected ? (
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={17}
+                        color={colors.brandCoral}
+                        style={{ marginLeft: spacing.sm }}
+                      />
+                    ) : null}
                   </Pressable>
                 );
               }}
               ItemSeparatorComponent={() => (
-                <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginHorizontal: 20 }} />
+                <View
+                  style={{
+                    height: 1,
+                    backgroundColor: colors.lineSofter,
+                    marginHorizontal: spacing.xl,
+                  }}
+                />
               )}
             />
 
             <Pressable
-              onPress={() => { setOpen(false); setQuery(''); }}
+              onPress={closePicker}
               className="items-center py-4"
-              style={{ borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)' }}
+              style={({ pressed }) => ({
+                borderTopWidth: 1,
+                borderTopColor: colors.lineSoft,
+                backgroundColor: pressed ? colors.bgWarmDeep : colors.bgWarm,
+              })}
             >
-              <Text style={{ color: 'rgba(255,255,255,0.5)' }} className="text-sm">
+              <Text
+                className="text-sm"
+                style={{
+                  color: colors.textBrown,
+                  fontFamily: fontFamily.displayBold,
+                  fontWeight: '700',
+                }}
+              >
                 {t.common.cancel}
               </Text>
             </Pressable>
