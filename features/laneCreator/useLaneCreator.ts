@@ -155,3 +155,15 @@ export function useTaskLanes(status: 'active' | 'archived' | 'abandoned' = 'acti
       (await api.get('/odyssey/lanes', { params: { status } })).data.data as TaskLane[],
   });
 }
+
+export function useRenameTaskLane() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ laneId, title }: { laneId: string; title: string }) =>
+      (await api.patch(`/odyssey/lanes/${laneId}`, { title })).data.data as TaskLane,
+    onSuccess: (lane) => {
+      void qc.invalidateQueries({ queryKey: ['lane-creator', 'lanes'] });
+      qc.setQueryData(['lane-creator', 'lane', lane.id], lane);
+    },
+  });
+}

@@ -16,6 +16,8 @@ export interface OdysseyNode {
   can_parallel: boolean;
   source_url?: string | null;
   last_verified_at?: string | null;
+  lane_id?: string | null;
+  created_by?: 'system' | 'user' | 'ai';
 }
 
 export interface OdysseyState {

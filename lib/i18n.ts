@@ -147,6 +147,18 @@ export type Translations = {
     explore_plaza_body: string;
     settled_banner_title: string;
     settled_banner_body: string;
+    task_line_section: string;
+    system_lane_title: string;
+    system_lane_subtitle: string;
+    ai_lane_subtitle: string;
+    side_lane_title: string;
+    side_lane_subtitle: string;
+    task_line_task_count: string;
+    task_line_empty: string;
+    task_line_change_name: string;
+    task_line_rename_title: string;
+    task_line_name_placeholder: string;
+    task_line_rename_save: string;
     detail_section_status: string;
     detail_section_guide: string;
     detail_section_user_context: string;

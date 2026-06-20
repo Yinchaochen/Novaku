@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,18 +17,13 @@ import * as secureStore from '../../lib/secureStore';
 import { useAuthStore } from '../../store/authStore';
 import { PersonalOdysseyCard } from '../../features/community/PersonalTaskCard';
 import { usePersonalOdysseys } from '../../features/community/useCommunity';
+import type { PersonalOdyssey } from '../../features/community/useCommunity';
 import { OdysseyCard, OdysseyNode, OdysseyState } from '../../features/tasks/TaskCard';
 import { OdysseyDetailModal } from '../../features/tasks/OdysseyDetailModal';
 import { useDag } from '../../features/tasks/useTasks';
-import { useLaneQuota } from '../../features/laneCreator/useLaneCreator';
-import { useIsVianterPlus } from '../../features/billing/useBilling';
+import { useLaneQuota, useRenameTaskLane, useTaskLanes } from '../../features/laneCreator/useLaneCreator';
+import type { TaskLane } from '../../features/laneCreator/useLaneCreator';
 import { colors } from '../../theme/tokens';
-
-interface CanonicalSection {
-  title: string;
-  data: OdysseyNode[];
-  dim?: boolean;
-}
 
 interface CelebrationState {
   visible: boolean;
@@ -36,9 +31,27 @@ interface CelebrationState {
   type: OdysseyNode['type'];
 }
 
+interface TaskLineSummary {
+  id: string;
+  kind: 'system' | 'ai' | 'side';
+  title: string;
+  subtitle: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  tone: 'gold' | 'coral' | 'lavender' | 'sage';
+  nodes: OdysseyNode[];
+  lane?: TaskLane;
+}
+
 const TAB_BAR_BASE_HEIGHT = 64;
 const HISTORY_PILL_HEIGHT = 64;
-const HISTORY_FLOATING_GAP = 16;
+const SYSTEM_LANE_ID = 'system-settle-germany';
+
+const LINE_TONES: Record<TaskLineSummary['tone'], { bg: string; iconBg: string; icon: string; border: string }> = {
+  gold: { bg: '#FFF8EC', iconBg: '#FFE2A7', icon: '#B27A18', border: 'rgba(229, 183, 97, 0.35)' },
+  coral: { bg: '#FFF1EA', iconBg: '#FFD9CB', icon: colors.brandCoral, border: 'rgba(240, 130, 96, 0.26)' },
+  lavender: { bg: '#F7F2FF', iconBg: '#E9DEFF', icon: '#6269D9', border: 'rgba(121, 107, 210, 0.24)' },
+  sage: { bg: '#F3FBEF', iconBg: '#DDF3D2', icon: '#5C8A48', border: 'rgba(118, 166, 92, 0.26)' },
+};
 
 export default function TasksScreen() {
   const { t, langCode } = useLanguage();
@@ -60,12 +73,17 @@ export default function TasksScreen() {
   };
   const [celebration, setCelebration] = useState<CelebrationState | null>(null);
   const [detailTarget, setDetailTarget] = useState<{ node: OdysseyNode; state: OdysseyState | undefined } | null>(null);
-  const isPlus = useIsVianterPlus();
   const user = useAuthStore((s) => s.user);
   const me = useMe();
   const laneQuota = useLaneQuota();
+  const taskLanes = useTaskLanes('active');
+  const renameTaskLane = useRenameTaskLane();
   const laneRemaining = laneQuota.data ? Math.max(0, laneQuota.data.limit - laneQuota.data.used) : null;
   const [settledBannerVisible, setSettledBannerVisible] = useState(false);
+  const [systemLaneTitle, setSystemLaneTitle] = useState<string | null>(null);
+  const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
+  const [renameTarget, setRenameTarget] = useState<TaskLineSummary | null>(null);
+  const [renameTitle, setRenameTitle] = useState('');
 
   // When the user is settled and hasn't dismissed the welcome banner yet,
   // surface it. Per-user SecureStore key so a fresh login on the same device
@@ -79,6 +97,16 @@ export default function TasksScreen() {
       if (!flag) setSettledBannerVisible(true);
     });
   }, [user?.id, user?.arrival_stage]);
+
+  useEffect(() => {
+    if (!user) {
+      setSystemLaneTitle(null);
+      return;
+    }
+    secureStore.getItemAsync(`system_lane_title_${user.id}`).then((title) => {
+      setSystemLaneTitle(title || null);
+    });
+  }, [user?.id]);
 
   const dismissSettledBanner = async () => {
     if (!user) return;
@@ -115,23 +143,99 @@ export default function TasksScreen() {
   const mainNodes = allNodes.filter((node) => node.type === 'main' && !isHistorical(node));
   const sideNodes = allNodes.filter((node) => node.type === 'side' && !isHistorical(node));
 
-  const byStatus = (nodeList: OdysseyNode[], status: string) =>
-    nodeList.filter((node) => stateMap[node.id]?.status === status);
-
-  const mainSections: CanonicalSection[] = [
-    { title: t.tasks.section_progress, data: byStatus(mainNodes, 'in_progress') },
-    { title: t.tasks.section_available, data: byStatus(mainNodes, 'available') },
-    { title: t.tasks.section_locked, data: byStatus(mainNodes, 'locked'), dim: true },
-  ].filter((section) => section.data.length > 0);
-
   const visiblePersonalCount = personalTasks.filter((task) => task.status !== 'done').length;
   const hasSideContent = sideNodes.length > 0 || visiblePersonalCount > 0;
+  const systemNodes = mainNodes.filter((node) => !node.lane_id);
+  const laneNodes = mainNodes.filter((node) => Boolean(node.lane_id));
+  const activeLanes = taskLanes.data ?? [];
+  const taskLines: TaskLineSummary[] = [
+    ...(systemNodes.length > 0
+      ? [
+          {
+            id: SYSTEM_LANE_ID,
+            kind: 'system' as const,
+            title: systemLaneTitle ?? t.tasks.system_lane_title,
+            subtitle: t.tasks.system_lane_subtitle,
+            icon: 'home-outline' as const,
+            tone: 'gold' as const,
+            nodes: systemNodes,
+          },
+        ]
+      : []),
+    ...activeLanes.map((lane) => ({
+      id: lane.id,
+      kind: 'ai' as const,
+      title: lane.title,
+      subtitle: lane.description || t.tasks.ai_lane_subtitle,
+      icon: lane.lane_type === 'trip' ? ('map-outline' as const) : ('sparkles-outline' as const),
+      tone: lane.lane_type === 'trip' ? ('coral' as const) : ('lavender' as const),
+      nodes: laneNodes.filter((node) => node.lane_id === lane.id),
+      lane,
+    })),
+    ...(hasSideContent
+      ? [
+          {
+            id: 'side-local',
+            kind: 'side' as const,
+            title: t.tasks.side_lane_title,
+            subtitle: t.tasks.side_lane_subtitle,
+            icon: 'leaf-outline' as const,
+            tone: 'sage' as const,
+            nodes: sideNodes,
+          },
+        ]
+      : []),
+  ];
+  const selectedLine = selectedLineId ? taskLines.find((line) => line.id === selectedLineId) ?? null : null;
 
   const showError = dag.isError || personal.isError;
   const refreshAll = () => {
     void dag.refetch();
     void personal.refetch();
     void me.refetch();
+    void taskLanes.refetch();
+  };
+
+  const openRenameSheet = (line: TaskLineSummary) => {
+    if (line.kind === 'side') return;
+    Alert.alert(line.title, undefined, [
+      {
+        text: t.tasks.task_line_change_name,
+        onPress: () => {
+          setRenameTarget(line);
+          setRenameTitle(line.title);
+        },
+      },
+      { text: t.common.cancel, style: 'cancel' },
+    ]);
+  };
+
+  const saveRename = () => {
+    const title = renameTitle.trim();
+    if (!renameTarget || !title) return;
+
+    if (renameTarget.kind === 'system') {
+      if (user) {
+        void secureStore.setItemAsync(`system_lane_title_${user.id}`, title);
+      }
+      setSystemLaneTitle(title);
+      setRenameTarget(null);
+      setRenameTitle('');
+      return;
+    }
+
+    if (renameTarget.lane) {
+      renameTaskLane.mutate(
+        { laneId: renameTarget.lane.id, title },
+        {
+          onSuccess: () => {
+            setRenameTarget(null);
+            setRenameTitle('');
+          },
+          onError: () => Alert.alert(t.common.error),
+        },
+      );
+    }
   };
 
   return (
@@ -202,9 +306,10 @@ export default function TasksScreen() {
         <ScrollView
           className="flex-1"
           contentContainerStyle={{
+            flexGrow: 1,
             paddingHorizontal: 20,
             paddingTop: 14,
-            paddingBottom: tabBarHeight + HISTORY_PILL_HEIGHT + HISTORY_FLOATING_GAP + 32,
+            paddingBottom: tabBarHeight + 28,
           }}
           refreshControl={
             <RefreshControl
@@ -214,6 +319,8 @@ export default function TasksScreen() {
             />
           }
         >
+          {!selectedLine ? (
+            <>
           <Pressable
             onPress={() => router.push('/(tabs)/plaza')}
             style={({ pressed }) => [
@@ -249,7 +356,7 @@ export default function TasksScreen() {
           </Pressable>
 
           <Pressable
-            onPress={() => router.push('/lane-creator')}
+            onPress={() => router.push('/lane-creator' as never)}
             style={({ pressed }) => [
               { marginBottom: 14, transform: pressed ? [{ scale: 0.985 }] : [] },
             ]}
@@ -288,146 +395,88 @@ export default function TasksScreen() {
               </View>
             </GlassCard>
           </Pressable>
+            </>
+          ) : null}
 
-          {mainSections.map((section) => (
-              <View key={section.title}>
-                <View style={{ marginTop: 18, marginBottom: 12 }}>
-                  <SectionLabel tone="muted">{section.title}</SectionLabel>
-                </View>
-                {section.data.map((node) => (
-                  <View key={node.id} style={{ marginBottom: 12 }}>
-                    <OdysseyCard
-                      node={node}
-                      state={stateMap[node.id]}
-                      onRefresh={refreshAll}
-                      onTaskComplete={(task) => {
-                        setCelebration({ visible: true, title: task.title, type: task.type });
-                      }}
-                    />
-                  </View>
-                ))}
-              </View>
-            ))}
-
-            {hasSideContent ? (
-              <>
-                <View style={{ marginTop: 18, marginBottom: 12 }}>
-                  <SectionLabel tone="coral">{t.tasks.side_section_progress}</SectionLabel>
-                </View>
-                {sideNodes.map((node) => (
-                  <View key={node.id} style={{ marginBottom: 12 }}>
-                    <OdysseyCard
-                      node={node}
-                      state={stateMap[node.id]}
-                      onRefresh={refreshAll}
-                      onTaskComplete={(task) => {
-                        setCelebration({ visible: true, title: task.title, type: task.type });
-                      }}
-                      onPressDetail={(n, s) => setDetailTarget({ node: n, state: s })}
-                    />
-                  </View>
-                ))}
-                {personalTasks
-                  .filter((task) => task.status !== 'done')
-                  .map((task) => (
-                    <View key={task.id} style={{ marginBottom: 12 }}>
-                      <PersonalOdysseyCard task={task} />
-                    </View>
-                  ))}
-                {/* Hidden until Postervia+ launches publicly. Restore by removing `false &&`. */}
-                {false && !isPlus && allNodes.length >= 5 ? (
-                  <Pressable
-                    onPress={() => router.push('/billing/subscribe' as never)}
-                    style={({ pressed }) => [
-                      { marginTop: 14, transform: pressed ? [{ scale: 0.985 }] : [] },
-                    ]}
-                  >
-                    <GlassCard tone="cream" radiusKey="2xl" padding={16}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <View
-                          style={{
-                            height: 38,
-                            width: 38,
-                            borderRadius: 19,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            marginRight: 12,
-                            backgroundColor: colors.brandCoral,
-                          }}
-                        >
-                          <Ionicons name="diamond-outline" size={18} color="#FFFFFF" />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ fontSize: 14, fontWeight: '800', color: colors.textMain }}>
-                            {t.billing.paywall_tasks_headline}
-                          </Text>
-                          <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }} numberOfLines={2}>
-                            {t.billing.paywall_tasks_body}
-                          </Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={18} color={colors.brandCoral} />
-                      </View>
-                    </GlassCard>
-                  </Pressable>
-                ) : null}
-              </>
-            ) : null}
-        </ScrollView>
-      </View>
-
-      {/* Floating History pill above the tab bar. */}
-      <View
-        style={{
-          position: 'absolute',
-          left: 44,
-          right: 44,
-          bottom: tabBarHeight + HISTORY_FLOATING_GAP,
-          zIndex: 40,
-        }}
-      >
-        <View
-          style={{
-            width: '100%',
-            height: HISTORY_PILL_HEIGHT,
-            borderRadius: 32,
-            backgroundColor: '#FFFFFF',
-            borderWidth: 1,
-            borderColor: 'rgba(98, 57, 40, 0.13)',
-            shadowColor: '#7A4A2C',
-            shadowOpacity: 0.08,
-            shadowRadius: 18,
-            shadowOffset: { width: 0, height: 10 },
-          }}
-        >
-          <Pressable
-            onPress={() => router.push('/odyssey-history' as never)}
-            accessibilityRole="button"
-            accessibilityLabel={t.tasks.history}
-            style={StyleSheet.absoluteFill}
-          />
-          <View
-            pointerEvents="none"
-            style={{
-              height: '100%',
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Ionicons name="time-outline" size={20} color={colors.brandPeach} />
-            <Text
-              style={{
-                marginLeft: 8,
-                fontSize: 15,
-                fontWeight: '700',
-                color: colors.brandPeach,
-                letterSpacing: 0.2,
+          {selectedLine ? (
+            <TaskLineDetail
+              line={selectedLine}
+              stateMap={stateMap}
+              personalTasks={selectedLine.kind === 'side' ? personalTasks.filter((task) => task.status !== 'done') : []}
+              onBack={() => setSelectedLineId(null)}
+              onOpenMenu={() => openRenameSheet(selectedLine)}
+              onRefresh={refreshAll}
+              onPressTask={(node, state) => setDetailTarget({ node, state })}
+              onTaskComplete={(task) => {
+                setCelebration({ visible: true, title: task.title, type: task.type });
               }}
+            />
+          ) : (
+            <>
+              <View style={{ marginTop: 18, marginBottom: 12 }}>
+                <SectionLabel tone="muted">{t.tasks.task_line_section}</SectionLabel>
+              </View>
+              {taskLines.map((line) => (
+                <TaskLineCard
+                  key={line.id}
+                  line={line}
+                  activeCount={
+                    line.kind === 'side'
+                      ? line.nodes.length + visiblePersonalCount
+                      : line.nodes.length
+                  }
+                  label={t.tasks.task_line_task_count}
+                  onPress={() => setSelectedLineId(line.id)}
+                />
+              ))}
+
+            <Pressable
+              onPress={() => router.push('/odyssey-history' as never)}
+              accessibilityRole="button"
+              accessibilityLabel={t.tasks.history}
+              style={({ pressed }) => ({
+                height: HISTORY_PILL_HEIGHT,
+                marginHorizontal: 24,
+                marginTop: 18,
+                marginBottom: 10,
+                borderRadius: 32,
+                backgroundColor: '#FFFFFF',
+                borderWidth: 1,
+                borderColor: 'rgba(98, 57, 40, 0.13)',
+                shadowColor: '#7A4A2C',
+                shadowOpacity: 0.08,
+                shadowRadius: 18,
+                shadowOffset: { width: 0, height: 10 },
+                elevation: 4,
+                transform: pressed ? [{ scale: 0.985 }] : [],
+              })}
             >
-              {t.tasks.history}
-            </Text>
-          </View>
-        </View>
+              <View
+                pointerEvents="none"
+                style={{
+                  height: '100%',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="time-outline" size={20} color={colors.brandPeach} />
+                <Text
+                  style={{
+                    marginLeft: 8,
+                    fontSize: 15,
+                    fontWeight: '700',
+                    color: colors.brandPeach,
+                    letterSpacing: 0.2,
+                  }}
+                >
+                  {t.tasks.history}
+                </Text>
+              </View>
+            </Pressable>
+            </>
+          )}
+        </ScrollView>
       </View>
 
       <CelebrationOverlay
@@ -450,7 +499,193 @@ export default function TasksScreen() {
           setCelebration({ visible: true, title: task.title, type: task.type });
         }}
       />
+
+      <Modal
+        visible={renameTarget !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRenameTarget(null)}
+      >
+        <View style={styles.modalScrim}>
+          <View style={styles.renameModal}>
+            <Text style={styles.renameTitle}>{t.tasks.task_line_rename_title}</Text>
+            <TextInput
+              value={renameTitle}
+              onChangeText={setRenameTitle}
+              placeholder={t.tasks.task_line_name_placeholder}
+              placeholderTextColor={colors.textSubtle}
+              autoFocus
+              style={styles.renameInput}
+            />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <Pressable
+                onPress={() => setRenameTarget(null)}
+                style={[styles.renameButton, { backgroundColor: '#F6EEE5' }]}
+              >
+                <Text style={[styles.renameButtonText, { color: colors.textMuted }]}>{t.common.cancel}</Text>
+              </Pressable>
+              <Pressable
+                onPress={saveRename}
+                disabled={!renameTitle.trim() || renameTaskLane.isPending}
+                style={[
+                  styles.renameButton,
+                  {
+                    backgroundColor: !renameTitle.trim() || renameTaskLane.isPending
+                      ? '#EADFD4'
+                      : colors.brandCoral,
+                  },
+                ]}
+              >
+                <Text style={[styles.renameButtonText, { color: '#FFFFFF' }]}>
+                  {t.tasks.task_line_rename_save}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </AppBackground>
+  );
+}
+
+function TaskLineCard({
+  line,
+  activeCount,
+  label,
+  onPress,
+}: {
+  line: TaskLineSummary;
+  activeCount: number;
+  label: string;
+  onPress: () => void;
+}) {
+  const tone = LINE_TONES[line.tone];
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.lineCard,
+        {
+          backgroundColor: tone.bg,
+          borderColor: tone.border,
+          transform: pressed ? [{ scale: 0.985 }] : [],
+        },
+      ]}
+    >
+      <View style={[styles.lineIcon, { backgroundColor: tone.iconBg }]}>
+        <Ionicons name={line.icon} size={23} color={tone.icon} />
+      </View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={styles.lineTitle} numberOfLines={2}>
+          {line.title}
+        </Text>
+        <Text style={styles.lineSubtitle} numberOfLines={2}>
+          {line.subtitle}
+        </Text>
+        <View style={[styles.lineCountChip, { backgroundColor: tone.iconBg }]}>
+          <Text style={[styles.lineCountText, { color: tone.icon }]}>
+            {label.replace('{count}', String(activeCount))}
+          </Text>
+        </View>
+      </View>
+      <Ionicons name="chevron-forward" size={19} color={tone.icon} />
+    </Pressable>
+  );
+}
+
+function TaskLineDetail({
+  line,
+  stateMap,
+  personalTasks,
+  onBack,
+  onOpenMenu,
+  onRefresh,
+  onPressTask,
+  onTaskComplete,
+}: {
+  line: TaskLineSummary;
+  stateMap: Record<string, OdysseyState | undefined>;
+  personalTasks: PersonalOdyssey[];
+  onBack: () => void;
+  onOpenMenu: () => void;
+  onRefresh: () => void;
+  onPressTask: (node: OdysseyNode, state: OdysseyState | undefined) => void;
+  onTaskComplete: (task: { title: Record<string, string>; type: OdysseyNode['type'] }) => void;
+}) {
+  const { t } = useLanguage();
+  const tone = LINE_TONES[line.tone];
+  const sections = [
+    { title: t.tasks.section_progress, data: line.nodes.filter((node) => stateMap[node.id]?.status === 'in_progress') },
+    { title: t.tasks.section_available, data: line.nodes.filter((node) => stateMap[node.id]?.status === 'available') },
+    {
+      title: t.tasks.section_locked,
+      data: line.nodes.filter((node) => !stateMap[node.id] || stateMap[node.id]?.status === 'locked'),
+    },
+  ].filter((section) => section.data.length > 0);
+  const hasTasks = sections.length > 0 || personalTasks.length > 0;
+
+  return (
+    <View>
+      <View style={styles.lineDetailHeader}>
+        <Pressable onPress={onBack} hitSlop={10} style={styles.detailBackButton}>
+          <Ionicons name="chevron-back" size={22} color={colors.textMain} />
+        </Pressable>
+        <View style={[styles.lineIcon, { backgroundColor: tone.iconBg }]}>
+          <Ionicons name={line.icon} size={23} color={tone.icon} />
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={styles.detailTitle} numberOfLines={2}>
+            {line.title}
+          </Text>
+          <Text style={styles.detailSubtitle} numberOfLines={2}>
+            {line.subtitle}
+          </Text>
+        </View>
+        {line.kind !== 'side' ? (
+          <Pressable onPress={onOpenMenu} hitSlop={10} style={styles.detailMenuButton}>
+            <Ionicons name="ellipsis-horizontal" size={22} color={colors.textMain} />
+          </Pressable>
+        ) : null}
+      </View>
+
+      {!hasTasks ? (
+        <View style={styles.lineEmptyState}>
+          <Text style={styles.lineEmptyText}>{t.tasks.task_line_empty}</Text>
+        </View>
+      ) : null}
+
+      {sections.map((section) => (
+        <View key={section.title}>
+          <View style={{ marginTop: 18, marginBottom: 12 }}>
+            <SectionLabel tone="muted">{section.title}</SectionLabel>
+          </View>
+          {section.data.map((node) => (
+            <View key={node.id} style={{ marginBottom: 12 }}>
+              <OdysseyCard
+                node={node}
+                state={stateMap[node.id]}
+                onRefresh={onRefresh}
+                onTaskComplete={onTaskComplete}
+                onPressDetail={onPressTask}
+              />
+            </View>
+          ))}
+        </View>
+      ))}
+
+      {personalTasks.length > 0 ? (
+        <View>
+          <View style={{ marginTop: 18, marginBottom: 12 }}>
+            <SectionLabel tone="coral">{t.tasks.section_from_plaza}</SectionLabel>
+          </View>
+          {personalTasks.map((task) => (
+            <View key={task.id} style={{ marginBottom: 12 }}>
+              <PersonalOdysseyCard task={task} />
+            </View>
+          ))}
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -549,3 +784,148 @@ function CelebrationOverlay({
     </Animated.View>
   );
 }
+
+const styles = StyleSheet.create({
+  lineCard: {
+    minHeight: 118,
+    marginBottom: 12,
+    borderRadius: 28,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    shadowColor: '#7A4A2C',
+    shadowOpacity: 0.08,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 4,
+  },
+  lineIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lineTitle: {
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: '800',
+    color: colors.textMain,
+  },
+  lineSubtitle: {
+    marginTop: 4,
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: colors.textMuted,
+  },
+  lineCountChip: {
+    alignSelf: 'flex-start',
+    marginTop: 10,
+    borderRadius: 999,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+  },
+  lineCountText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  lineDetailHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 4,
+    marginBottom: 6,
+  },
+  detailBackButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(98, 57, 40, 0.10)',
+  },
+  detailMenuButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(98, 57, 40, 0.10)',
+  },
+  detailTitle: {
+    fontSize: 20,
+    lineHeight: 25,
+    fontWeight: '900',
+    color: colors.textMain,
+  },
+  detailSubtitle: {
+    marginTop: 3,
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: colors.textMuted,
+  },
+  lineEmptyState: {
+    marginTop: 20,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(98, 57, 40, 0.10)',
+    padding: 18,
+  },
+  lineEmptyText: {
+    fontSize: 13.5,
+    lineHeight: 19,
+    color: colors.textMuted,
+    fontWeight: '600',
+  },
+  modalScrim: {
+    flex: 1,
+    backgroundColor: 'rgba(44, 34, 27, 0.42)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  renameModal: {
+    borderRadius: 28,
+    backgroundColor: '#FFF9F2',
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(98, 57, 40, 0.12)',
+  },
+  renameTitle: {
+    fontSize: 19,
+    lineHeight: 24,
+    fontWeight: '900',
+    color: colors.textMain,
+    marginBottom: 14,
+  },
+  renameInput: {
+    minHeight: 52,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(98, 57, 40, 0.14)',
+    paddingHorizontal: 14,
+    color: colors.textMain,
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 16,
+  },
+  renameButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  renameButtonText: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+});
