@@ -632,7 +632,11 @@
     "cancel": "取消",
     "confirm": "确认",
     "back": "返回",
-    "copied_to_clipboard": "已复制"
+    "copied_to_clipboard": "已复制",
+    "share": "分享",
+    "share_sheet_title": "分享到",
+    "share_copy_link": "复制链接",
+    "share_more": "更多"
   },
   "onboarding": {
     "title": "设置你的城市流",

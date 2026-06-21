@@ -777,7 +777,11 @@
     "cancel": "Cancel",
     "confirm": "Confirm",
     "back": "Back",
-    "copied_to_clipboard": "Copied"
+    "copied_to_clipboard": "Copied",
+    "share": "Share",
+    "share_sheet_title": "Share to",
+    "share_copy_link": "Copy link",
+    "share_more": "More"
   },
   "chat": {
     "menu_view_profile": "View profile",

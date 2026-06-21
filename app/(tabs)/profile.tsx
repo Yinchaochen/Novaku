@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -21,6 +21,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import ViewShot from 'react-native-view-shot';
 
 import { AppBackground } from '../../components/AppBackground';
 import { AvatarCropper } from '../../components/AvatarCropper';
@@ -29,6 +30,8 @@ import { GlassCard } from '../../components/GlassCard';
 import { LanguagePicker } from '../../components/LanguagePicker';
 import { OnboardingModal } from '../../components/OnboardingModal';
 import { PrivacyModal } from '../../components/PrivacyModal';
+import { ProfileShareCard } from '../../components/ProfileShareCard';
+import { ShareSheet } from '../../components/ShareSheet';
 import { UserQRCodeModal } from '../../components/UserQRCodeModal';
 import { useLanguage } from '../../context/LanguageContext';
 import { colors, gradients, shadows } from '../../theme/tokens';
@@ -547,6 +550,8 @@ export default function ProfileScreen() {
   const friendsCount = socialOverview.data?.friends.length ?? 0;
   const shortId = user?.display_id ?? (user?.id ? numericDisplayId(user.id) : '—');
   const [qrModalVisible, setQrModalVisible] = useState(false);
+  const [shareSheetVisible, setShareSheetVisible] = useState(false);
+  const profileShotRef = useRef<ViewShot>(null);
   const isSavingProfile = updateProfile.isPending;
   const isUploadingAvatar = uploadAvatar.isPending;
   const normalizedName = draftName.trim();
@@ -686,25 +691,21 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleShareProfile = async () => {
-    if (!user) {
-      return;
-    }
-
-    const lines = [
-      user.display_name,
-      `${t.profile.base_in_label} ${displayBaseCity}`,
-      displayOriginCity ? `${t.profile.from_label} ${displayOriginCity}` : null,
-    ].filter(Boolean);
-
-    try {
-      await Share.share({
-        message: lines.join('\n'),
-      });
-    } catch {
-      setFeedback(t.common.error);
-    }
+  const handleShareProfile = () => {
+    if (!user) return;
+    setShareSheetVisible(true);
   };
+
+  const captureProfileCard = async () => (await profileShotRef.current?.capture?.()) ?? null;
+  const profileShareUrl = user ? `https://postervia.app/u/${user.id}` : '';
+  const profileShareMessage = [
+    user?.display_name,
+    user ? `${t.profile.base_in_label} ${displayBaseCity}` : null,
+    displayOriginCity ? `${t.profile.from_label} ${displayOriginCity}` : null,
+    profileShareUrl || null,
+  ]
+    .filter(Boolean)
+    .join('\n');
 
   const handleSaveProfile = async () => {
     if (!canSaveProfile || !user) {
@@ -1698,6 +1699,32 @@ export default function ProfileScreen() {
           avatarUrl={user.avatar_url}
           onClose={() => setQrModalVisible(false)}
         />
+      ) : null}
+
+      {user ? (
+        <>
+          <View style={{ position: 'absolute', top: -10000, left: 0 }} pointerEvents="none">
+            <ViewShot ref={profileShotRef} options={{ format: 'png', quality: 1, result: 'tmpfile' }}>
+              <ProfileShareCard
+                userId={user.id}
+                displayId={shortId}
+                displayName={user.display_name}
+                avatarUrl={user.avatar_url}
+                baseCity={displayBaseCity}
+                originCity={displayOriginCity}
+              />
+            </ViewShot>
+          </View>
+          <ShareSheet
+            visible={shareSheetVisible}
+            onClose={() => setShareSheetVisible(false)}
+            capture={captureProfileCard}
+            linkUrl={profileShareUrl}
+            message={profileShareMessage}
+            onCopied={() => setFeedback(t.common.copied_to_clipboard)}
+            onStoryLinkCopied={() => setFeedback(t.common.copied_to_clipboard)}
+          />
+        </>
       ) : null}
     </SafeAreaView>
     </AppBackground>

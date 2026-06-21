@@ -7,8 +7,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useLanguage } from '../context/LanguageContext';
 
+// Accept the current postervia:// scheme plus legacy novaku/vianter schemes so
+// older printed QR codes still resolve. The QR generator (lib/displayId.ts)
+// emits postervia://profile/{uuid}, which the old vianter-only pattern rejected.
 const PROFILE_DEEP_LINK_RE =
-  /^vianter:\/\/profile\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+  /^(?:postervia|vianter|novaku):\/\/profile\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 
 export default function ScanQRCodeScreen() {
   const { t } = useLanguage();

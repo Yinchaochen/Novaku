@@ -1037,6 +1037,10 @@ export type Translations = {
     confirm: string;
     back: string;
     copied_to_clipboard: string;
+    share: string;
+    share_sheet_title: string;
+    share_copy_link: string;
+    share_more: string;
   };
 };
 

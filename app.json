@@ -37,7 +37,10 @@
         {
           "action": "VIEW",
           "autoVerify": true,
-          "data": [{ "scheme": "https", "host": "postervia.app", "pathPrefix": "/p" }],
+          "data": [
+            { "scheme": "https", "host": "postervia.app", "pathPrefix": "/p" },
+            { "scheme": "https", "host": "postervia.app", "pathPrefix": "/u" }
+          ],
           "category": ["BROWSABLE", "DEFAULT"]
         }
       ]

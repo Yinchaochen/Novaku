@@ -15,7 +15,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  Share,
   Text,
   useWindowDimensions,
   View,
@@ -31,7 +30,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useBlockUser } from '../../features/social/useSocial';
 import { ActionSheet, type ActionSheetAction } from '../../components/ActionSheet';
 import { StoryShareCard } from '../../components/StoryShareCard';
-import { shareToInstagramStory } from '../../lib/instagramStory';
+import { ShareSheet } from '../../components/ShareSheet';
 import { ReportSheet } from '../../components/ReportSheet';
 import { Toast, type ToastMessage } from '../../components/Toast';
 import { CommentComposerSheet, type CommentComposerInput } from './CommentComposerSheet';
@@ -228,6 +227,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [reportSheetVisible, setReportSheetVisible] = useState(false);
   const [moreActionsVisible, setMoreActionsVisible] = useState(false);
+  const [shareSheetVisible, setShareSheetVisible] = useState(false);
   const followUser = useFollowUser();
   const unfollowUser = useUnfollowUser();
   const editComment = useEditComment(seedPost?.id ?? '');
@@ -526,36 +526,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
     void Linking.openURL(finalUrl);
   };
 
-  const handleSharePost = async () => {
-    const message = [post.title, post.body, post.source_url].filter(Boolean).join('\n\n');
-    if (!message) {
-      return;
-    }
-    try {
-      await Share.share({ message });
-    } catch {
-      // Ignore share cancellation/errors here; this is a convenience action.
-    }
-  };
-
-  const handleShareToStory = async () => {
-    if (!post) return;
-    try {
-      const uri = await storyShotRef.current?.capture?.();
-      if (!uri) return;
-      const result = await shareToInstagramStory({
-        imageUri: uri,
-        linkUrl: `https://postervia.app/p/${post.id}`,
-        onLinkCopied: () =>
-          setToast({ id: Date.now(), tone: 'success', text: t.plaza.share_link_copied, durationMs: 3000 }),
-      });
-      if (result === 'failed') {
-        Alert.alert(t.common.error);
-      }
-    } catch {
-      Alert.alert(t.common.error);
-    }
-  };
+  const captureShareCard = async () => (await storyShotRef.current?.capture?.()) ?? null;
 
   const handleAddLocationToTasks = (actionCandidateId: string) => {
     addAction.mutate(actionCandidateId, {
@@ -668,8 +639,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
 
   const currentAvatarUrl = resolveMediaUrl(user?.avatar_url);
   const postActions: ActionSheetAction[] = [
-    { label: t.plaza.share_to_story, icon: 'logo-instagram', onPress: handleShareToStory },
-    { label: t.plaza.share_other, icon: 'share-social-outline', onPress: handleSharePost },
+    { label: t.common.share, icon: 'share-social-outline', onPress: () => setShareSheetVisible(true) },
   ];
 
   if (canEditPost) {
@@ -1154,6 +1124,22 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
           </ViewShot>
         ) : null}
       </View>
+
+      {post ? (
+        <ShareSheet
+          visible={shareSheetVisible}
+          onClose={() => setShareSheetVisible(false)}
+          capture={captureShareCard}
+          linkUrl={`https://postervia.app/p/${post.id}`}
+          message={[post.title, `https://postervia.app/p/${post.id}`].filter(Boolean).join('\n\n')}
+          onCopied={() =>
+            setToast({ id: Date.now(), tone: 'success', text: t.common.copied_to_clipboard, durationMs: 2500 })
+          }
+          onStoryLinkCopied={() =>
+            setToast({ id: Date.now(), tone: 'success', text: t.plaza.share_link_copied, durationMs: 3000 })
+          }
+        />
+      ) : null}
     </Modal>
   );
 }

@@ -632,7 +632,11 @@
     "cancel": "Abbrechen",
     "confirm": "Bestätigen",
     "back": "Zurück",
-    "copied_to_clipboard": "Kopiert"
+    "copied_to_clipboard": "Kopiert",
+    "share": "Teilen",
+    "share_sheet_title": "Teilen mit",
+    "share_copy_link": "Link kopieren",
+    "share_more": "Mehr"
   },
   "onboarding": {
     "title": "Richte deinen Stadtmodus ein",
