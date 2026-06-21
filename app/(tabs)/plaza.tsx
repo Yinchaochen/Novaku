@@ -13,6 +13,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 const LocationPickerLazy = lazy(() => import('../../components/LocationPicker'));
 import {
   ActivityIndicator,
+  BackHandler,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -443,6 +444,25 @@ export default function PlazaScreen() {
     }
   }, [filteredPosts, trackCommunityEvents]);
 
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (locationPickerVisible) {
+        closeLocationPicker();
+        return true;
+      }
+      if (composerVisible) {
+        closeComposer();
+        return true;
+      }
+      if (selectedPost) {
+        setSelectedPost(null);
+        return true;
+      }
+      return false;
+    });
+    return () => subscription.remove();
+  }, [closeComposer, closeLocationPicker, composerVisible, locationPickerVisible, selectedPost]);
+
   return (
     <AppBackground>
     <SafeAreaView testID="screen.plaza" className="flex-1" edges={[]}>
@@ -494,6 +514,8 @@ export default function PlazaScreen() {
       ) : null}
       <ScrollView
         className="flex-1"
+        collapsable={false}
+        nestedScrollEnabled
         contentContainerStyle={{ paddingHorizontal: 10, paddingTop: 14, paddingBottom: Math.max(insets.bottom + 180, 200) }}
         refreshControl={
           <RefreshControl refreshing={isFetching && !isLoading} onRefresh={refetch} tintColor={colors.brandCoral} />
@@ -620,7 +642,7 @@ export default function PlazaScreen() {
         visible={composerVisible}
         animationType="slide"
         presentationStyle="fullScreen"
-        onRequestClose={closeComposer}
+        onRequestClose={locationPickerVisible ? closeLocationPicker : closeComposer}
       >
         {/* IOS-LOGIN-113 Build 39: render LocationPicker in-place inside the
             composer Modal instead of as a stacked second Modal. iOS 26 strict

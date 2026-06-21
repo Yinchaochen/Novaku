@@ -270,15 +270,11 @@ export type Translations = {
     delete_confirm_body: string;
     delete_confirm_action: string;
     delete_failed: string;
-    notes_settings_title: string;
     notes_action_edit: string;
     notes_action_privacy: string;
-    notes_action_boost: string;
-    notes_action_collab: string;
     notes_action_delete: string;
     coming_soon: string;
     post_visibility_public: string;
-    post_edit_permissions_entry: string;
     add_to_tasks_failed: string;
     add_to_odyssey_success: string;
     add_to_odyssey_already_active: string;

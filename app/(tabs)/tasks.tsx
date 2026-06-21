@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, BackHandler, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -107,6 +107,29 @@ export default function TasksScreen() {
       setSystemLaneTitle(title || null);
     });
   }, [user?.id]);
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (renameTarget) {
+        setRenameTarget(null);
+        return true;
+      }
+      if (detailTarget) {
+        setDetailTarget(null);
+        return true;
+      }
+      if (celebration?.visible) {
+        setCelebration(null);
+        return true;
+      }
+      if (selectedLineId) {
+        setSelectedLineId(null);
+        return true;
+      }
+      return false;
+    });
+    return () => subscription.remove();
+  }, [celebration?.visible, detailTarget, renameTarget, selectedLineId]);
 
   const dismissSettledBanner = async () => {
     if (!user) return;
@@ -305,6 +328,8 @@ export default function TasksScreen() {
       <View style={{ flex: 1 }}>
         <ScrollView
           className="flex-1"
+          collapsable={false}
+          nestedScrollEnabled
           contentContainerStyle={{
             flexGrow: 1,
             paddingHorizontal: 20,
@@ -566,7 +591,7 @@ function TaskLineCard({
       style={({ pressed }) => [
         styles.lineCard,
         {
-          backgroundColor: tone.bg,
+          backgroundColor: '#FFFFFF',
           borderColor: tone.border,
           transform: pressed ? [{ scale: 0.985 }] : [],
         },
@@ -588,7 +613,7 @@ function TaskLineCard({
           </Text>
         </View>
       </View>
-      <Ionicons name="chevron-forward" size={19} color={tone.icon} />
+      <Ionicons name="chevron-forward" size={19} color={tone.icon} style={styles.lineChevron} />
     </Pressable>
   );
 }
@@ -789,13 +814,14 @@ const styles = StyleSheet.create({
   lineCard: {
     minHeight: 118,
     marginBottom: 12,
+    width: '100%',
+    alignSelf: 'stretch',
     borderRadius: 28,
     borderWidth: 1,
     paddingHorizontal: 16,
     paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
     shadowColor: '#7A4A2C',
     shadowOpacity: 0.08,
     shadowRadius: 22,
@@ -808,6 +834,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 14,
   },
   lineTitle: {
     fontSize: 17,
@@ -831,6 +858,9 @@ const styles = StyleSheet.create({
   lineCountText: {
     fontSize: 11,
     fontWeight: '800',
+  },
+  lineChevron: {
+    marginLeft: 10,
   },
   lineDetailHeader: {
     flexDirection: 'row',

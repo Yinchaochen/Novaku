@@ -1,5 +1,5 @@
-import { Image } from 'expo-image';
-import { Text, View } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
+import { Image as RNImage, Text, View } from 'react-native';
 
 import { CommunityPost } from '../features/community/useCommunity';
 import { resolveMediaUrl } from '../lib/media';
@@ -36,7 +36,7 @@ export function StoryShareCard({ post, langCode }: { post: CommunityPost; langCo
       <View style={{ width: '100%', backgroundColor: '#FFFFFF', borderRadius: 24, overflow: 'hidden' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', padding: 14 }}>
           {avatar ? (
-            <Image source={avatar} style={{ width: 38, height: 38, borderRadius: 19 }} contentFit="cover" />
+            <ExpoImage source={avatar} style={{ width: 38, height: 38, borderRadius: 19 }} contentFit="cover" />
           ) : (
             <View
               style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#FFE8DA', alignItems: 'center', justifyContent: 'center' }}
@@ -58,7 +58,7 @@ export function StoryShareCard({ post, langCode }: { post: CommunityPost; langCo
           </View>
         </View>
 
-        {image ? <Image source={image} style={{ width: '100%', height: 300 }} contentFit="cover" /> : null}
+        {image ? <ExpoImage source={image} style={{ width: '100%', height: 300 }} contentFit="cover" /> : null}
 
         <Text
           numberOfLines={3}
@@ -68,11 +68,13 @@ export function StoryShareCard({ post, langCode }: { post: CommunityPost; langCo
         </Text>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', padding: 14, marginTop: 4 }}>
-          <Image
-            source={require('../assets/adaptive-icon.png')}
-            style={{ width: 26, height: 26, borderRadius: 7 }}
-            contentFit="contain"
-          />
+          <View style={{ width: 28, height: 28, borderRadius: 8, overflow: 'hidden' }}>
+            <RNImage
+              source={require('../assets/icon.png')}
+              resizeMode="cover"
+              style={{ width: 28, height: 28 }}
+            />
+          </View>
           <Text style={{ marginLeft: 8, fontSize: 13, fontWeight: '800', color: '#F67673', flex: 1 }}>Postervia</Text>
           <Text style={{ fontSize: 12, color: '#9CA3AF' }}>{formatDate(post.created_at, langCode)}</Text>
         </View>

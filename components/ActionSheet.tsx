@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { type ComponentProps } from 'react';
-import { Modal, Pressable, Text, View, useWindowDimensions } from 'react-native';
+import { type ComponentProps, useRef } from 'react';
+import { Modal, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useLanguage } from '../context/LanguageContext';
@@ -30,8 +30,17 @@ export function ActionSheet({ visible, title, actions, onClose }: Props) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const sheetWidth = Math.min(width - spacing.lg * 2, 520);
+  const pendingAction = useRef<(() => void) | null>(null);
 
   const runAction = (action: ActionSheetAction) => {
+    // iOS can't present a new Modal while this one is still dismissing
+    // (present-while-dismissing race). Defer the action until the sheet has
+    // fully dismissed (onDismiss). Android never fires onDismiss, so run inline.
+    if (Platform.OS === 'ios') {
+      pendingAction.current = action.onPress;
+      onClose();
+      return;
+    }
     onClose();
     action.onPress();
   };
@@ -42,6 +51,11 @@ export function ActionSheet({ visible, title, actions, onClose }: Props) {
       transparent
       animationType="fade"
       onRequestClose={onClose}
+      onDismiss={() => {
+        const next = pendingAction.current;
+        pendingAction.current = null;
+        next?.();
+      }}
       statusBarTranslucent
     >
       <Pressable

@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  BackHandler,
   KeyboardAvoidingView,
   Linking,
   Modal,
@@ -28,7 +29,7 @@ import { normalizeMapUrl } from '../../lib/maps';
 import { resolveMediaUrl } from '../../lib/media';
 import { useAuthStore } from '../../store/authStore';
 import { useBlockUser } from '../../features/social/useSocial';
-import { ActionSheet } from '../../components/ActionSheet';
+import { ActionSheet, type ActionSheetAction } from '../../components/ActionSheet';
 import { StoryShareCard } from '../../components/StoryShareCard';
 import { shareToInstagramStory } from '../../lib/instagramStory';
 import { ReportSheet } from '../../components/ReportSheet';
@@ -217,7 +218,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
   const createComment = useCreateCommunityComment(seedPost?.id ?? '');
   const postDetail = useCommunityPost(seedPost?.id ?? null, visible && Boolean(seedPost?.id));
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
-  const [notesSettingsVisible, setNotesSettingsVisible] = useState(false);
+  const [lightboxVisible, setLightboxVisible] = useState(false);
   const [privacySheetVisible, setPrivacySheetVisible] = useState(false);
   const [composerVisible, setComposerVisible] = useState(false);
   const [replyTo, setReplyTo] = useState<{ commentId: string; userId: string; userName: string } | null>(
@@ -227,7 +228,6 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [reportSheetVisible, setReportSheetVisible] = useState(false);
   const [moreActionsVisible, setMoreActionsVisible] = useState(false);
-  const [shareSheetVisible, setShareSheetVisible] = useState(false);
   const followUser = useFollowUser();
   const unfollowUser = useUnfollowUser();
   const editComment = useEditComment(seedPost?.id ?? '');
@@ -258,6 +258,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
   useEffect(() => {
     if (!visible) {
       setActiveMediaIndex(0);
+      setLightboxVisible(false);
       scrollX.setValue(0);
       mediaScrollRef.current?.scrollTo({ x: 0, animated: false });
     }
@@ -320,6 +321,37 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
     };
   }, [detailKey, post, postId, trackCommunityEvents, visible]);
 
+  useEffect(() => {
+    if (!visible) return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (lightboxVisible) {
+        setLightboxVisible(false);
+        return true;
+      }
+      if (composerVisible) {
+        setComposerVisible(false);
+        setReplyTo(null);
+        setEditTarget(null);
+        return true;
+      }
+      if (privacySheetVisible) {
+        setPrivacySheetVisible(false);
+        return true;
+      }
+      if (reportSheetVisible) {
+        setReportSheetVisible(false);
+        return true;
+      }
+      if (moreActionsVisible) {
+        setMoreActionsVisible(false);
+        return true;
+      }
+      onClose();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [composerVisible, lightboxVisible, moreActionsVisible, onClose, privacySheetVisible, reportSheetVisible, visible]);
+
   if (!post) {
     return null;
   }
@@ -373,26 +405,6 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
         },
       ],
     );
-  };
-
-  const handleOpenNotesSettings = () => {
-    if (!canEditPost) return;
-    setNotesSettingsVisible(true);
-  };
-
-  const handleNotesSettingsEdit = () => {
-    setNotesSettingsVisible(false);
-    handleEditPost();
-  };
-
-  const handleNotesSettingsDelete = () => {
-    setNotesSettingsVisible(false);
-    handleDeletePost();
-  };
-
-  const handleNotesSettingsComingSoon = (label: string) => {
-    setNotesSettingsVisible(false);
-    Alert.alert(label, t.plaza.coming_soon);
   };
 
   const removePostFromFeedCache = (postId: string) => {
@@ -655,6 +667,44 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
   };
 
   const currentAvatarUrl = resolveMediaUrl(user?.avatar_url);
+  const postActions: ActionSheetAction[] = [
+    { label: t.plaza.share_to_story, icon: 'logo-instagram', onPress: handleShareToStory },
+    { label: t.plaza.share_other, icon: 'share-social-outline', onPress: handleSharePost },
+  ];
+
+  if (canEditPost) {
+    postActions.push(
+      { label: t.plaza.notes_action_edit, icon: 'create-outline', onPress: handleEditPost },
+      {
+        label: t.plaza.notes_action_privacy,
+        icon: post.visibility === 'private' ? 'lock-closed-outline' : 'lock-open-outline',
+        onPress: () => setPrivacySheetVisible(true),
+      },
+      {
+        label: t.plaza.notes_action_delete,
+        icon: 'trash-outline',
+        destructive: true,
+        onPress: handleDeletePost,
+      },
+    );
+  }
+
+  // Hide / report / block are actions taken against *someone else's* content.
+  // They never apply to your own post — for that you have edit / privacy /
+  // delete above. Reporting your own post is meaningless, so guard the whole
+  // set behind !canEditPost.
+  if (!canEditPost) {
+    postActions.push(
+      { label: t.plaza.hide_post, icon: 'eye-off-outline', onPress: handleHidePost },
+      { label: t.plaza.report_post, icon: 'flag-outline', destructive: true, onPress: handleReportPost },
+      {
+        label: t.chat.menu_block,
+        icon: 'person-remove-outline',
+        destructive: true,
+        onPress: handleBlockAuthor,
+      },
+    );
+  }
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
@@ -699,20 +749,20 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
               ) : null}
             </View>
 
-            <View className="ml-3 flex-row items-center gap-3">
+            <View className="ml-2 flex-row items-center">
               <View className="rounded-full bg-[#FFE8DA] px-3 py-1.5">
                 <Text className="text-[11px] font-bold text-[#F67673]">
                   {t.plaza[`type_${post.post_type}`]}
                 </Text>
               </View>
-              <Pressable onPress={() => setShareSheetVisible(true)}>
-                <Ionicons name="share-social-outline" size={22} color="#111111" />
+              <Pressable
+                onPress={handleOpenMoreActions}
+                hitSlop={8}
+                className="ml-2 h-10 w-10 items-center justify-center rounded-full bg-white"
+                style={{ borderWidth: 1, borderColor: 'rgba(17,17,17,0.06)' }}
+              >
+                <Ionicons name="ellipsis-horizontal" size={22} color="#111111" />
               </Pressable>
-              {!canEditPost ? (
-                <Pressable onPress={handleOpenMoreActions} hitSlop={6}>
-                  <Ionicons name="ellipsis-horizontal" size={22} color="#111111" />
-                </Pressable>
-              ) : null}
             </View>
           </View>
         </View>
@@ -726,6 +776,8 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
             ref={scrollViewRef}
             className="flex-1"
             contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 168, 220) }}
+            collapsable={false}
+            nestedScrollEnabled
             showsVerticalScrollIndicator={false}
           >
             {post.media_items.length > 0 ? (
@@ -746,13 +798,18 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
                     onMomentumScrollEnd={handleMediaMomentumEnd}
                   >
                     {post.media_items.map((media, index) => (
-                      <Image
+                      <Pressable
                         key={media.id ?? `${media.media_url}-${index}`}
-                        source={resolveMediaUrl(media.media_url) ?? media.media_url}
-                        contentFit="cover"
-                        transition={120}
+                        onPress={() => setLightboxVisible(true)}
                         style={{ width: viewportWidth, height: mediaHeight }}
-                      />
+                      >
+                        <Image
+                          source={resolveMediaUrl(media.media_url) ?? media.media_url}
+                          contentFit="cover"
+                          transition={120}
+                          style={{ width: viewportWidth, height: mediaHeight }}
+                        />
+                      </Pressable>
                     ))}
                   </Animated.ScrollView>
 
@@ -939,32 +996,6 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
           </ScrollView>
 
           <View className="border-t border-neutral-200 bg-white px-4 pt-3" style={{ paddingBottom: Math.max(insets.bottom, 12) }}>
-            {canEditPost ? (
-              <Pressable
-                onPress={handleOpenNotesSettings}
-                className="mb-3 flex-row items-center justify-between rounded-2xl bg-[#F5F5F7] px-4 py-3"
-              >
-                <View className="flex-row items-center">
-                  <Ionicons
-                    name={post.visibility === 'private' ? 'lock-closed-outline' : 'lock-open-outline'}
-                    size={18}
-                    color="#111111"
-                  />
-                  <View className="ml-3">
-                    <Text className="text-[13px] font-semibold text-black">
-                      {post.visibility === 'private'
-                        ? t.plaza.post_visibility_private
-                        : t.plaza.post_visibility_public}
-                    </Text>
-                    <Text className="mt-0.5 text-[12px] text-neutral-500">
-                      {t.plaza.post_edit_permissions_entry}
-                    </Text>
-                  </View>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
-              </Pressable>
-            ) : null}
-
             <View className="mb-3 flex-row items-center gap-3">
               <Avatar
                 name={user?.display_name ?? 'N'}
@@ -1028,20 +1059,6 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
         </KeyboardAvoidingView>
       </View>
 
-      <NotesSettingsSheet
-        visible={notesSettingsVisible}
-        onClose={() => setNotesSettingsVisible(false)}
-        onEdit={handleNotesSettingsEdit}
-        onPrivacy={() => {
-          setNotesSettingsVisible(false);
-          setPrivacySheetVisible(true);
-        }}
-        onBoost={() => handleNotesSettingsComingSoon(t.plaza.notes_action_boost)}
-        onCollab={() => handleNotesSettingsComingSoon(t.plaza.notes_action_collab)}
-        onDelete={handleNotesSettingsDelete}
-        deletePending={deletePost.isPending}
-      />
-
       <PrivacySheet
         visible={privacySheetVisible}
         currentVisibility={post.visibility ?? 'public'}
@@ -1090,35 +1107,45 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
         visible={moreActionsVisible}
         title={t.plaza.more_actions_title}
         onClose={() => setMoreActionsVisible(false)}
-        actions={[
-          { label: t.plaza.hide_post, icon: 'eye-off-outline', onPress: handleHidePost },
-          {
-            label: t.plaza.report_post,
-            icon: 'flag-outline',
-            destructive: true,
-            onPress: handleReportPost,
-          },
-          ...(!canEditPost
-            ? [
-                {
-                  label: t.chat.menu_block,
-                  icon: 'person-remove-outline' as const,
-                  destructive: true,
-                  onPress: handleBlockAuthor,
-                },
-              ]
-            : []),
-        ]}
+        actions={postActions}
       />
 
-      <ActionSheet
-        visible={shareSheetVisible}
-        onClose={() => setShareSheetVisible(false)}
-        actions={[
-          { label: t.plaza.share_to_story, icon: 'logo-instagram', onPress: handleShareToStory },
-          { label: t.plaza.share_other, icon: 'share-social-outline', onPress: handleSharePost },
-        ]}
-      />
+      {/* Full-screen image viewer: the in-flow media is cover-cropped to a hero
+          height, so tapping opens the complete image with contentFit="contain".
+          Mirrors the chat lightbox in social.tsx (tap / X / back to dismiss). */}
+      <Modal
+        visible={lightboxVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLightboxVisible(false)}
+        statusBarTranslucent
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.97)' }}>
+          <Pressable
+            style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
+            onPress={() => setLightboxVisible(false)}
+          >
+            {post.media_items[activeMediaIndex] ? (
+              <Image
+                source={
+                  resolveMediaUrl(post.media_items[activeMediaIndex].media_url) ??
+                  post.media_items[activeMediaIndex].media_url
+                }
+                style={{ width: '100%', height: '100%' }}
+                contentFit="contain"
+                transition={120}
+              />
+            ) : null}
+          </Pressable>
+          <Pressable
+            onPress={() => setLightboxVisible(false)}
+            hitSlop={12}
+            style={{ position: 'absolute', top: insets.top + 8, right: 20, padding: 4 }}
+          >
+            <Ionicons name="close-circle" size={38} color="rgba(255,255,255,0.9)" />
+          </Pressable>
+        </View>
+      </Modal>
 
       <View style={{ position: 'absolute', top: -10000, left: 0 }} pointerEvents="none">
         {post ? (
@@ -1128,126 +1155,6 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
         ) : null}
       </View>
     </Modal>
-  );
-}
-
-function NotesSettingsSheet({
-  visible,
-  onClose,
-  onEdit,
-  onPrivacy,
-  onBoost,
-  onCollab,
-  onDelete,
-  deletePending,
-}: {
-  visible: boolean;
-  onClose: () => void;
-  onEdit: () => void;
-  onPrivacy: () => void;
-  onBoost: () => void;
-  onCollab: () => void;
-  onDelete: () => void;
-  deletePending: boolean;
-}) {
-  const { t } = useLanguage();
-  const insets = useSafeAreaInsets();
-
-  return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable
-        className="flex-1 justify-end"
-        style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
-        onPress={onClose}
-      >
-        <Pressable
-          onPress={(e) => e.stopPropagation()}
-          className="rounded-t-3xl bg-white px-5 pt-4"
-          style={{ paddingBottom: Math.max(insets.bottom + 16, 24) }}
-        >
-          <View className="mb-4 flex-row items-center justify-between">
-            <Text className="text-[16px] font-semibold text-black">
-              {t.plaza.notes_settings_title}
-            </Text>
-            <Pressable onPress={onClose} hitSlop={8}>
-              <Ionicons name="close" size={22} color="#111111" />
-            </Pressable>
-          </View>
-
-          <View className="flex-row flex-wrap justify-between">
-            <NotesSheetAction
-              icon="create-outline"
-              label={t.plaza.notes_action_edit}
-              onPress={onEdit}
-            />
-            <NotesSheetAction
-              icon="lock-closed-outline"
-              label={t.plaza.notes_action_privacy}
-              onPress={onPrivacy}
-            />
-            <NotesSheetAction
-              icon="rocket-outline"
-              label={t.plaza.notes_action_boost}
-              onPress={onBoost}
-            />
-            <NotesSheetAction
-              icon="people-outline"
-              label={t.plaza.notes_action_collab}
-              onPress={onCollab}
-            />
-            <NotesSheetAction
-              icon="trash-outline"
-              label={t.plaza.notes_action_delete}
-              onPress={onDelete}
-              danger
-              loading={deletePending}
-            />
-          </View>
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-}
-
-function NotesSheetAction({
-  icon,
-  label,
-  onPress,
-  danger,
-  loading,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  onPress: () => void;
-  danger?: boolean;
-  loading?: boolean;
-}) {
-  const tint = danger ? '#F67673' : '#111111';
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={loading}
-      className="mb-2 items-center"
-      style={{ width: '18%' }}
-    >
-      <View
-        className="mb-1 h-12 w-12 items-center justify-center rounded-2xl"
-        style={{ backgroundColor: danger ? '#FFF1F3' : '#F5F5F7' }}
-      >
-        {loading ? (
-          <ActivityIndicator size="small" color={tint} />
-        ) : (
-          <Ionicons name={icon} size={22} color={tint} />
-        )}
-      </View>
-      <Text
-        numberOfLines={1}
-        className="text-[11px] font-medium"
-        style={{ color: tint }}
-      >
-        {label}
-      </Text>
-    </Pressable>
   );
 }
 
