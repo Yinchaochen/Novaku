@@ -46,7 +46,6 @@ import {
   getCommunitySessionId,
   useCommunityFeed,
   useCreateCommunityPost,
-  useRefillFeedSnapshot,
   useTrackCommunityEvents,
   useUpdateCommunityPost,
   useUploadCommunityMedia,
@@ -98,6 +97,20 @@ function splitIntoColumns(posts: CommunityPost[]) {
   }
 
   return { left, right };
+}
+
+// A refetched feed can legitimately surface the same post in more than one
+// query page (ranking shifts between snapshots on pull-to-refresh), so flatten
+// defensively by post id — keeping first occurrence preserves display order.
+function dedupePostsById(posts: CommunityPost[]): CommunityPost[] {
+  const seen = new Set<string>();
+  const out: CommunityPost[] = [];
+  for (const post of posts) {
+    if (seen.has(post.id)) continue;
+    seen.add(post.id);
+    out.push(post);
+  }
+  return out;
 }
 
 async function noopRefetch() {
@@ -160,9 +173,8 @@ export default function PlazaScreen() {
   const insets = useSafeAreaInsets();
   const [editingPost, setEditingPost] = useState<CommunityPost | null>(null);
   const feedQuery = useCommunityFeed();
-  const refillFeed = useRefillFeedSnapshot();
   const pages = feedQuery?.data?.pages;
-  const data = pages?.flatMap((page) => page.items) ?? [];
+  const data = dedupePostsById(pages?.flatMap((page) => page.items) ?? []);
   const isLoading = feedQuery?.isLoading ?? false;
   const isError = feedQuery?.isError ?? false;
   const isFetching = feedQuery?.isFetching ?? false;
@@ -170,9 +182,9 @@ export default function PlazaScreen() {
   const hasNextPage = feedQuery?.hasNextPage ?? false;
   const refetch = feedQuery?.refetch ?? noopRefetch;
   const fetchNextPage = feedQuery?.fetchNextPage ?? (() => Promise.resolve(undefined));
-  const lastPage = pages && pages.length > 0 ? pages[pages.length - 1] : undefined;
-  const isFeedExhausted = lastPage?.exhausted === true;
-  const isRefilling = refillFeed?.isPending ?? false;
+  // Single cursor-paginated snapshot is the only feed source now; "caught up" =
+  // the cursor returned no next page (no separate refill mechanism to track).
+  const isFeedCaughtUp = data.length > 0 && !hasNextPage;
   const createPost = useCreateCommunityPost();
   const updatePost = useUpdateCommunityPost(editingPost?.id ?? null);
   const trackCommunityEvents = useTrackCommunityEvents()?.mutate ?? (() => undefined);
@@ -526,9 +538,6 @@ export default function PlazaScreen() {
           if (distanceFromBottom >= 600) return;
           if (hasNextPage && !isFetchingNextPage) {
             void fetchNextPage();
-          } else if (!hasNextPage && !isFetchingNextPage && !isFeedExhausted && !isRefilling) {
-            // Snapshot exhausted — mint a new snapshot in the background, dedupe, append.
-            refillFeed?.mutate();
           }
         }}
         scrollEventThrottle={250}
@@ -567,11 +576,11 @@ export default function PlazaScreen() {
           </GlassCard>
         ) : null}
 
-        {isFetchingNextPage || isRefilling ? (
+        {isFetchingNextPage ? (
           <View className="items-center py-6">
             <ActivityIndicator size="small" color={colors.brandCoral} />
           </View>
-        ) : isFeedExhausted ? (
+        ) : isFeedCaughtUp ? (
           <View className="items-center py-6">
             <Text style={{ fontSize: 12, color: colors.textSubtle, letterSpacing: 0.4 }}>{t.plaza.feed_caught_up}</Text>
           </View>

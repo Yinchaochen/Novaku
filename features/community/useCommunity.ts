@@ -263,9 +263,6 @@ export function getCommunitySessionId() {
 export interface CommunityFeedPage {
   items: CommunityPost[];
   next_cursor: string | null;
-  // Set on the last page when a refill cycle returned no new content.
-  // Plaza uses this to stop further auto-refill attempts and show "all caught up".
-  exhausted?: boolean;
 }
 
 type CommunityFeedUser = {
@@ -314,58 +311,6 @@ export function useCommunityFeed() {
     retry: 1,
     refetchOnMount: 'always',
     refetchOnReconnect: true,
-  });
-}
-
-export function useRefillFeedSnapshot() {
-  const qc = useQueryClient();
-  const { langCode } = useLanguage();
-  const user = useAuthStore((state) => state.user);
-  return useMutation({
-    mutationFn: async () => {
-      const res = await api.get('/community/feed', {
-        params: {
-          city: user?.city,
-          identity: user?.identity,
-        },
-      });
-      return {
-        items: res.data.data.items as CommunityPost[],
-        next_cursor: (res.data.data.next_cursor ?? null) as string | null,
-      };
-    },
-    onSuccess: (newPage) => {
-      qc.setQueryData<InfiniteData<CommunityFeedPage>>(
-        communityFeedQueryKey(user, langCode),
-        (old) => {
-          if (!old) return old;
-          const seenIds = new Set(
-            old.pages.flatMap((page) => page.items.map((item) => item.id)),
-          );
-          const filteredItems = newPage.items.filter((item) => !seenIds.has(item.id));
-          // No fresh content + backend has no more cursor → mark last page exhausted, do not append.
-          if (filteredItems.length === 0 && newPage.next_cursor === null) {
-            if (old.pages.length === 0) return old;
-            const updatedPages = old.pages.slice();
-            const lastIdx = updatedPages.length - 1;
-            updatedPages[lastIdx] = { ...updatedPages[lastIdx], exhausted: true };
-            return { ...old, pages: updatedPages };
-          }
-          return {
-            ...old,
-            pages: [
-              ...old.pages,
-              {
-                items: filteredItems,
-                next_cursor: newPage.next_cursor,
-                exhausted: filteredItems.length === 0 && newPage.next_cursor === null,
-              },
-            ],
-            pageParams: [...old.pageParams, null],
-          };
-        },
-      );
-    },
   });
 }
 
