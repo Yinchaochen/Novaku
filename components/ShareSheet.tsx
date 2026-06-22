@@ -58,10 +58,11 @@ export function ShareSheet({
     if (!uri) return;
     if (key === 'story') {
       await shareToInstagramStory({ imageUri: uri, linkUrl, onLinkCopied: onStoryLinkCopied });
-    } else if (key === 'whatsapp') {
-      await shareToWhatsApp({ imageUri: uri, message });
-    } else if (key === 'telegram') {
-      await shareToTelegram({ imageUri: uri, message });
+    } else if (key === 'whatsapp' || key === 'telegram') {
+      // iOS often drops the caption text when an image is shared to these apps,
+      // so copy the link as a safety net — the user can paste it into the chat.
+      if (await copyLink(linkUrl)) onCopied();
+      await (key === 'whatsapp' ? shareToWhatsApp : shareToTelegram)({ imageUri: uri, message });
     } else {
       await shareToSystemSheet({ imageUri: uri, message });
     }
@@ -80,9 +81,10 @@ export function ShareSheet({
     void run(key);
   };
 
-  // Instagram / WhatsApp / Telegram are trademarks — intentionally NOT routed
-  // through i18n (they read identically in every locale, matching the project's
-  // proper-noun preservation convention). Only generic verbs are localized.
+  // WhatsApp / Telegram are trademarks — intentionally NOT routed through i18n
+  // (identical in every locale, matching the proper-noun convention). The
+  // Instagram target keeps its logo but is labeled "Story" (localized) so it's
+  // honest that it posts to Story, not Instagram DMs. Generic verbs localized too.
   const targets: {
     key: TargetKey;
     label: string;
@@ -90,7 +92,7 @@ export function ShareSheet({
     bg: string;
     fg: string;
   }[] = [
-    { key: 'story', label: 'Instagram', icon: 'logo-instagram', bg: '#FCE7F0', fg: '#C13584' },
+    { key: 'story', label: t.common.share_story, icon: 'logo-instagram', bg: '#FCE7F0', fg: '#C13584' },
     { key: 'whatsapp', label: 'WhatsApp', icon: 'logo-whatsapp', bg: '#E3F7EC', fg: '#25D366' },
     { key: 'telegram', label: 'Telegram', icon: 'paper-plane', bg: '#E4F2FB', fg: '#229ED9' },
     { key: 'copy', label: t.common.share_copy_link, icon: 'link', bg: colors.bgWarm, fg: colors.textBrown },

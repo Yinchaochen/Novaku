@@ -781,7 +781,8 @@
     "share": "Share",
     "share_sheet_title": "Share to",
     "share_copy_link": "Copy link",
-    "share_more": "More"
+    "share_more": "More",
+    "share_story": "Story"
   },
   "chat": {
     "menu_view_profile": "View profile",

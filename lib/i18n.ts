@@ -1041,6 +1041,7 @@ export type Translations = {
     share_sheet_title: string;
     share_copy_link: string;
     share_more: string;
+    share_story: string;
   };
 };
 
