@@ -7,6 +7,7 @@
     "android": "cross-env NODE_OPTIONS=--max-old-space-size=4096 expo start --android",
     "ios": "cross-env NODE_OPTIONS=--max-old-space-size=4096 expo start --ios",
     "web": "cross-env NODE_OPTIONS=--max-old-space-size=4096 expo start --web",
+    "build:web": "cross-env NODE_OPTIONS=--max-old-space-size=4096 expo export --platform web",
     "test:e2e": "maestro test .maestro",
     "postinstall": "patch-package"
   },

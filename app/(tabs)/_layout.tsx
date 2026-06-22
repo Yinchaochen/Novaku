@@ -11,6 +11,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useMe } from '../../features/auth/useAuth';
 import { tap } from '../../lib/haptics';
 import { useAuthStore } from '../../store/authStore';
+import { getTabBarHeight, TAB_BAR_MIN_BOTTOM } from '../../theme/layout';
 import { colors, gradients, shadows } from '../../theme/tokens';
 
 const ACTIVE_TINT = colors.brandCoral;
@@ -68,8 +69,8 @@ export default function TabsLayout() {
     setShowOnboardingModal(!user.onboarding_completed);
   }, [user?.id, user?.onboarding_completed]);
 
-  const tabBarBottomPadding = Math.max(insets.bottom, 12);
-  const tabBarHeight = 64 + tabBarBottomPadding;
+  const tabBarBottomPadding = Math.max(insets.bottom, TAB_BAR_MIN_BOTTOM);
+  const tabBarHeight = getTabBarHeight(insets.bottom);
 
   return (
     <>

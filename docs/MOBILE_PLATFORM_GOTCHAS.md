@@ -355,6 +355,11 @@ visible={isConversationVisible && !isCreateMeetupVisible}
 
 ## 4. 编码 checklist(写新代码前看这个)
 
+### 写新屏幕 / 大改布局时
+- [ ] 用 [`components/Screen.tsx`](../components/Screen.tsx) 组合,别手搓 SafeAreaView(tab 屏加 `tabBar`,表单加 `keyboard`,无 header 的屏加 `topInset`)
+- [ ] tab bar 间距取自 [`theme/layout.ts`](../theme/layout.ts) 的 `getTabBarHeight()`,**禁止再抄 `64` 或硬编 `paddingBottom: 130`**
+- [ ] **没在 Expo Web 渲染并核对全状态前不算 done** —— 见 §9
+
 ### 写新 `<Modal>` 时
 - [ ] **显式写 `presentationStyle="fullScreen"`**(除非你**真的**要 transparent overlay,那就用 `transparent={true}`)
 - [ ] 如果这个 Modal **会被嵌套在另一个 Modal 里**:父子都必须 fullScreen,或子用 transparent
@@ -486,6 +491,33 @@ EXPO_PUBLIC_FOO=actual_value_here
 ### v2+ 规划
 - [ ] Self-hosted Sentry(memory `project_postervia_monitoring_roadmap.md`)
 - [ ] Railway 升 Pro / 评估其他 platform(高频 504 时启动)
+
+---
+
+## 9. UI 实现闭环:渲染过才算 done(Definition of Done)
+
+> 为什么有这节:有设计图、有 huashu-design、有这份 checklist,UI 还是反复排布错。根因不是缺文档,是 **AI 写完 JSX 从没看过渲染像素** —— FAB 压内容 / 德语溢出 / 间距错位对它是隐形的。设计图只是*输入*,必须拿自己的*输出*去比对。
+
+### 硬规则
+**任何 RN/Expo 屏幕、组件、布局改动,没有"在 Expo Web 渲染并核对全状态"的证据,不算 done。**「先上 happy path,截图以后补」不接受(跟 i18n 硬规则一个态度)。
+
+### 1. 用 `<Screen>` 组合,别手搓 SafeArea
+新屏一律从 [`components/Screen.tsx`](../components/Screen.tsx) 组合,它焊死了四个反复出错的不变量:背景、顶部 inset、底部 tab bar 间距、键盘避让。
+- tab 屏:`<Screen header={<PageHeader.../>} scroll tabBar>` —— `tabBar` 自动留出 tab bar 高度(取自 [`theme/layout.ts`](../theme/layout.ts) **单一来源**)。
+- 无 header 的屏(表单 / auth):`<Screen topInset keyboard>`。
+- 全屏 Modal 正文也能用 `<Screen background="none">` —— 它读 root inset,比 Modal 内的 `<SafeAreaView>` 可靠(见坑 #1 / #2)。
+
+### 2. 渲染 + 核对全状态
+```bash
+cd novaku-app && npm run web      # 起 Expo Web
+# 浏览器开 /dev/screen-preview 看 <Screen> 模板;新屏照样在 app/dev/ 加一个 preview 路由
+```
+每个新屏 / 改动必须核对这 6 个状态(拿德语长文案当压力测试):
+**正常 · 长德语 · 空 · 加载 · 自己的内容 · 他人内容**。
+检查:不与刘海 / tab bar / 键盘重叠;所有可点区域 ≥ 44dp;卡片内最长文案不溢出。
+
+### 3. Web 环的边界(别过度承诺)
+Expo Web 抓 flex / 溢出 / 间距 / 文案长度 / 空+加载 —— "低级排布"绝大多数在这。但**抓不了原生专属渲染**:地图、相机、iOS Modal 的 UIWindow safe-area(坑 #1~#6)。那部分仍要真机 / Maestro 冒烟(`npm run test:e2e`)。分工:**Web 环管布局(每次改都做),真机 / Maestro 管原生集成(发版前做)**。别把"web 截图过了"当"上架就对"。
 
 ---
 

@@ -219,7 +219,7 @@ function AppBody() {
     const isRootRoute = pathname === '/';
     const inAuthGroup = segments[0] === '(auth)';
     const isWelcome = inAuthGroup && segments[1] === 'welcome';
-    const isPublicRoute = segments[0] === 'legal';
+    const isPublicRoute = segments[0] === 'legal' || segments[0] === 'dev';
     if (!isAuthenticated && !isRootRoute && !inAuthGroup && !isPublicRoute) {
       if (lastRedirect.current !== 'login') {
         lastRedirect.current = 'login';
