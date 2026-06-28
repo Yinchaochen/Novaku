@@ -11,6 +11,9 @@ paths = [
   '''\.example$''',
   '''\.md$''',
   '''\.map$''',
+  # Firebase Android config: the contained API key is restricted to the app
+  # package + ships inside every APK, so it is not a secret (Google-documented).
+  '''(^|/)google-services\.json$''',
 ]
 regexes = [
   '''EXAMPLE''',

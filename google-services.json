@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "386795662061",
+    "project_id": "postervia-e2921",
+    "storage_bucket": "postervia-e2921.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:386795662061:android:bbcb81a2281e14c4263ae4",
+        "android_client_info": {
+          "package_name": "app.novaku.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDqTyJ_QW9okQvczyaxke8CjvzydHb6SNU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
