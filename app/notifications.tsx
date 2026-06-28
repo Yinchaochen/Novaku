@@ -138,6 +138,8 @@ export default function NotificationsScreen() {
                       ? t.notifications.followed_you
                       : n.type === 'comment_reply'
                       ? t.notifications.replied_to_you
+                      : n.type === 'friend_request'
+                      ? t.notifications.sent_friend_request
                       : t.notifications.mentioned_you}
                   </Text>
                 </Text>

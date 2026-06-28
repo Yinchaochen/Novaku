@@ -886,7 +886,7 @@ export type NotificationCategory = 'social' | 'buddy';
 
 export interface CommunityNotification {
   id: string;
-  type: 'follow' | 'comment_reply' | 'comment_mention' | 'buddy_chat_started';
+  type: 'follow' | 'comment_reply' | 'comment_mention' | 'buddy_chat_started' | 'friend_request';
   actor: CommunityAuthor;
   post_id?: string | null;
   comment_id?: string | null;

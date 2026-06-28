@@ -620,7 +620,8 @@
     "empty_hint": "当有人关注你或回复你的评论时，这里会显示。",
     "followed_you": "关注了你",
     "replied_to_you": "回复了你的评论",
-    "mentioned_you": "在评论中提到了你"
+    "mentioned_you": "在评论中提到了你",
+    "sent_friend_request": "向你发送了好友申请"
   },
   "common": {
     "loading": "加载中...",

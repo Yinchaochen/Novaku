@@ -40,6 +40,14 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: async () => {
     try {
+      // Drop this device's push token first — needs the access token still
+      // present to authenticate the DELETE. Best-effort.
+      const { unregisterPushTokenAsync } = await import('../lib/push');
+      await unregisterPushTokenAsync();
+    } catch {
+      // ignore — server prunes dead tokens on send
+    }
+    try {
       const refreshToken = await secureStore.getItemAsync('refresh_token');
       if (refreshToken) {
         const { api } = await import('../lib/api');

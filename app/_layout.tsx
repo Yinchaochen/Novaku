@@ -60,6 +60,7 @@ import {
 } from '../lib/bootWatchdog';
 import { addSentryBreadcrumb, reportToSentry } from '../lib/sentry';
 import { queryClient } from '../lib/queryClient';
+import { usePushNotifications } from '../lib/push';
 import { useAuthStore } from '../store/authStore';
 
 const STARTUP_TIMEOUT_MS = 3000;
@@ -156,6 +157,9 @@ function AppBody() {
   const pathname = usePathname();
   const router = useRouter();
   const lastRedirect = useRef<string | null>(null);
+
+  // Register for OS push once authenticated; route on notification tap.
+  usePushNotifications();
 
   const [, fontError] = useFonts({
     PlusJakartaSans_500Medium,

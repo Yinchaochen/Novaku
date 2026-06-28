@@ -1025,6 +1025,7 @@ export type Translations = {
     followed_you: string;
     replied_to_you: string;
     mentioned_you: string;
+    sent_friend_request: string;
   };
   common: {
     loading: string;

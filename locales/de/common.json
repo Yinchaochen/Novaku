@@ -620,7 +620,8 @@
     "empty_hint": "Wenn dir jemand folgt oder auf deinen Kommentar antwortet, siehst du es hier.",
     "followed_you": "folgt dir jetzt",
     "replied_to_you": "hat auf deinen Kommentar geantwortet",
-    "mentioned_you": "hat dich in einem Kommentar erwähnt"
+    "mentioned_you": "hat dich in einem Kommentar erwähnt",
+    "sent_friend_request": "hat dir eine Freundschaftsanfrage gesendet"
   },
   "common": {
     "loading": "Lädt...",

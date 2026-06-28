@@ -765,7 +765,8 @@
     "empty_hint": "When someone follows you or replies to your comments, you'll see it here.",
     "followed_you": "started following you",
     "replied_to_you": "replied to your comment",
-    "mentioned_you": "mentioned you in a comment"
+    "mentioned_you": "mentioned you in a comment",
+    "sent_friend_request": "sent you a friend request"
   },
   "common": {
     "loading": "Loading...",
