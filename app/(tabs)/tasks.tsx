@@ -5,11 +5,11 @@ import { router } from 'expo-router';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppBackground } from '../../components/AppBackground';
 import { GlassCard } from '../../components/GlassCard';
 import { LangPill } from '../../components/PageHeader';
 import { Pill } from '../../components/Pill';
 import { SectionLabel } from '../../components/SectionLabel';
+import { Screen } from '../../components/Screen';
 import { StackedButton } from '../../components/StackedButton';
 import { useLanguage } from '../../context/LanguageContext';
 import { useMe } from '../../features/auth/useAuth';
@@ -23,6 +23,7 @@ import { OdysseyDetailModal } from '../../features/tasks/OdysseyDetailModal';
 import { useDag } from '../../features/tasks/useTasks';
 import { useLaneQuota, useRenameTaskLane, useTaskLanes } from '../../features/laneCreator/useLaneCreator';
 import type { TaskLane } from '../../features/laneCreator/useLaneCreator';
+import { getTabBarHeight } from '../../theme/layout';
 import { colors } from '../../theme/tokens';
 
 interface CelebrationState {
@@ -42,7 +43,6 @@ interface TaskLineSummary {
   lane?: TaskLane;
 }
 
-const TAB_BAR_BASE_HEIGHT = 64;
 const HISTORY_PILL_HEIGHT = 64;
 const SYSTEM_LANE_ID = 'system-settle-germany';
 
@@ -56,7 +56,7 @@ const LINE_TONES: Record<TaskLineSummary['tone'], { bg: string; iconBg: string; 
 export default function TasksScreen() {
   const { t, langCode } = useLanguage();
   const insets = useSafeAreaInsets();
-  const tabBarHeight = TAB_BAR_BASE_HEIGHT + Math.max(insets.bottom, 12);
+  const tabBarHeight = getTabBarHeight(insets.bottom);
   const dag = useDag() ?? {
     data: undefined,
     isLoading: false,
@@ -139,17 +139,17 @@ export default function TasksScreen() {
 
   if (dag.isLoading && !dag.data && personal.isLoading && !personal.data) {
     return (
-      <AppBackground style={{ alignItems: 'center', justifyContent: 'center' }}>
+      <Screen background="default" contentStyle={{ alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator size="large" color={colors.brandCoral} />
-      </AppBackground>
+      </Screen>
     );
   }
 
   if (dag.isError && !dag.data && personal.isError && !personal.data) {
     return (
-      <AppBackground style={{ alignItems: 'center', justifyContent: 'center' }}>
+      <Screen background="default" contentStyle={{ alignItems: 'center', justifyContent: 'center' }}>
         <Text style={{ color: colors.danger, fontSize: 14 }}>{t.common.error}</Text>
-      </AppBackground>
+      </Screen>
     );
   }
 
@@ -262,10 +262,10 @@ export default function TasksScreen() {
   };
 
   return (
-    <AppBackground testID="screen.tasks">
+    <Screen background="default" contentStyle={{ paddingBottom: 0 }} testID="screen.tasks">
       {/* Yellow band hero — matches the YumQuick-style consistent header
           shipped on auth pages and the Buddy tab. White title + LangPill on
-          right; AppBackground cream takes over below the curved 32px corner. */}
+          right; the cream background takes over below the curved 32px corner. */}
       <View
         style={{
           backgroundColor: '#FFD17E',
@@ -346,80 +346,82 @@ export default function TasksScreen() {
         >
           {!selectedLine ? (
             <>
-          <Pressable
-            onPress={() => router.push('/(tabs)/plaza')}
-            style={({ pressed }) => [
-              { marginBottom: 14, transform: pressed ? [{ scale: 0.985 }] : [] },
-            ]}
-          >
-            <GlassCard tone="white" radiusKey="2xl" padding={16}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View
-                  style={{
-                    height: 48,
-                    width: 48,
-                    borderRadius: 16,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginRight: 14,
-                    backgroundColor: '#FFE0CC',
-                  }}
+              <View style={styles.ctaCardShell}>
+                <Pressable
+                  onPress={() => router.push('/(tabs)/plaza')}
+                  accessibilityRole="button"
+                  style={styles.ctaPressable}
                 >
-                  <Ionicons name="compass-outline" size={22} color={colors.brandCoral} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 15, fontWeight: '800', color: colors.textMain, marginBottom: 2 }}>
-                    {t.tasks.explore_plaza_title}
-                  </Text>
-                  <Text style={{ fontSize: 12, color: colors.textMuted, lineHeight: 17 }} numberOfLines={2}>
-                    {t.tasks.explore_plaza_body}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.textSubtle} />
+                  <GlassCard tone="white" radiusKey="2xl" padding={16}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <View
+                        style={{
+                          height: 48,
+                          width: 48,
+                          borderRadius: 16,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginRight: 14,
+                          backgroundColor: '#FFE0CC',
+                        }}
+                      >
+                        <Ionicons name="compass-outline" size={22} color={colors.brandCoral} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 15, fontWeight: '800', color: colors.textMain, marginBottom: 2 }}>
+                          {t.tasks.explore_plaza_title}
+                        </Text>
+                        <Text style={{ fontSize: 12, color: colors.textMuted, lineHeight: 17 }} numberOfLines={2}>
+                          {t.tasks.explore_plaza_body}
+                        </Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color={colors.textSubtle} />
+                    </View>
+                  </GlassCard>
+                </Pressable>
               </View>
-            </GlassCard>
-          </Pressable>
 
-          <Pressable
-            onPress={() => router.push('/lane-creator' as never)}
-            style={({ pressed }) => [
-              { marginBottom: 14, transform: pressed ? [{ scale: 0.985 }] : [] },
-            ]}
-          >
-            <GlassCard tone="white" radiusKey="2xl" padding={16}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View
-                  style={{
-                    height: 48,
-                    width: 48,
-                    borderRadius: 16,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginRight: 14,
-                    backgroundColor: '#EDE7FF',
-                  }}
+              <View style={styles.ctaCardShell}>
+                <Pressable
+                  onPress={() => router.push('/lane-creator' as never)}
+                  accessibilityRole="button"
+                  style={styles.ctaPressable}
                 >
-                  <Ionicons name="sparkles-outline" size={22} color="#6269D9" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 15, fontWeight: '800', color: colors.textMain, marginBottom: 2 }}>
-                    {t.laneCreator.entry_title}
-                  </Text>
-                  <Text style={{ fontSize: 12, color: colors.textMuted, lineHeight: 17 }} numberOfLines={2}>
-                    {t.laneCreator.entry_body}
-                  </Text>
-                  {laneRemaining !== null ? (
-                    <Text style={{ fontSize: 11, color: '#6269D9', fontWeight: '700', marginTop: 3 }}>
-                      {laneRemaining > 0
-                        ? t.laneCreator.quota_left.replace('{count}', String(laneRemaining))
-                        : t.laneCreator.quota_none}
-                    </Text>
-                  ) : null}
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.textSubtle} />
+                  <GlassCard tone="white" radiusKey="2xl" padding={16}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <View
+                        style={{
+                          height: 48,
+                          width: 48,
+                          borderRadius: 16,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginRight: 14,
+                          backgroundColor: '#EDE7FF',
+                        }}
+                      >
+                        <Ionicons name="sparkles-outline" size={22} color="#6269D9" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 15, fontWeight: '800', color: colors.textMain, marginBottom: 2 }}>
+                          {t.laneCreator.entry_title}
+                        </Text>
+                        <Text style={{ fontSize: 12, color: colors.textMuted, lineHeight: 17 }} numberOfLines={2}>
+                          {t.laneCreator.entry_body}
+                        </Text>
+                        {laneRemaining !== null ? (
+                          <Text style={{ fontSize: 11, color: '#6269D9', fontWeight: '700', marginTop: 3 }}>
+                            {laneRemaining > 0
+                              ? t.laneCreator.quota_left.replace('{count}', String(laneRemaining))
+                              : t.laneCreator.quota_none}
+                          </Text>
+                        ) : null}
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color={colors.textSubtle} />
+                    </View>
+                  </GlassCard>
+                </Pressable>
               </View>
-            </GlassCard>
-          </Pressable>
             </>
           ) : null}
 
@@ -455,50 +457,29 @@ export default function TasksScreen() {
                 />
               ))}
 
-            <Pressable
-              onPress={() => router.push('/odyssey-history' as never)}
-              accessibilityRole="button"
-              accessibilityLabel={t.tasks.history}
-              style={({ pressed }) => ({
-                height: HISTORY_PILL_HEIGHT,
-                marginHorizontal: 24,
-                marginTop: 18,
-                marginBottom: 10,
-                borderRadius: 32,
-                backgroundColor: '#FFFFFF',
-                borderWidth: 1,
-                borderColor: 'rgba(98, 57, 40, 0.13)',
-                shadowColor: '#7A4A2C',
-                shadowOpacity: 0.08,
-                shadowRadius: 18,
-                shadowOffset: { width: 0, height: 10 },
-                elevation: 4,
-                transform: pressed ? [{ scale: 0.985 }] : [],
-              })}
-            >
-              <View
-                pointerEvents="none"
-                style={{
-                  height: '100%',
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Ionicons name="time-outline" size={20} color={colors.brandPeach} />
-                <Text
-                  style={{
-                    marginLeft: 8,
-                    fontSize: 15,
-                    fontWeight: '700',
-                    color: colors.brandPeach,
-                    letterSpacing: 0.2,
-                  }}
+              <View style={styles.historyPill}>
+                <Pressable
+                  onPress={() => router.push('/odyssey-history' as never)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t.tasks.history}
+                  style={styles.historyPillPressable}
                 >
-                  {t.tasks.history}
-                </Text>
+                  <View pointerEvents="none" style={styles.historyPillContent}>
+                    <Ionicons name="time-outline" size={20} color={colors.brandPeach} />
+                    <Text
+                      style={{
+                        marginLeft: 8,
+                        fontSize: 15,
+                        fontWeight: '700',
+                        color: colors.brandPeach,
+                        letterSpacing: 0.2,
+                      }}
+                    >
+                      {t.tasks.history}
+                    </Text>
+                  </View>
+                </Pressable>
               </View>
-            </Pressable>
             </>
           )}
         </ScrollView>
@@ -569,7 +550,7 @@ export default function TasksScreen() {
           </View>
         </View>
       </Modal>
-    </AppBackground>
+    </Screen>
   );
 }
 
@@ -586,35 +567,27 @@ function TaskLineCard({
 }) {
   const tone = LINE_TONES[line.tone];
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.lineCard,
-        {
-          backgroundColor: '#FFFFFF',
-          borderColor: tone.border,
-          transform: pressed ? [{ scale: 0.985 }] : [],
-        },
-      ]}
-    >
-      <View style={[styles.lineIcon, { backgroundColor: tone.iconBg }]}>
-        <Ionicons name={line.icon} size={23} color={tone.icon} />
-      </View>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={styles.lineTitle} numberOfLines={2}>
-          {line.title}
-        </Text>
-        <Text style={styles.lineSubtitle} numberOfLines={2}>
-          {line.subtitle}
-        </Text>
-        <View style={[styles.lineCountChip, { backgroundColor: tone.iconBg }]}>
-          <Text style={[styles.lineCountText, { color: tone.icon }]}>
-            {label.replace('{count}', String(activeCount))}
-          </Text>
+    <View style={[styles.lineCard, { backgroundColor: '#FFFFFF', borderColor: tone.border }]}>
+      <Pressable onPress={onPress} accessibilityRole="button" style={styles.lineCardPressable}>
+        <View style={[styles.lineIcon, { backgroundColor: tone.iconBg }]}>
+          <Ionicons name={line.icon} size={23} color={tone.icon} />
         </View>
-      </View>
-      <Ionicons name="chevron-forward" size={19} color={tone.icon} style={styles.lineChevron} />
-    </Pressable>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={styles.lineTitle} numberOfLines={2}>
+            {line.title}
+          </Text>
+          <Text style={styles.lineSubtitle} numberOfLines={2}>
+            {line.subtitle}
+          </Text>
+          <View style={[styles.lineCountChip, { backgroundColor: tone.iconBg }]}>
+            <Text style={[styles.lineCountText, { color: tone.icon }]}>
+              {label.replace('{count}', String(activeCount))}
+            </Text>
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={19} color={tone.icon} style={styles.lineChevron} />
+      </Pressable>
+    </View>
   );
 }
 
@@ -811,6 +784,12 @@ function CelebrationOverlay({
 }
 
 const styles = StyleSheet.create({
+  ctaCardShell: {
+    marginBottom: 14,
+  },
+  ctaPressable: {
+    borderRadius: 28,
+  },
   lineCard: {
     minHeight: 118,
     marginBottom: 12,
@@ -818,15 +797,19 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     borderRadius: 28,
     borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
     shadowColor: '#7A4A2C',
     shadowOpacity: 0.08,
     shadowRadius: 22,
     shadowOffset: { width: 0, height: 12 },
     elevation: 4,
+  },
+  lineCardPressable: {
+    minHeight: 116,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 28,
   },
   lineIcon: {
     width: 52,
@@ -861,6 +844,31 @@ const styles = StyleSheet.create({
   },
   lineChevron: {
     marginLeft: 10,
+  },
+  historyPill: {
+    height: HISTORY_PILL_HEIGHT,
+    marginHorizontal: 24,
+    marginTop: 18,
+    marginBottom: 10,
+    borderRadius: 32,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(98, 57, 40, 0.13)',
+    shadowColor: '#7A4A2C',
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 4,
+  },
+  historyPillPressable: {
+    flex: 1,
+    borderRadius: 32,
+  },
+  historyPillContent: {
+    height: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   lineDetailHeader: {
     flexDirection: 'row',
