@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api } from '../../lib/api';
+import { CHAT_SEND_MUTATION_KEY } from '../../lib/queryPersister';
 import { useAuthStore } from '../../store/authStore';
+import { useChatOutboxStore } from '../../store/chatOutboxStore';
 
 export interface ChatSender {
   id: string;
@@ -17,6 +19,20 @@ export interface ChatMessage {
   media_url?: string | null;
   meta?: Record<string, unknown> | null;
   created_at: string;
+  /** Client-only: optimistic message still waiting on the server round-trip. */
+  _pending?: boolean;
+  /** Client-only: send failed (network/5xx); UI offers a tap-to-retry. */
+  _failed?: boolean;
+}
+
+export interface SendMessageVariables {
+  conversationId: string;
+  type: 'text' | 'image' | 'voice' | 'memo' | 'sticker';
+  body?: string;
+  media_url?: string;
+  meta?: Record<string, unknown>;
+  /** Stable client id: optimistic placeholder id + resume-after-kill dedup. */
+  clientId: string;
 }
 
 export interface ChatConversation {
@@ -153,23 +169,52 @@ export function useChatSearch(query: string, enabled = true) {
   });
 }
 
+export interface SendMessageInput {
+  type: 'text' | 'image' | 'voice' | 'memo' | 'sticker';
+  body?: string;
+  media_url?: string;
+  meta?: Record<string, unknown>;
+}
+
+// MS-16 / P1: the actual send logic (mutationFn + optimistic
+// onMutate/onError/onSuccess) is registered once on the QueryClient via
+// setMutationDefaults in lib/queryClient.ts, so a send queued offline or
+// interrupted by an app kill resumes on relaunch. This hook is a thin
+// binding: it supplies the mutationKey, and `send`/`sendAsync` inject
+// conversationId + a stable clientId (needed by onMutate at mutate() time)
+// into the variables.
 export function useSendMessage(conversationId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (input: {
-      type: 'text' | 'image' | 'voice' | 'memo' | 'sticker';
-      body?: string;
-      media_url?: string;
-      meta?: Record<string, unknown>;
-    }) => {
-      const res = await api.post(`/chat/conversations/${conversationId}/messages`, input);
-      return res.data.data as ChatMessage;
-    },
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ['chat', 'messages', conversationId] });
-      await qc.invalidateQueries({ queryKey: ['chat', 'conversations'] });
-    },
+  const mutation = useMutation<ChatMessage, unknown, SendMessageVariables>({
+    mutationKey: [CHAT_SEND_MUTATION_KEY],
   });
+
+  const buildVariables = (input: SendMessageInput): SendMessageVariables => ({
+    conversationId,
+    clientId: `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    ...input,
+  });
+
+  const send = (input: SendMessageInput) => mutation.mutate(buildVariables(input));
+
+  // Retry a failed outbox message: drop the failed placeholder, then re-send
+  // the same content as a fresh optimistic message (new clientId).
+  const retry = (failed: ChatMessage) => {
+    useChatOutboxStore.getState().remove(conversationId, failed.id);
+    if (failed.type === 'deleted') return;
+    send({
+      type: failed.type,
+      body: failed.body ?? undefined,
+      media_url: failed.media_url ?? undefined,
+      meta: failed.meta ?? undefined,
+    });
+  };
+
+  return {
+    ...mutation,
+    send,
+    sendAsync: (input: SendMessageInput) => mutation.mutateAsync(buildVariables(input)),
+    retry,
+  };
 }
 
 export function useMarkRead() {
@@ -232,6 +277,8 @@ export function useUploadChatMedia(conversationId: string) {
       form.append('file', file as unknown as Blob);
       const res = await api.post(`/chat/conversations/${conversationId}/upload`, form, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        // MS-16: multipart uploads need more than the 10s global default.
+        timeout: 60000,
       });
       return res.data.data as { url: string };
     },
@@ -245,6 +292,8 @@ export function useUploadStickerMedia() {
       form.append('file', file as unknown as Blob);
       const res = await api.post('/chat/stickers/upload', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        // MS-16: multipart uploads need more than the 10s global default.
+        timeout: 60000,
       });
       return res.data.data as { url: string };
     },

@@ -1,0 +1,184 @@
+{
+  "schema_version": 1,
+  "name": "novaku-ui-system",
+  "purpose": "Agent-operable UI design system entrypoint for the Novaku/Postervia Expo app.",
+  "principle": "Correct UI should be the easiest path: use blessed interfaces, recipes, dev gallery states, and verification commands before writing custom layout.",
+  "paths_relative_to_repo_root": true,
+  "required_before_any_ui_change": [
+    "Read novaku-app/ui-system/README.md",
+    "Read this manifest",
+    "Use components/Screen.tsx for screen composition unless the file is a tiny framed sub-surface inside another Screen",
+    "Check docs/MOBILE_PLATFORM_GOTCHAS.md section 9",
+    "Add or update a dev gallery state when the UI introduces a new reusable primitive, recipe, or risky state"
+  ],
+  "foundations": {
+    "screen": {
+      "path": "components/Screen.tsx",
+      "owns": ["ambient background", "safe-area top inset", "floating tab-bar clearance", "keyboard avoidance"],
+      "rule": "Route screens compose with Screen instead of re-deriving SafeArea, AppBackground, keyboard, or tab bar padding."
+    },
+    "layout": {
+      "path": "theme/layout.ts",
+      "owns": ["floating tab bar height", "bottom inset floor"],
+      "rule": "Never copy tab bar geometry into route files. Use getTabBarHeight(bottomInset)."
+    },
+    "tokens": {
+      "path": "theme/tokens.ts",
+      "owns": ["colors", "gradients", "radius", "spacing", "shadows", "typography"],
+      "rule": "Prefer semantic tokens and blessed primitives over local hex/radius/shadow definitions."
+    },
+    "i18n": {
+      "paths": ["lib/i18n.ts", "locales/en/common.json", "locales/zh/common.json", "locales/de/common.json", "locales/all_translations.ts"],
+      "rule": "Any user-visible copy must enter the language system. Dev gallery copy is the exception and stays English-only."
+    }
+  },
+  "blessed_primitives": [
+    {
+      "name": "Screen",
+      "path": "components/Screen.tsx",
+      "use_when": "Any route-level screen, full-screen modal body, or tab screen."
+    },
+    {
+      "name": "PageHeader",
+      "path": "components/PageHeader.tsx",
+      "use_when": "Standard top page title, subtitle, and language/header actions."
+    },
+    {
+      "name": "GlassCard",
+      "path": "components/GlassCard.tsx",
+      "use_when": "Warm rounded card surface that should match the app visual language."
+    },
+    {
+      "name": "SurfaceCard",
+      "path": "components/SurfaceCard.tsx",
+      "use_when": "Static card or panel shell where layout must not depend on Pressable callback styles."
+    },
+    {
+      "name": "ListRow",
+      "path": "components/ListRow.tsx",
+      "use_when": "Reusable one-row item with leading icon, copy, optional meta, and optional chevron."
+    },
+    {
+      "name": "StateBlock",
+      "path": "components/StateBlock.tsx",
+      "use_when": "Empty, loading, error, success, and quiet status states with consistent icon and action layout."
+    },
+    {
+      "name": "GradientButton",
+      "path": "components/GradientButton.tsx",
+      "use_when": "Primary and secondary command buttons."
+    },
+    {
+      "name": "IconCircleButton",
+      "path": "components/IconCircleButton.tsx",
+      "use_when": "Compact icon-only actions with consistent hit area and visual style."
+    },
+    {
+      "name": "Pill",
+      "path": "components/Pill.tsx",
+      "use_when": "Small status/count/category chips."
+    },
+    {
+      "name": "SectionLabel",
+      "path": "components/SectionLabel.tsx",
+      "use_when": "Section dividers and uppercase section labels."
+    },
+    {
+      "name": "StackedButton",
+      "path": "components/StackedButton.tsx",
+      "use_when": "Large stacked CTA surfaces in modals and focused flows."
+    }
+  ],
+  "current_recipes": [
+    {
+      "name": "OdysseyTaskLineCard",
+      "path": "components/recipes/OdysseyTaskLineCard.tsx",
+      "status": "extracted recipe, used by app/(tabs)/tasks.tsx",
+      "invariant": "Static visual shell must not depend on Pressable pressed-state callback styles."
+    },
+    {
+      "name": "Plaza post card",
+      "path": "app/(tabs)/plaza.tsx",
+      "status": "local recipe, candidate for extraction"
+    },
+    {
+      "name": "Comment row",
+      "path": "features/community/CommunityPostComments.tsx",
+      "status": "feature recipe"
+    },
+    {
+      "name": "Chat message bubble",
+      "path": "app/(tabs)/social.tsx",
+      "status": "local recipe, candidate for extraction"
+    },
+    {
+      "name": "Network health banner",
+      "path": "components/NetworkHealthBanner.tsx",
+      "status": "shared recipe"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "Route screen manually composes AppBackground + SafeArea + ScrollView padding",
+      "use_instead": "components/Screen.tsx"
+    },
+    {
+      "pattern": "Hard-coded tab bar bottom padding or copied 64 + inset formulas",
+      "use_instead": "theme/layout.ts getTabBarHeight"
+    },
+    {
+      "pattern": "Essential layout/shell styles placed only in Pressable callback style",
+      "use_instead": "Static View shell plus Pressable hit layer"
+    },
+    {
+      "pattern": "New user-visible copy written directly in a component",
+      "use_instead": "lib/i18n.ts and locale files"
+    },
+    {
+      "pattern": "Reusable UI pattern implemented only inside a route after it appears twice",
+      "use_instead": "Extract to components/ or features/<area>/ with dev gallery coverage"
+    },
+    {
+      "pattern": "UI declared done without rendering long German, empty, loading, own, and other states",
+      "use_instead": "app/dev gallery route plus Expo Web render check"
+    }
+  ],
+  "verification_surfaces": {
+    "dev_gallery_hub": "app/dev/index.tsx",
+    "routes": [
+      {
+        "path": "/dev/screen-preview",
+        "covers": ["Screen primitive", "normal", "long German", "empty", "loading", "tab bar clearance"]
+      },
+      {
+        "path": "/dev/ui-system",
+        "covers": ["SurfaceCard", "ListRow", "StateBlock", "OdysseyTaskLineCard", "long German stress"]
+      },
+      {
+        "path": "/dev/components",
+        "covers": ["GradientButton", "Pill", "GlassCard", "long German stress"]
+      },
+      {
+        "path": "/dev/button-audit",
+        "covers": ["button label overflow across locales"]
+      },
+      {
+        "path": "/dev/network-resilience",
+        "covers": ["comment pending/failed", "chat pending/failed", "weak network banner"]
+      }
+    ],
+    "commands": [
+      "npm run verify:ui",
+      "npx tsc --noEmit --pretty false",
+      "npm run build:web"
+    ],
+    "native_follow_up": "Expo Web catches layout drift; native-only surfaces still need real device or Maestro verification."
+  },
+  "new_ui_workflow": [
+    "Identify whether the work is foundation, primitive, recipe, or screen.",
+    "Prefer an existing blessed primitive or recipe before writing local layout.",
+    "If a local pattern appears twice or owns a risky invariant, extract it into a primitive or recipe.",
+    "Add dev gallery states for any new primitive or recipe.",
+    "Run the verification commands and report what could not be visually verified."
+  ]
+}

@@ -128,6 +128,8 @@ export interface CommunityComment {
   reply_count: number;
   viewer_reaction?: string | null;
   reaction_summary: CommunityCommentReactionEntry[];
+  /** Client-only: true while the optimistic insert is still waiting on the server round-trip. */
+  _pending?: boolean;
 }
 
 export interface CommunityPost {
@@ -503,6 +505,9 @@ export function useUploadCommunityMedia() {
       form.append('file', { uri, name: fileName, type: mimeType } as any);
       const res = await api.post('/community/media/upload', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        // MS-16: multipart uploads need far more than the 10s global default —
+        // even a compressed image on a weak network can take tens of seconds.
+        timeout: 60000,
       });
       return res.data.data as CommunityPostMedia;
     },
@@ -581,45 +586,121 @@ export function useCreateCommunityComment(postId: string) {
       const res = await api.post(`/community/posts/${postId}/comments`, payload);
       return res.data.data as CommunityComment;
     },
-    onSuccess: async (created) => {
-      // Top-level comment: prepend to comments cache. Reply: also handled below
-      // by either invalidating replies cache or letting the consumer setQueryData.
-      const isReply = Boolean(created.parent_comment_id);
-      qc.setQueryData<CommunityComment[]>(
-        ['community', 'comments', postId, langCode],
-        (old) => {
-          if (!old) return old;
-          if (isReply) return old;
-          return [...old, created];
+    // MS-16: don't make the composer wait on the network round-trip — insert a
+    // local placeholder the instant the user hits send, so a flaky connection
+    // doesn't read as "stuck". onError rolls the placeholder back.
+    onMutate: async (input) => {
+      const user = useAuthStore.getState().user;
+      if (!user) return undefined;
+      const payload = typeof input === 'string' ? { body: input } : input;
+      const parentCommentId = payload.parent_comment_id ?? null;
+      const isReply = Boolean(parentCommentId);
+      const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const now = new Date().toISOString();
+      const optimisticComment: CommunityComment = {
+        id: tempId,
+        body: payload.body,
+        source_language: langCode,
+        translated_body: null,
+        is_translated: false,
+        moderation_status: 'approved',
+        created_at: now,
+        updated_at: now,
+        author: {
+          id: user.id,
+          display_name: user.display_name,
+          avatar_url: user.avatar_url,
+          city: user.city,
+          identity: user.identity,
         },
-      );
+        parent_comment_id: parentCommentId,
+        reply_to_user_id: payload.reply_to_user_id ?? null,
+        reply_to_user_name: payload.reply_to_user_name ?? null,
+        helpful_count: 0,
+        viewer_marked_helpful: false,
+        reply_count: 0,
+        viewer_reaction: null,
+        reaction_summary: [],
+        _pending: true,
+      };
+
+      const topKey = ['community', 'comments', postId, langCode];
+      await qc.cancelQueries({ queryKey: topKey });
+      if (!isReply) {
+        qc.setQueryData<CommunityComment[]>(topKey, (old) =>
+          old ? [...old, optimisticComment] : old,
+        );
+      }
       if (isReply) {
-        qc.setQueryData<CommunityComment[]>(
-          [
-            'community',
-            'comments',
-            postId,
-            'replies',
-            created.parent_comment_id,
-            langCode,
-          ],
-          (old) => {
-            if (!old) return [created];
-            return [...old, created];
-          },
+        const repliesKey = ['community', 'comments', postId, 'replies', parentCommentId, langCode];
+        await qc.cancelQueries({ queryKey: repliesKey });
+        qc.setQueryData<CommunityComment[]>(repliesKey, (old) =>
+          old ? [...old, optimisticComment] : [optimisticComment],
         );
+      }
+      return { tempId, isReply, parentCommentId };
+    },
+    onError: (_err, _input, context) => {
+      _bc('create_comment');
+      if (!context) return;
+      const topKey = ['community', 'comments', postId, langCode];
+      qc.setQueryData<CommunityComment[]>(topKey, (old) =>
+        old?.filter((c) => c.id !== context.tempId),
+      );
+      if (context.isReply && context.parentCommentId) {
+        const repliesKey = [
+          'community',
+          'comments',
+          postId,
+          'replies',
+          context.parentCommentId,
+          langCode,
+        ];
+        qc.setQueryData<CommunityComment[]>(repliesKey, (old) =>
+          old?.filter((c) => c.id !== context.tempId),
+        );
+      }
+    },
+    onSuccess: async (created, _input, context) => {
+      // Top-level comment: replace the optimistic placeholder (or append if
+      // onMutate skipped, e.g. no cached user yet). Reply: same, in the
+      // replies cache.
+      const isReply = Boolean(created.parent_comment_id);
+      const topKey = ['community', 'comments', postId, langCode];
+      if (!isReply) {
+        qc.setQueryData<CommunityComment[]>(topKey, (old) => {
+          if (!old) return old;
+          if (context?.tempId && old.some((c) => c.id === context.tempId)) {
+            return old.map((c) => (c.id === context.tempId ? created : c));
+          }
+          return [...old, created];
+        });
+      }
+      if (isReply) {
+        const repliesKey = [
+          'community',
+          'comments',
+          postId,
+          'replies',
+          created.parent_comment_id,
+          langCode,
+        ];
+        qc.setQueryData<CommunityComment[]>(repliesKey, (old) => {
+          if (!old) return [created];
+          if (context?.tempId && old.some((c) => c.id === context.tempId)) {
+            return old.map((c) => (c.id === context.tempId ? created : c));
+          }
+          return [...old, created];
+        });
         // Bump reply_count on the parent comment in the top-level cache.
-        qc.setQueryData<CommunityComment[]>(
-          ['community', 'comments', postId, langCode],
-          (old) => {
-            if (!old) return old;
-            return old.map((c) =>
-              c.id === created.parent_comment_id
-                ? { ...c, reply_count: (c.reply_count ?? 0) + 1 }
-                : c,
-            );
-          },
-        );
+        qc.setQueryData<CommunityComment[]>(topKey, (old) => {
+          if (!old) return old;
+          return old.map((c) =>
+            c.id === created.parent_comment_id
+              ? { ...c, reply_count: (c.reply_count ?? 0) + 1 }
+              : c,
+          );
+        });
       }
       // Bump comment_count on the post in feed and detail caches.
       patchPostInFeedCaches(qc, postId, (post) => ({

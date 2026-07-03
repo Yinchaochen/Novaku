@@ -8,6 +8,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassCard } from '../../components/GlassCard';
 import { LangPill } from '../../components/PageHeader';
 import { Pill } from '../../components/Pill';
+import {
+  ODYSSEY_TASK_LINE_TONES,
+  OdysseyTaskLineCard,
+  type OdysseyTaskLineTone,
+} from '../../components/recipes/OdysseyTaskLineCard';
 import { SectionLabel } from '../../components/SectionLabel';
 import { Screen } from '../../components/Screen';
 import { StackedButton } from '../../components/StackedButton';
@@ -38,20 +43,13 @@ interface TaskLineSummary {
   title: string;
   subtitle: string;
   icon: keyof typeof Ionicons.glyphMap;
-  tone: 'gold' | 'coral' | 'lavender' | 'sage';
+  tone: OdysseyTaskLineTone;
   nodes: OdysseyNode[];
   lane?: TaskLane;
 }
 
 const HISTORY_PILL_HEIGHT = 64;
 const SYSTEM_LANE_ID = 'system-settle-germany';
-
-const LINE_TONES: Record<TaskLineSummary['tone'], { bg: string; iconBg: string; icon: string; border: string }> = {
-  gold: { bg: '#FFF8EC', iconBg: '#FFE2A7', icon: '#B27A18', border: 'rgba(229, 183, 97, 0.35)' },
-  coral: { bg: '#FFF1EA', iconBg: '#FFD9CB', icon: colors.brandCoral, border: 'rgba(240, 130, 96, 0.26)' },
-  lavender: { bg: '#F7F2FF', iconBg: '#E9DEFF', icon: '#6269D9', border: 'rgba(121, 107, 210, 0.24)' },
-  sage: { bg: '#F3FBEF', iconBg: '#DDF3D2', icon: '#5C8A48', border: 'rgba(118, 166, 92, 0.26)' },
-};
 
 export default function TasksScreen() {
   const { t, langCode } = useLanguage();
@@ -444,15 +442,18 @@ export default function TasksScreen() {
                 <SectionLabel tone="muted">{t.tasks.task_line_section}</SectionLabel>
               </View>
               {taskLines.map((line) => (
-                <TaskLineCard
+                <OdysseyTaskLineCard
                   key={line.id}
-                  line={line}
+                  title={line.title}
+                  subtitle={line.subtitle}
+                  icon={line.icon}
+                  tone={line.tone}
                   activeCount={
                     line.kind === 'side'
                       ? line.nodes.length + visiblePersonalCount
                       : line.nodes.length
                   }
-                  label={t.tasks.task_line_task_count}
+                  countLabel={t.tasks.task_line_task_count}
                   onPress={() => setSelectedLineId(line.id)}
                 />
               ))}
@@ -554,43 +555,6 @@ export default function TasksScreen() {
   );
 }
 
-function TaskLineCard({
-  line,
-  activeCount,
-  label,
-  onPress,
-}: {
-  line: TaskLineSummary;
-  activeCount: number;
-  label: string;
-  onPress: () => void;
-}) {
-  const tone = LINE_TONES[line.tone];
-  return (
-    <View style={[styles.lineCard, { backgroundColor: '#FFFFFF', borderColor: tone.border }]}>
-      <Pressable onPress={onPress} accessibilityRole="button" style={styles.lineCardPressable}>
-        <View style={[styles.lineIcon, { backgroundColor: tone.iconBg }]}>
-          <Ionicons name={line.icon} size={23} color={tone.icon} />
-        </View>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={styles.lineTitle} numberOfLines={2}>
-            {line.title}
-          </Text>
-          <Text style={styles.lineSubtitle} numberOfLines={2}>
-            {line.subtitle}
-          </Text>
-          <View style={[styles.lineCountChip, { backgroundColor: tone.iconBg }]}>
-            <Text style={[styles.lineCountText, { color: tone.icon }]}>
-              {label.replace('{count}', String(activeCount))}
-            </Text>
-          </View>
-        </View>
-        <Ionicons name="chevron-forward" size={19} color={tone.icon} style={styles.lineChevron} />
-      </Pressable>
-    </View>
-  );
-}
-
 function TaskLineDetail({
   line,
   stateMap,
@@ -611,7 +575,7 @@ function TaskLineDetail({
   onTaskComplete: (task: { title: Record<string, string>; type: OdysseyNode['type'] }) => void;
 }) {
   const { t } = useLanguage();
-  const tone = LINE_TONES[line.tone];
+  const tone = ODYSSEY_TASK_LINE_TONES[line.tone];
   const sections = [
     { title: t.tasks.section_progress, data: line.nodes.filter((node) => stateMap[node.id]?.status === 'in_progress') },
     { title: t.tasks.section_available, data: line.nodes.filter((node) => stateMap[node.id]?.status === 'available') },
@@ -790,27 +754,6 @@ const styles = StyleSheet.create({
   ctaPressable: {
     borderRadius: 28,
   },
-  lineCard: {
-    minHeight: 118,
-    marginBottom: 12,
-    width: '100%',
-    alignSelf: 'stretch',
-    borderRadius: 28,
-    borderWidth: 1,
-    shadowColor: '#7A4A2C',
-    shadowOpacity: 0.08,
-    shadowRadius: 22,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 4,
-  },
-  lineCardPressable: {
-    minHeight: 116,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 28,
-  },
   lineIcon: {
     width: 52,
     height: 52,
@@ -818,32 +761,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
-  },
-  lineTitle: {
-    fontSize: 17,
-    lineHeight: 22,
-    fontWeight: '800',
-    color: colors.textMain,
-  },
-  lineSubtitle: {
-    marginTop: 4,
-    fontSize: 12.5,
-    lineHeight: 18,
-    color: colors.textMuted,
-  },
-  lineCountChip: {
-    alignSelf: 'flex-start',
-    marginTop: 10,
-    borderRadius: 999,
-    paddingHorizontal: 11,
-    paddingVertical: 5,
-  },
-  lineCountText: {
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  lineChevron: {
-    marginLeft: 10,
   },
   historyPill: {
     height: HISTORY_PILL_HEIGHT,

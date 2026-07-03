@@ -9,12 +9,18 @@ import { env } from './env';
 import { hydrateCurrentLocale } from './locale';
 import * as secureStore from './secureStore';
 import { addSentryBreadcrumb, reportToSentry } from './sentry';
+import { useNetworkHealthStore } from '../store/networkHealthStore';
 
 export const API_BASE = env.EXPO_PUBLIC_API_URL;
 
+// MS-16: 15s let a single flaky request hold the UI for nearly 40s once
+// TanStack Query's own retry+backoff stacked on top. 10s still gives cellular
+// networks (which spike on tower/signal handoff) plenty of room, while
+// capping the worst case the UI has to sit through before failing over to
+// the offline/error state.
 export const api = axios.create({
   baseURL: API_BASE,
-  timeout: 15000,
+  timeout: 10000,
 });
 
 // Augment axios's per-request config to carry the request start timestamp
@@ -110,6 +116,7 @@ api.interceptors.response.use(
       status: response.status,
       ms: durationMs(response.config),
     });
+    useNetworkHealthStore.getState().reportSuccess();
     return response;
   },
   async (error: AxiosError) => {
@@ -134,10 +141,12 @@ api.interceptors.response.use(
     if (!status) {
       if (!isBestEffortTelemetry(url)) {
         reportToSentry(error, { url, status: 'network', code: error.code, ms });
+        useNetworkHealthStore.getState().reportFailure();
       }
     } else if (status >= 500) {
       if (!isBestEffortTelemetry(url)) {
         reportToSentry(error, { url, status, ms });
+        useNetworkHealthStore.getState().reportFailure();
       }
     } else if (status === 401 && url.includes('/auth/refresh')) {
       reportToSentry(error, { url, status, ms, context: 'token_refresh_initial_401' });

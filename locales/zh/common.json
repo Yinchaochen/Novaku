@@ -182,6 +182,7 @@
     "composer_hint_local": "分享本地发现、活动计划和重新认识 Berlin 的路线，让大家跳出自己最熟的生活半径。",
     "publish": "发布",
     "publish_success": "你的帖子已经发布到广场。",
+    "publishing": "正在发布你的帖子…",
     "review_notice": "你的帖子已保存，正在等待审核。",
     "helpful": "有帮助",
     "comments": "评论",
@@ -601,6 +602,7 @@
     "reply_to_label": "回复 {name}",
     "reply_posted": "回复已发布",
     "comment_published": "评论已发布，可在「个人中心 - 评论」中查看",
+    "sending": "发送中…",
     "view_replies": "查看 {count} 条回复",
     "hide_replies": "收起回复",
     "follow": "关注",
@@ -628,6 +630,7 @@
     "error": "出错了",
     "server_error": "服务器开小差了，请稍后再试",
     "network_error": "网络连接失败，检查一下 WiFi 或流量",
+    "network_degraded_banner": "网络不稳定，部分内容可能加载较慢",
     "retry": "重试",
     "save": "保存",
     "cancel": "取消",
@@ -839,7 +842,9 @@
     "msg_deleted": "此消息已被删除",
     "toast_favorited": "已收藏",
     "toast_copied": "已复制",
-    "toast_forwarded": "已转发"
+    "toast_forwarded": "已转发",
+    "sending": "发送中…",
+    "send_failed_retry": "发送失败 · 点击重试"
   },
   "map": {
     "our_map": "我们的地图",

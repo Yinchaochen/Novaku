@@ -182,6 +182,7 @@
     "composer_hint_local": "Teile lokale Entdeckungen, Eventideen und kleine Routen, mit denen man Berlin jenseits der gewohnten Wege neu erlebt.",
     "publish": "Veröffentlichen",
     "publish_success": "Dein Beitrag ist jetzt im Plaza sichtbar.",
+    "publishing": "Dein Beitrag wird veröffentlicht…",
     "review_notice": "Dein Beitrag wurde gespeichert und wartet auf die Moderation.",
     "helpful": "Hilfreich",
     "comments": "Kommentare",
@@ -601,6 +602,7 @@
     "reply_to_label": "Antwort an {name}",
     "reply_posted": "Antwort gepostet",
     "comment_published": "Kommentar veröffentlicht. Sieh ihn unter Mein Profil - Kommentare.",
+    "sending": "Wird gesendet…",
     "view_replies": "{count} Antworten anzeigen",
     "hide_replies": "Antworten ausblenden",
     "follow": "Folgen",
@@ -628,6 +630,7 @@
     "error": "Etwas ist schiefgelaufen",
     "server_error": "Unser Server hat gerade Probleme. Bitte versuche es gleich noch einmal.",
     "network_error": "Verbindung zum Server fehlgeschlagen. Prüfe dein WLAN oder Mobilfunknetz.",
+    "network_degraded_banner": "Schwache Verbindung — manche Inhalte laden eventuell langsam",
     "retry": "Erneut versuchen",
     "save": "Speichern",
     "cancel": "Abbrechen",
@@ -839,7 +842,9 @@
     "msg_deleted": "Diese Nachricht wurde gelöscht",
     "toast_favorited": "Zu Favoriten hinzugefügt",
     "toast_copied": "Kopiert",
-    "toast_forwarded": "Weitergeleitet"
+    "toast_forwarded": "Weitergeleitet",
+    "sending": "Wird gesendet…",
+    "send_failed_retry": "Nicht zugestellt · zum Wiederholen tippen"
   },
   "map": {
     "our_map": "Unsere Karte",

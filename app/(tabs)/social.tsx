@@ -33,6 +33,7 @@ import { useAuthStore } from '../../store/authStore';
 import { colors, shadows } from '../../theme/tokens';
 import { formatDisplayLocation } from '../../lib/displayLocation';
 import { firstUrl } from '../../lib/links';
+import { compressImageForUpload } from '../../lib/imageCompression';
 import { resolveMediaUrl } from '../../lib/media';
 import { reportToSentry } from '../../lib/sentry';
 import {
@@ -70,6 +71,7 @@ import { MessageActionMenu, MenuAction } from '../../components/MessageActionMen
 import { ReportSheet } from '../../components/ReportSheet';
 import { useNotifications } from '../../features/community/useCommunity';
 import { api } from '../../lib/api';
+import { useChatOutboxStore } from '../../store/chatOutboxStore';
 import { useSearchIntentStore } from '../../store/searchIntentStore';
 
 type ConversationKind = 'self' | 'direct' | 'group';
@@ -214,8 +216,9 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   return <Text className="px-5 pb-2 pt-2 text-xs font-bold uppercase tracking-[1.3px] text-slate-400">{children}</Text>;
 }
 
-// Renders a single message bubble
-function MessageBubble({
+// Renders a single message bubble. Exported for the /dev/network-resilience
+// gallery so the pending/failed send states can be eyeballed (D-035).
+export function MessageBubble({
   message,
   isMe,
   userAvatar,
@@ -230,6 +233,9 @@ function MessageBubble({
   highlighted = false,
   onSelect,
   onReplyPress,
+  sendingLabel,
+  failedLabel,
+  onRetry,
 }: {
   message: ChatMessage;
   isMe: boolean;
@@ -245,6 +251,9 @@ function MessageBubble({
   highlighted?: boolean;
   onSelect?: (id: string) => void;
   onReplyPress?: (originalId: string) => void;
+  sendingLabel: string;
+  failedLabel: string;
+  onRetry?: (message: ChatMessage) => void;
 }) {
   const senderAvatar = isMe ? userAvatar : resolveMediaUrl(message.sender.avatar_url) ?? null;
   const senderName = isMe ? userDisplayName : message.sender.display_name;
@@ -450,7 +459,23 @@ function MessageBubble({
           <SingleAvatar uri={senderAvatar} size={36} label={senderName} tint={senderTint} />
         </View>
       ) : null}
-      <View style={{ maxWidth: isMedia ? undefined : '72%' }}>{bubbleContent()}</View>
+      <View style={{ maxWidth: isMedia ? undefined : '72%' }}>
+        {bubbleContent()}
+        {/* MS-16: local-first send status. Pending = optimistic, waiting on
+            the server; failed = network/5xx, tap the bubble to resend. */}
+        {isMe && message._pending ? (
+          <Text style={{ textAlign: 'right', color: '#9CA3AF', fontSize: 11, marginTop: 2 }}>
+            {sendingLabel}
+          </Text>
+        ) : null}
+        {isMe && message._failed ? (
+          <Pressable onPress={() => onRetry?.(message)} hitSlop={6}>
+            <Text style={{ textAlign: 'right', color: '#F47C7C', fontSize: 11, marginTop: 2 }}>
+              {failedLabel}
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
       {isMe ? (
         <View style={{ marginLeft: 8 }}>
           <SingleAvatar uri={senderAvatar} size={36} label={senderName} tint={senderTint} />
@@ -701,7 +726,21 @@ export default function SocialScreen() {
     return [selfConversation, ...directConversations, ...groupConversations];
   }, [conversationOrigin, buddyConversations, directConversations, groupConversations, selfConversation]);
 
-  const messages = messagesQuery.data?.items ?? [];
+  // MS-16: merge the local send outbox (pending/failed optimistic messages)
+  // with the server-backed list. Outbox items live outside the query cache so
+  // the 3s poll can't drop an in-flight message; they're ordered after server
+  // messages by created_at so a fresh send lands at the bottom.
+  const outboxMap = useChatOutboxStore(
+    (state) => state.byConversation[activeConversationId ?? ''],
+  );
+  const messages = useMemo(() => {
+    const server = messagesQuery.data?.items ?? [];
+    const pending = outboxMap ? Object.values(outboxMap) : [];
+    if (pending.length === 0) return server;
+    return [...server, ...pending].sort((a, b) =>
+      a.created_at.localeCompare(b.created_at),
+    );
+  }, [messagesQuery.data, outboxMap]);
 
   // Scroll to the search-targeted message and flash highlight for 1s.
   useEffect(() => {
@@ -842,7 +881,11 @@ export default function SocialScreen() {
       setReplyTo(null);
     }
 
-    await sendMessage.mutateAsync({
+    // MS-16: fire-and-forget — the optimistic placeholder (onMutate in the
+    // client mutation defaults) shows the message instantly with a "sending"
+    // state, and onError flips it to a tap-to-retry state. The composer never
+    // waits on the round-trip, so a flaky network can't freeze the input.
+    sendMessage.send({
       type: 'text',
       body: text,
       meta: Object.keys(meta).length > 0 ? meta : undefined,
@@ -860,13 +903,23 @@ export default function SocialScreen() {
     if (result.canceled || !result.assets[0]) return;
 
     const asset = result.assets[0];
-    const filename = asset.fileName ?? `photo_${Date.now()}.jpg`;
-    const mimeType = asset.mimeType ?? 'image/jpeg';
 
     setUploadingImage(true);
     try {
-      const { url } = await uploadMedia.mutateAsync({ uri: asset.uri, name: filename, type: mimeType });
-      await sendMessage.mutateAsync({ type: 'image', media_url: url });
+      // MS-16: downscale/re-compress before upload so a raw multi-MB photo
+      // doesn't stall the send on a weak network.
+      const compressed = await compressImageForUpload({
+        uri: asset.uri,
+        width: asset.width,
+        height: asset.height,
+        fileName: asset.fileName,
+      });
+      const { url } = await uploadMedia.mutateAsync({
+        uri: compressed.uri,
+        name: compressed.fileName,
+        type: compressed.mimeType,
+      });
+      sendMessage.send({ type: 'image', media_url: url });
     } catch (err) {
       Alert.alert(t.common.error, t.chat.upload_failed);
       reportToSentry(err, { source: 'social.uploadImage' });
@@ -875,10 +928,10 @@ export default function SocialScreen() {
     }
   };
 
-  const handleSendSticker = async (mediaUrl: string) => {
+  const handleSendSticker = (mediaUrl: string) => {
     if (!activeConversationId) return;
     setIsEmojiVisible(false);
-    await sendMessage.mutateAsync({ type: 'sticker', media_url: mediaUrl });
+    sendMessage.send({ type: 'sticker', media_url: mediaUrl });
   };
 
   const handleAddSticker = async () => {
@@ -1095,11 +1148,14 @@ export default function SocialScreen() {
               return next;
             })}
             onReplyPress={handleReplyBlockPress}
+            sendingLabel={t.chat.sending}
+            failedLabel={t.chat.send_failed_retry}
+            onRetry={(msg) => sendMessage.retry(msg)}
           />
         </View>
       );
     },
-    [messages, langCode, user.id, userAvatar, user.display_name, handleMessageLongPress, t.chat.edited_label, t.chat.msg_deleted, isMultiSelect, selectedMsgIds, favoritedIds, handleReplyBlockPress],
+    [messages, langCode, user.id, userAvatar, user.display_name, handleMessageLongPress, t.chat.edited_label, t.chat.msg_deleted, t.chat.sending, t.chat.send_failed_retry, isMultiSelect, selectedMsgIds, favoritedIds, handleReplyBlockPress, sendMessage],
   );
 
   return (
@@ -1978,7 +2034,6 @@ export default function SocialScreen() {
               {draftMessage.trim() ? (
                 <Pressable
                   onPress={() => void handleSendText()}
-                  disabled={sendMessage.isPending}
                   style={{
                     width: 38,
                     height: 38,
@@ -2079,7 +2134,7 @@ export default function SocialScreen() {
                     {(stickersQuery.data ?? []).map((sticker) => (
                       <Pressable
                         key={sticker.id}
-                        onPress={() => void handleSendSticker(sticker.media_url)}
+                        onPress={() => handleSendSticker(sticker.media_url)}
                         style={{ width: '25%', aspectRatio: 1, padding: 4 }}
                       >
                         <Image

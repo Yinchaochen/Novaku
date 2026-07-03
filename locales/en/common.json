@@ -182,6 +182,7 @@
     "composer_hint_local": "Share local discoveries, event plans, and rediscovery routes that help people experience Berlin beyond their usual routine.",
     "publish": "Publish",
     "publish_success": "Your post is live in Plaza.",
+    "publishing": "Publishing your post…",
     "review_notice": "Your post is saved and waiting for moderation review.",
     "helpful": "Helpful",
     "comments": "Comments",
@@ -746,6 +747,7 @@
     "reply_to_label": "Reply to {name}",
     "reply_posted": "Reply posted",
     "comment_published": "Comment published. View it under My Profile - Comments.",
+    "sending": "Sending…",
     "view_replies": "View {count} replies",
     "hide_replies": "Hide replies",
     "follow": "Follow",
@@ -773,6 +775,7 @@
     "error": "Something went wrong",
     "server_error": "Our server is having a moment. Please try again in a bit.",
     "network_error": "Couldn't reach the server. Check your WiFi or mobile data.",
+    "network_degraded_banner": "Weak connection — some things may load slowly",
     "retry": "Retry",
     "save": "Save",
     "cancel": "Cancel",
@@ -839,7 +842,9 @@
     "msg_deleted": "This message was deleted",
     "toast_favorited": "Added to favorites",
     "toast_copied": "Copied",
-    "toast_forwarded": "Forwarded"
+    "toast_forwarded": "Forwarded",
+    "sending": "Sending…",
+    "send_failed_retry": "Not delivered · tap to retry"
   },
   "map": {
     "our_map": "Our Map",

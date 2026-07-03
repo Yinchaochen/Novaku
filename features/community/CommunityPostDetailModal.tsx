@@ -198,6 +198,11 @@ function getLocationEntries(post: CommunityPost) {
   return [];
 }
 
+function wrapMediaIndex(index: number, itemCount: number) {
+  if (itemCount <= 0) return 0;
+  return ((index % itemCount) + itemCount) % itemCount;
+}
+
 export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onEditPost }: Props) {
   const { t, langCode } = useLanguage();
   const insets = useSafeAreaInsets();
@@ -596,21 +601,24 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
   };
 
   const handleComposerSubmit = (input: CommentComposerInput) => {
+    // MS-16: the mutation inserts an optimistic placeholder synchronously
+    // (see useCreateCommunityComment), so close the composer and give
+    // feedback right away instead of waiting on the network round-trip —
+    // a flaky connection shouldn't hold the composer hostage. onError below
+    // rolls the placeholder back and surfaces the failure.
+    const isReply = Boolean(input.parent_comment_id);
+    hadDownstreamSignalRef.current = true;
+    setComposerVisible(false);
+    setReplyTo(null);
+    showToast(
+      isReply ? t.comments.reply_posted : t.comments.comment_published,
+      isReply ? 2000 : 3500,
+    );
+    if (!isReply) {
+      // Scroll into the comments section so the user sees their (optimistic) post.
+      setTimeout(() => scrollToComments(), 80);
+    }
     createComment.mutate(input, {
-      onSuccess: (created) => {
-        hadDownstreamSignalRef.current = true;
-        const isReply = Boolean(created.parent_comment_id);
-        setComposerVisible(false);
-        setReplyTo(null);
-        showToast(
-          isReply ? t.comments.reply_posted : t.comments.comment_published,
-          isReply ? 2000 : 3500,
-        );
-        if (!isReply) {
-          // Scroll into the (now refreshed) comments section so the user sees their post.
-          setTimeout(() => scrollToComments(), 80);
-        }
-      },
       onError: (err) => Alert.alert(t.common.error, commentErrorMessage(err, 'create')),
     });
   };
@@ -635,6 +643,17 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
     const nextIndex = Math.round(event.nativeEvent.contentOffset.x / viewportWidth);
     const clampedIndex = Math.max(0, Math.min(post.media_items.length - 1, nextIndex));
     setActiveMediaIndex(clampedIndex);
+  };
+
+  const goToMediaIndex = (index: number) => {
+    if (!hasMediaPager) {
+      return;
+    }
+    const nextIndex = wrapMediaIndex(index, mediaItemCount);
+    const nextOffset = nextIndex * viewportWidth;
+    setActiveMediaIndex(nextIndex);
+    scrollX.setValue(nextOffset);
+    mediaScrollRef.current?.scrollTo({ x: nextOffset, animated: true });
   };
 
   const currentAvatarUrl = resolveMediaUrl(user?.avatar_url);
@@ -792,6 +811,46 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
                         {activeMediaIndex + 1}/{post.media_items.length}
                       </Text>
                     </View>
+                  ) : null}
+
+                  {hasMediaPager ? (
+                    <>
+                      <Pressable
+                        accessibilityRole="button"
+                        hitSlop={8}
+                        onPress={() => goToMediaIndex(activeMediaIndex - 1)}
+                        className="absolute items-center justify-center rounded-full"
+                        style={{
+                          left: 14,
+                          top: mediaHeight / 2 - 22,
+                          width: 44,
+                          height: 44,
+                          backgroundColor: 'rgba(17, 17, 17, 0.48)',
+                          borderWidth: 1,
+                          borderColor: 'rgba(255, 255, 255, 0.28)',
+                        }}
+                      >
+                        <Ionicons name="chevron-back" size={25} color="#FFFFFF" />
+                      </Pressable>
+
+                      <Pressable
+                        accessibilityRole="button"
+                        hitSlop={8}
+                        onPress={() => goToMediaIndex(activeMediaIndex + 1)}
+                        className="absolute items-center justify-center rounded-full"
+                        style={{
+                          right: 14,
+                          top: mediaHeight / 2 - 22,
+                          width: 44,
+                          height: 44,
+                          backgroundColor: 'rgba(17, 17, 17, 0.48)',
+                          borderWidth: 1,
+                          borderColor: 'rgba(255, 255, 255, 0.28)',
+                        }}
+                      >
+                        <Ionicons name="chevron-forward" size={25} color="#FFFFFF" />
+                      </Pressable>
+                    </>
                   ) : null}
                 </View>
 

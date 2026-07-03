@@ -329,7 +329,9 @@ function RepliesList({
   );
 }
 
-function CommentRow({
+// Exported for the /dev/network-resilience gallery so the _pending comment
+// state can be eyeballed (D-035).
+export function CommentRow({
   comment,
   isOwn,
   langCode,
@@ -351,9 +353,11 @@ function CommentRow({
   onPressMore: () => void;
 }) {
   const { t } = useLanguage();
-  const detailLine = [formatCommentDate(comment.created_at, langCode), comment.author.city]
-    .filter(Boolean)
-    .join(' · ');
+  const detailLine = comment._pending
+    ? t.comments.sending
+    : [formatCommentDate(comment.created_at, langCode), comment.author.city]
+        .filter(Boolean)
+        .join(' · ');
   const showTranslated =
     Boolean(comment.translated_body) && comment.is_translated && !translateOverridden;
   const bodyToShow = showTranslated ? (comment.translated_body ?? comment.body) : comment.body;
@@ -374,8 +378,10 @@ function CommentRow({
     }
   };
 
+  const pending = Boolean(comment._pending);
+
   return (
-    <View className="flex-row gap-3">
+    <View className={`flex-row gap-3 ${pending ? 'opacity-60' : ''}`}>
       <Pressable onPress={openAuthorProfile} hitSlop={4}>
         <Avatar name={comment.author.display_name} avatarUrl={comment.author.avatar_url} />
       </Pressable>
@@ -386,9 +392,11 @@ function CommentRow({
               {comment.author.display_name}
             </Text>
           </Pressable>
-          <Pressable onPress={onPressMore} hitSlop={8} className="ml-2">
-            <Ionicons name="ellipsis-horizontal" size={16} color="#9CA3AF" />
-          </Pressable>
+          {pending ? null : (
+            <Pressable onPress={onPressMore} hitSlop={8} className="ml-2">
+              <Ionicons name="ellipsis-horizontal" size={16} color="#9CA3AF" />
+            </Pressable>
+          )}
         </View>
 
         <Text className="mt-1 text-[15px] leading-6 text-neutral-800">
@@ -398,9 +406,11 @@ function CommentRow({
 
         <View className="mt-2 flex-row flex-wrap items-center gap-3">
           <Text className="text-[12px] text-neutral-400">{detailLine}</Text>
-          <Pressable onPress={onPressReply} hitSlop={6}>
-            <Text className="text-[12px] font-medium text-neutral-500">{t.comments.reply}</Text>
-          </Pressable>
+          {pending ? null : (
+            <Pressable onPress={onPressReply} hitSlop={6}>
+              <Text className="text-[12px] font-medium text-neutral-500">{t.comments.reply}</Text>
+            </Pressable>
+          )}
           {comment.translated_body ? (
             <Pressable onPress={onPressTranslate} hitSlop={6}>
               <Text className="text-[12px] font-medium text-neutral-500">
@@ -416,7 +426,7 @@ function CommentRow({
         </View>
 
         <View className="mt-2 flex-row items-center gap-4">
-          <Pressable onPress={onPressHelpful} hitSlop={6} className="flex-row items-center">
+          <Pressable onPress={onPressHelpful} hitSlop={6} className="flex-row items-center" disabled={pending}>
             <Ionicons
               name={comment.viewer_marked_helpful ? 'heart' : 'heart-outline'}
               size={16}

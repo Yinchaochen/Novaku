@@ -36,6 +36,7 @@ import { LangPill } from '../../components/PageHeader';
 import { useLanguage } from '../../context/LanguageContext';
 import { captureSentryMessage } from '../../lib/sentry';
 import { colors, shadows } from '../../theme/tokens';
+import { compressImageForUpload } from '../../lib/imageCompression';
 import { resolveMediaUrl } from '../../lib/media';
 import { CommunityPostCard } from '../../features/community/CommunityPostCard';
 import { CommunityPostDetailModal } from '../../features/community/CommunityPostDetailModal';
@@ -253,21 +254,24 @@ export default function PlazaScreen() {
 
       setIsUploadingMedia(true);
       setComposerMessage(null);
-      const uploaded: CommunityPostMedia[] = [];
       if (!uploadMedia?.mutateAsync) {
         setComposerMessage(t.common.error);
         return;
       }
-      for (const asset of result.assets.slice(0, remaining)) {
-        const mimeType = asset.mimeType ?? 'image/jpeg';
-        const fileName = asset.fileName ?? `plaza-${Date.now()}.jpg`;
-        const media = await uploadMedia.mutateAsync({
-          uri: asset.uri,
-          mimeType,
-          fileName,
-        });
-        uploaded.push(media);
-      }
+      // MS-16: compress each pick client-side (longest edge → 1600px, JPEG
+      // q0.7) then upload all in parallel. Sequential upload of raw multi-MB
+      // photos was the dominant cost of posting-with-images on weak networks.
+      const uploaded = await Promise.all(
+        result.assets.slice(0, remaining).map(async (asset) => {
+          const compressed = await compressImageForUpload({
+            uri: asset.uri,
+            width: asset.width,
+            height: asset.height,
+            fileName: asset.fileName,
+          });
+          return uploadMedia.mutateAsync(compressed);
+        }),
+      );
       setMediaItems((current) => [...current, ...uploaded].slice(0, MAX_MEDIA_ITEMS));
     } catch {
       setComposerMessage(t.common.error);
@@ -410,6 +414,13 @@ export default function PlazaScreen() {
       setComposerMessage(t.common.error);
       return;
     }
+    // MS-16: images are already uploaded (media_items hold R2 URLs), so the
+    // submit itself is a fast JSON call. Close the composer immediately and
+    // show a "publishing…" banner instead of blocking on the round-trip. On
+    // error we reopen the composer — the draft is intact because we only
+    // resetComposerState() on success.
+    setComposerVisible(false);
+    setPlazaBanner({ tone: 'info', message: t.plaza.publishing });
     createPost.mutate(payload, {
       onSuccess: (post) => {
         resetComposerState();
@@ -417,9 +428,10 @@ export default function PlazaScreen() {
           tone: post.moderation_status === 'review' ? 'info' : 'success',
           message: post.moderation_status === 'review' ? t.plaza.review_notice : t.plaza.publish_success,
         });
-        setComposerVisible(false);
       },
       onError: (err) => {
+        setPlazaBanner(null);
+        setComposerVisible(true);
         setComposerMessage(plazaErrorMessage(err, 'create'));
       },
     });

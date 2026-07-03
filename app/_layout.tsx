@@ -40,7 +40,7 @@ import {
   PlusJakartaSans_800ExtraBold,
   useFonts,
 } from '@expo-google-fonts/plus-jakarta-sans';
-import { QueryClientProvider } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { StyleSheet } from 'nativewind';
 import { StatusBar } from 'expo-status-bar';
 import { Stack, usePathname, useRouter, useSegments } from 'expo-router';
@@ -50,7 +50,9 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { LanguageProvider, useLanguage } from '../context/LanguageContext';
+import { NetworkHealthBanner } from '../components/NetworkHealthBanner';
 import { PendingDeletionBanner } from '../components/PendingDeletionBanner';
+import { asyncStoragePersister, CHAT_SEND_MUTATION_KEY } from '../lib/queryPersister';
 import { SafeModeScreen } from '../components/SafeModeScreen';
 import {
   loadBootState,
@@ -240,10 +242,29 @@ function AppBody() {
   }, [ready, isAuthenticated, pathname, segments, router]);
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister: asyncStoragePersister,
+        // MS-16 / P1: persist nothing except the paused chat-send mutation
+        // queue. Queries stay in-memory (they refetch on reconnect anyway);
+        // dehydrating only the queued sends keeps unsent messages alive
+        // across an app kill without replaying unrelated mutations.
+        dehydrateOptions: {
+          shouldDehydrateQuery: () => false,
+          shouldDehydrateMutation: (mutation) =>
+            mutation.options.mutationKey?.[0] === CHAT_SEND_MUTATION_KEY,
+        },
+      }}
+      onSuccess={() => {
+        // Fire off any sends that were queued while offline/killed.
+        void queryClient.resumePausedMutations();
+      }}
+    >
       <StatusBar style="dark" />
       {isAuthenticated ? <PendingDeletionBanner /> : null}
+      <NetworkHealthBanner />
       <Stack screenOptions={{ headerShown: false }} />
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }

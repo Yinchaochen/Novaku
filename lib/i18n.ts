@@ -188,6 +188,7 @@ export type Translations = {
     composer_hint_local: string;
     publish: string;
     publish_success: string;
+    publishing: string;
     review_notice: string;
     helpful: string;
     comments: string;
@@ -938,6 +939,8 @@ export type Translations = {
     toast_favorited: string;
     toast_copied: string;
     toast_forwarded: string;
+    sending: string;
+    send_failed_retry: string;
     menu_view_profile: string;
     menu_report: string;
     menu_block: string;
@@ -1005,6 +1008,7 @@ export type Translations = {
     reply_to_label: string;
     reply_posted: string;
     comment_published: string;
+    sending: string;
     view_replies: string;
     hide_replies: string;
     follow: string;
@@ -1032,6 +1036,7 @@ export type Translations = {
     error: string;
     server_error: string;
     network_error: string;
+    network_degraded_banner: string;
     retry: string;
     save: string;
     cancel: string;

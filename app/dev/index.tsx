@@ -5,22 +5,21 @@ import { PageHeader } from '../../components/PageHeader';
 import { Screen } from '../../components/Screen';
 
 /**
- * Dev gallery hub — the verification surface (GOTCHAS §9). Reachable on web
- * because the root auth redirect exempts `/dev` (app/_layout.tsx). The Expo Web
- * static export of this app is deployed (Cloudflare Pages) so every branch has a
- * URL to eyeball rendered states. Dev-only: English, out of the i18n pipeline.
+ * Dev gallery hub: the verification surface for rendered UI states.
+ * Dev-only copy stays English and out of the i18n pipeline.
  */
 
-// expo-router's typedRoutes table (.expo/types/router.d.ts) only regenerates on
-// `expo start`; sibling dev routes added in the same change aren't in it yet,
-// though they resolve fine at runtime. Widen here so a stale codegen file can't
-// block tsc — dev-only hub, not a user-facing route.
+// expo-router typedRoutes only regenerates on `expo start`; sibling dev routes
+// added in the same change can be missing from generated types while resolving
+// at runtime. Widen here so a stale dev-only table cannot block tsc.
 const devRoute = (p: string) => p as unknown as Href;
 
 const PAGES: { href: string; title: string; blurb: string }[] = [
   { href: '/dev/screen-preview', title: 'Screen preview', blurb: '<Screen> primitive in all 6 states' },
-  { href: '/dev/components', title: 'Components', blurb: 'Buttons · pills · cards — long-German stress' },
-  { href: '/dev/button-audit', title: 'Button audit', blurb: '103-locale label overflow (web only)' },
+  { href: '/dev/ui-system', title: 'UI system', blurb: 'Agent-operable primitives and Odyssey recipes' },
+  { href: '/dev/components', title: 'Components', blurb: 'Buttons, pills, cards, long-German stress' },
+  { href: '/dev/button-audit', title: 'Button audit', blurb: '103-locale label overflow, web only' },
+  { href: '/dev/network-resilience', title: 'Network resilience', blurb: 'Weak-network send states: comment, chat, banner' },
 ];
 
 export default function DevGalleryHub() {
