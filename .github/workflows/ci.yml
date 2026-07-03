@@ -37,3 +37,9 @@ jobs:
       # emitted by the step above, so CI validates the same Href types as local.
       - name: Typecheck
         run: npx tsc --noEmit
+
+      # Unit tests (jest-expo): pure logic + the MS-16 optimistic-send path
+      # (outbox, network-health thresholds, image compression, mutation
+      # defaults). --ci disables snapshot auto-write.
+      - name: Unit tests
+        run: npx jest --ci
