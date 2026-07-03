@@ -34,6 +34,7 @@ import { ProfileShareCard } from '../../components/ProfileShareCard';
 import { ShareSheet } from '../../components/ShareSheet';
 import { UserQRCodeModal } from '../../components/UserQRCodeModal';
 import { useLanguage } from '../../context/LanguageContext';
+import { getTabBarHeight } from '../../theme/layout';
 import { colors, gradients, shadows } from '../../theme/tokens';
 import { useUpdateProfile, useUploadAvatar } from '../../features/auth/useAuth';
 import { CommunityPostDetailModal } from '../../features/community/CommunityPostDetailModal';
@@ -1142,7 +1143,7 @@ export default function ProfileScreen() {
         ) : null}
 
         {/* ── CONTENT ── */}
-        <View style={{ paddingHorizontal: 20, paddingBottom: 130 }}>
+        <View style={{ paddingHorizontal: 20, paddingBottom: getTabBarHeight(insets.bottom) + 32 }}>
           {feedback ? (
             <GlassCard tone="white" radiusKey="lg" padding={14} style={{ marginTop: 14 }}>
               <Text

@@ -24,6 +24,11 @@ jobs:
       - name: Install
         run: npm ci
 
+      # UI-system gate: manifest paths resolve, extracted recipes don't regress
+      # inline, tab screens don't hand-code tab-bar clearance (D-037).
+      - name: UI system gate
+        run: npm run verify:ui
+
       # Emit the git-ignored .expo/types/router.d.ts (typed routes). Locally the
       # dev server writes it; a fresh CI checkout has none, and this is Expo's
       # documented no-dev-server way to generate it. Without it useSegments()

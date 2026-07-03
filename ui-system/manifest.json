@@ -98,8 +98,8 @@
     },
     {
       "name": "Plaza post card",
-      "path": "app/(tabs)/plaza.tsx",
-      "status": "local recipe, candidate for extraction"
+      "path": "features/community/CommunityPostCard.tsx",
+      "status": "extracted feature recipe, consumed by app/(tabs)/plaza.tsx"
     },
     {
       "name": "Comment row",
@@ -109,7 +109,7 @@
     {
       "name": "Chat message bubble",
       "path": "app/(tabs)/social.tsx",
-      "status": "local recipe, candidate for extraction"
+      "status": "named export MessageBubble, rendered by /dev/network-resilience; extraction deferred until SOCIAL-UI-002 (codex) lands"
     },
     {
       "name": "Network health banner",
@@ -124,7 +124,8 @@
     },
     {
       "pattern": "Hard-coded tab bar bottom padding or copied 64 + inset formulas",
-      "use_instead": "theme/layout.ts getTabBarHeight"
+      "use_instead": "theme/layout.ts getTabBarHeight",
+      "enforced_by": "npm run verify:ui (literal 3-digit paddingBottom in app/(tabs)/*.tsx fails; social.tsx allowlisted until SOCIAL-UI-002 lands)"
     },
     {
       "pattern": "Essential layout/shell styles placed only in Pressable callback style",

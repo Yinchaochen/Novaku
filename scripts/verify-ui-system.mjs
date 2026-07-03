@@ -95,6 +95,23 @@ if (exists('components/recipes/OdysseyTaskLineCard.tsx')) {
   }
 }
 
+// Ratchet: tab-bar clearance has a single source (theme/layout.ts
+// getTabBarHeight). A literal three-digit paddingBottom in a tab screen means
+// someone re-guessed the geometry. social.tsx stays allowlisted until
+// SOCIAL-UI-002 (codex) lands its redesign.
+const TAB_BAR_RATCHET_ALLOWLIST = new Set(['app/(tabs)/social.tsx']);
+const tabsDir = path.join(appRoot, 'app', '(tabs)');
+if (fs.existsSync(tabsDir)) {
+  for (const file of fs.readdirSync(tabsDir).filter((name) => name.endsWith('.tsx'))) {
+    const rel = `app/(tabs)/${file}`;
+    if (TAB_BAR_RATCHET_ALLOWLIST.has(rel)) continue;
+    const match = read(rel).match(/paddingBottom:\s*1\d\d\b/);
+    if (match) {
+      fail(`${rel} hard-codes tab-bar clearance (${match[0]}); use getTabBarHeight from theme/layout.ts`);
+    }
+  }
+}
+
 if (failures.length > 0) {
   console.error('UI system verification failed:');
   for (const failure of failures) console.error(`- ${failure}`);

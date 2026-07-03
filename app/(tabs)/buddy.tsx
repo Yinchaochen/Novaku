@@ -14,6 +14,7 @@ import {
 import { useNotifications } from '../../features/community/useCommunity';
 import { tap } from '../../lib/haptics';
 import { addSentryBreadcrumb } from '../../lib/sentry';
+import { getTabBarHeight } from '../../theme/layout';
 import { colors, shadows } from '../../theme/tokens';
 import { useAuthStore } from '../../store/authStore';
 
@@ -42,6 +43,7 @@ function categoryLabel(t: ReturnType<typeof useLanguage>['t'], id: BuddyPostCate
 export default function BuddyTabScreen() {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
+  const tabBarHeight = getTabBarHeight(insets.bottom);
   const user = useAuthStore((s) => s.user);
   const [category, setCategory] = useState<BuddyPostCategory | 'all'>('all');
 
@@ -208,7 +210,7 @@ export default function BuddyTabScreen() {
             contentContainerStyle={{
               paddingHorizontal: 16,
               paddingTop: items.length === 0 ? 0 : 14,
-              paddingBottom: 100,
+              paddingBottom: tabBarHeight + 12,
               flexGrow: items.length === 0 ? 1 : undefined,
               justifyContent: items.length === 0 ? 'center' : undefined,
             }}
@@ -257,7 +259,7 @@ export default function BuddyTabScreen() {
         style={{
           position: 'absolute',
           right: 18,
-          bottom: insets.bottom + 90,
+          bottom: tabBarHeight + 16,
           width: 56,
           height: 56,
           borderRadius: 28,
