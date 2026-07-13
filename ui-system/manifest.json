@@ -102,6 +102,12 @@
       "status": "extracted feature recipe, consumed by app/(tabs)/plaza.tsx"
     },
     {
+      "name": "Community post image viewer",
+      "path": "features/community/CommunityPostImageViewer.tsx",
+      "status": "extracted feature recipe, consumed by CommunityPostDetailModal and rendered by /dev/ui-system",
+      "invariant": "Multi-image posts expose high-contrast previous/next controls and a counter; single-image posts hide pager controls."
+    },
+    {
       "name": "Comment row",
       "path": "features/community/CommunityPostComments.tsx",
       "status": "feature recipe"
@@ -153,7 +159,7 @@
       },
       {
         "path": "/dev/ui-system",
-        "covers": ["SurfaceCard", "ListRow", "StateBlock", "OdysseyTaskLineCard", "long German stress"]
+        "covers": ["SurfaceCard", "ListRow", "StateBlock", "OdysseyTaskLineCard", "CommunityPostImageViewer", "long German stress"]
       },
       {
         "path": "/dev/components",

@@ -234,6 +234,8 @@
     "verify_again": "下次检查",
     "hide_post": "隐藏",
     "report_post": "举报",
+    "previous_image": "上一张图片",
+    "next_image": "下一张图片",
     "report_confirm_body": "要将这条帖子标记为误导、垃圾信息或不安全吗？",
     "moderation_review": "审核中",
     "moderation_rejected_post": "这条帖子未通过审核，似乎包含不允许发布的内容（例如色情、暴力、仇恨言论，或倒卖 Deutschlandticket / Semesterticket 等个人车票）。请修改后再试。",

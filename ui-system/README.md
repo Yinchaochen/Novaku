@@ -58,6 +58,9 @@ Current extracted recipe:
 
 - `components/recipes/OdysseyTaskLineCard.tsx`: task-line card used by
   `app/(tabs)/tasks.tsx`; shell is static, hit layer is pressable.
+- `features/community/CommunityPostImageViewer.tsx`: full-screen Plaza image
+  viewer with high-contrast multi-image paging controls and single-image
+  control suppression; rendered by `/dev/ui-system`.
 
 ### Verification
 

@@ -35,6 +35,7 @@ import { ReportSheet } from '../../components/ReportSheet';
 import { Toast, type ToastMessage } from '../../components/Toast';
 import { CommentComposerSheet, type CommentComposerInput } from './CommentComposerSheet';
 import { CommunityPostComments } from './CommunityPostComments';
+import { CommunityPostImageViewer } from './CommunityPostImageViewer';
 import { TranslatedText } from './TranslatedText';
 import {
   CommunityComment,
@@ -1139,42 +1140,18 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
         actions={postActions}
       />
 
-      {/* Full-screen image viewer: the in-flow media is cover-cropped to a hero
-          height, so tapping opens the complete image with contentFit="contain".
-          Mirrors the chat lightbox in social.tsx (tap / X / back to dismiss). */}
-      <Modal
+      <CommunityPostImageViewer
         visible={lightboxVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setLightboxVisible(false)}
-        statusBarTranslucent
-      >
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.97)' }}>
-          <Pressable
-            style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
-            onPress={() => setLightboxVisible(false)}
-          >
-            {post.media_items[activeMediaIndex] ? (
-              <Image
-                source={
-                  resolveMediaUrl(post.media_items[activeMediaIndex].media_url) ??
-                  post.media_items[activeMediaIndex].media_url
-                }
-                style={{ width: '100%', height: '100%' }}
-                contentFit="contain"
-                transition={120}
-              />
-            ) : null}
-          </Pressable>
-          <Pressable
-            onPress={() => setLightboxVisible(false)}
-            hitSlop={12}
-            style={{ position: 'absolute', top: insets.top + 8, right: 20, padding: 4 }}
-          >
-            <Ionicons name="close-circle" size={38} color="rgba(255,255,255,0.9)" />
-          </Pressable>
-        </View>
-      </Modal>
+        mediaUrls={post.media_items.map(
+          (media) => resolveMediaUrl(media.media_url) ?? media.media_url,
+        )}
+        activeIndex={activeMediaIndex}
+        closeLabel={t.common.back}
+        previousLabel={t.plaza.previous_image}
+        nextLabel={t.plaza.next_image}
+        onClose={() => setLightboxVisible(false)}
+        onIndexChange={goToMediaIndex}
+      />
 
       <View style={{ position: 'absolute', top: -10000, left: 0 }} pointerEvents="none">
         {post ? (

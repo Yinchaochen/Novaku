@@ -234,6 +234,8 @@
     "verify_again": "Check again",
     "hide_post": "Hide",
     "report_post": "Report",
+    "previous_image": "Previous image",
+    "next_image": "Next image",
     "report_confirm_body": "Report this post as misleading, spammy, or unsafe?",
     "moderation_review": "Under review",
     "moderation_rejected_post": "This post was rejected because it appears to contain content that's not allowed (e.g. sexual, violent, hateful, or reselling personal tickets). Please revise and try again.",

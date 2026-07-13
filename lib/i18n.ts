@@ -240,6 +240,8 @@ export type Translations = {
     verify_again: string;
     hide_post: string;
     report_post: string;
+    previous_image: string;
+    next_image: string;
     report_confirm_body: string;
     moderation_review: string;
     moderation_rejected_post: string;

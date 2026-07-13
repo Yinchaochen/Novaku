@@ -53,6 +53,7 @@ export function IconCircleButton({
         tap('light');
         onPress?.();
       }}
+      accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       hitSlop={8}
       style={({ pressed }) => [
