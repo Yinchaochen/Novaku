@@ -16,6 +16,7 @@ export interface OdysseyNode {
   can_parallel: boolean;
   source_url?: string | null;
   last_verified_at?: string | null;
+  verification_status?: 'unverified' | 'verified' | 'stale';
   lane_id?: string | null;
   created_by?: 'system' | 'user' | 'ai';
 }
@@ -112,6 +113,17 @@ function getVerificationDate(value: string | null | undefined, langCode: string)
   }
 }
 
+// Past the 14-day re-verify window plus grace, treat the info as possibly
+// outdated even if the nightly engine hasn't caught up yet.
+const STALE_AFTER_DAYS = 21;
+
+function isVerificationOld(value: string | null | undefined) {
+  if (!value) return false;
+  const verified = new Date(value).getTime();
+  if (Number.isNaN(verified)) return false;
+  return Date.now() - verified > STALE_AFTER_DAYS * 24 * 60 * 60 * 1000;
+}
+
 export function OdysseyCard({ node, state, onRefresh, onTaskComplete, onPressDetail }: Props) {
   const { t, langCode } = useLanguage();
   const start = useStartOdyssey();
@@ -126,6 +138,8 @@ export function OdysseyCard({ node, state, onRefresh, onTaskComplete, onPressDet
   const isMain = node.type === 'main';
   const sourceHost = getSourceHost(node.source_url);
   const verificationDate = getVerificationDate(node.last_verified_at, langCode);
+  const sourceDead = node.verification_status === 'stale';
+  const verificationOld = isVerificationOld(node.last_verified_at);
   const tone = STATUS_STYLES[status] ?? STATUS_STYLES.locked;
 
   const canDiscard = status === 'locked' || status === 'available' || status === 'in_progress';
@@ -210,7 +224,7 @@ export function OdysseyCard({ node, state, onRefresh, onTaskComplete, onPressDet
           ) : null}
         </Pressable>
 
-        {(sourceHost || verificationDate) && (
+        {(sourceHost || verificationDate || sourceDead) && (
           <View style={{ marginBottom: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {sourceHost && node.source_url && (
               <Pressable
@@ -229,17 +243,40 @@ export function OdysseyCard({ node, state, onRefresh, onTaskComplete, onPressDet
                 </Text>
               </Pressable>
             )}
-            {verificationDate && (
+            {sourceDead && (
               <View
                 style={{
-                  backgroundColor: tone.chipBg,
+                  backgroundColor: 'rgba(194, 94, 94, 0.12)',
                   borderRadius: 999,
                   paddingHorizontal: 12,
                   paddingVertical: 6,
                 }}
               >
-                <Text style={{ color: tone.chipText, fontSize: 11.5, fontWeight: '500' }}>
-                  {verificationDate}
+                <Text style={{ color: '#C25E5E', fontSize: 11.5, fontWeight: '700' }}>
+                  {t.tasks.source_dead}
+                </Text>
+              </View>
+            )}
+            {!sourceDead && verificationDate && (
+              <View
+                style={{
+                  backgroundColor: verificationOld ? 'rgba(176, 122, 30, 0.12)' : tone.chipBg,
+                  borderRadius: 999,
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                }}
+              >
+                <Text
+                  style={{
+                    color: verificationOld ? '#B07A1E' : tone.chipText,
+                    fontSize: 11.5,
+                    fontWeight: verificationOld ? '700' : '500',
+                  }}
+                >
+                  {(verificationOld ? t.tasks.info_stale : t.tasks.info_verified_on).replace(
+                    '{date}',
+                    verificationDate,
+                  )}
                 </Text>
               </View>
             )}

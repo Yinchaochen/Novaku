@@ -31,6 +31,7 @@ import { z } from 'zod/v4';
 import { AppBackground } from '../../components/AppBackground';
 import { ChalkIcon } from '../../components/ChalkIcon';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
+import { FeedbackPressable } from '../../components/FeedbackPressable';
 import { GlassCard } from '../../components/GlassCard';
 import { LangPill } from '../../components/PageHeader';
 import { useLanguage } from '../../context/LanguageContext';
@@ -699,22 +700,20 @@ export default function PlazaScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           >
             <View className="px-5 pb-2 pt-2">
-              <Pressable
+              <FeedbackPressable
                 onPress={closeComposer}
-                style={({ pressed }) => [
-                  {
-                    height: 44,
-                    width: 44,
-                    borderRadius: 22,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    overflow: 'hidden',
-                    borderWidth: 1,
-                    borderColor: 'rgba(255,255,255,0.85)',
-                    ...shadows.iconButton,
-                  },
-                  pressed ? { transform: [{ scale: 0.95 }] } : null,
-                ]}
+                style={{
+                  height: 44,
+                  width: 44,
+                  borderRadius: 22,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.85)',
+                  ...shadows.iconButton,
+                }}
+                pressedStyle={{ transform: [{ scale: 0.95 }] }}
               >
                 <LinearGradient
                   colors={['rgba(255,255,255,0.96)', 'rgba(255,250,245,0.78)']}
@@ -723,7 +722,7 @@ export default function PlazaScreen() {
                   style={StyleSheet.absoluteFill}
                 />
                 <Ionicons name="chevron-back" size={24} color={colors.textMain} />
-              </Pressable>
+              </FeedbackPressable>
             </View>
 
             <ScrollView
@@ -829,20 +828,18 @@ export default function PlazaScreen() {
                 {POST_TYPES.map((type) => {
                   const active = selectedType === type;
                   return (
-                    <Pressable
+                    <FeedbackPressable
                       key={type}
                       onPress={() => setValue('post_type', type, { shouldValidate: true })}
-                      style={({ pressed }) => [
-                        {
-                          paddingHorizontal: 16,
-                          paddingVertical: 10,
-                          borderRadius: 999,
-                          backgroundColor: active ? '#FFE8DA' : 'rgba(98,57,40,0.06)',
-                          borderWidth: 1,
-                          borderColor: active ? 'rgba(246,118,115,0.30)' : 'rgba(98,57,40,0.08)',
-                        },
-                        pressed ? { transform: [{ scale: 0.97 }] } : null,
-                      ]}
+                      style={{
+                        paddingHorizontal: 16,
+                        paddingVertical: 10,
+                        borderRadius: 999,
+                        backgroundColor: active ? '#FFE8DA' : 'rgba(98,57,40,0.06)',
+                        borderWidth: 1,
+                        borderColor: active ? 'rgba(246,118,115,0.30)' : 'rgba(98,57,40,0.08)',
+                      }}
+                      pressedStyle={{ transform: [{ scale: 0.97 }] }}
                     >
                       <Text
                         style={{
@@ -855,7 +852,7 @@ export default function PlazaScreen() {
                         {active ? '# ' : ''}
                         {t.plaza[`type_${type}`]}
                       </Text>
-                    </Pressable>
+                    </FeedbackPressable>
                   );
                 })}
               </ScrollView>

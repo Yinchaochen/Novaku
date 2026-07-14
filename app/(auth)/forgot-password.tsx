@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod/v4';
 
+import { FeedbackPressable } from '../../components/FeedbackPressable';
 import { useLanguage } from '../../context/LanguageContext';
 import { getApiErrorCode, useForgotPassword } from '../../features/auth/useAuth';
 import { tap } from '../../lib/haptics';
@@ -81,18 +82,19 @@ export default function ForgotPasswordScreen() {
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Pressable
+          <FeedbackPressable
             onPress={() => {
               tap('light');
               router.back();
             }}
             hitSlop={12}
-            style={({ pressed }) => [{ padding: 4 }, pressed ? { opacity: 0.7 } : null]}
+            style={{ padding: 4 }}
+            pressedStyle={{ opacity: 0.7 }}
             accessibilityRole="button"
             accessibilityLabel={t.common.back}
           >
             <Ionicons name="chevron-back" size={28} color={colors.brandCoral} />
-          </Pressable>
+          </FeedbackPressable>
           <View style={{ flex: 1, alignItems: 'center', marginRight: 32 }}>
             <Text
               style={{

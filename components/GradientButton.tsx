@@ -2,6 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
 
+import { usePressedFeedback } from '../hooks/usePressedFeedback';
 import { tap } from '../lib/haptics';
 import { colors, gradients, radius, shadows } from '../theme/tokens';
 
@@ -53,6 +54,7 @@ export function GradientButton({
 }: Props) {
   const inactive = disabled || loading;
   const sizing = SIZE[size];
+  const [pressed, pressHandlers] = usePressedFeedback();
 
   const isFilled = variant === 'primary' || variant === 'secondary';
   const fillColors =
@@ -83,7 +85,8 @@ export function GradientButton({
           tap(variant === 'primary' ? 'medium' : 'light');
           onPress?.();
         }}
-        style={({ pressed }) => [
+        {...pressHandlers}
+        style={[
           {
             minHeight: sizing.minHeight,
             paddingHorizontal: sizing.paddingH,

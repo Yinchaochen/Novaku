@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppBackground } from '../../components/AppBackground';
+import { FeedbackPressable } from '../../components/FeedbackPressable';
 import { GlassCard } from '../../components/GlassCard';
 import { Pill } from '../../components/Pill';
 import { StackedButton } from '../../components/StackedButton';
@@ -212,26 +213,24 @@ export function OdysseyDetailModal({ visible, node, state, onClose, onTaskComple
               paddingVertical: 12,
             }}
           >
-            <Pressable
+            <FeedbackPressable
               onPress={onClose}
               hitSlop={8}
-              style={({ pressed }) => [
-                {
-                  height: 42,
-                  width: 42,
-                  borderRadius: 21,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: '#FFFFFF',
-                  borderWidth: 1,
-                  borderColor: 'rgba(232, 221, 210, 0.8)',
-                  ...shadows.iconButton,
-                },
-                pressed ? { transform: [{ scale: 0.94 }] } : null,
-              ]}
+              style={{
+                height: 42,
+                width: 42,
+                borderRadius: 21,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: '#FFFFFF',
+                borderWidth: 1,
+                borderColor: 'rgba(232, 221, 210, 0.8)',
+                ...shadows.iconButton,
+              }}
+              pressedStyle={{ transform: [{ scale: 0.94 }] }}
             >
               <Ionicons name="chevron-back" size={22} color={colors.textMain} />
-            </Pressable>
+            </FeedbackPressable>
             <Pill label={typeLabel} tone={isMain ? 'peach' : 'coral'} size="sm" />
           </View>
 
@@ -363,22 +362,20 @@ export function OdysseyDetailModal({ visible, node, state, onClose, onTaskComple
                 </Text>
                 {sourceHost && node.source_url ? (
                   <View style={{ marginTop: 12 }}>
-                    <Pressable
+                    <FeedbackPressable
                       onPress={() => void Linking.openURL(node.source_url!)}
-                      style={({ pressed }) => [
-                        {
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          borderRadius: 18,
-                          borderWidth: 1,
-                          borderColor: 'rgba(232, 221, 210, 0.72)',
-                          backgroundColor: '#FFF8F1',
-                          paddingHorizontal: 14,
-                          paddingVertical: 14,
-                        },
-                        pressed ? { transform: [{ scale: 0.99 }] } : null,
-                      ]}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        borderRadius: 18,
+                        borderWidth: 1,
+                        borderColor: 'rgba(232, 221, 210, 0.72)',
+                        backgroundColor: '#FFF8F1',
+                        paddingHorizontal: 14,
+                        paddingVertical: 14,
+                      }}
+                      pressedStyle={{ transform: [{ scale: 0.99 }] }}
                     >
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <Ionicons name="globe-outline" size={16} color={colors.brandCoral} />
@@ -389,7 +386,7 @@ export function OdysseyDetailModal({ visible, node, state, onClose, onTaskComple
                       <Text style={{ fontSize: 12, fontWeight: '700', color: colors.brandCoral }}>
                         {t.tasks.detail_open_source}
                       </Text>
-                    </Pressable>
+                    </FeedbackPressable>
                     {verifiedDate ? (
                       <Text style={{ marginTop: 8, fontSize: 11.5, color: colors.textSubtle }}>
                         {t.tasks.detail_last_verified} · {verifiedDate}
@@ -471,24 +468,22 @@ export function OdysseyDetailModal({ visible, node, state, onClose, onTaskComple
                     color: colors.textMain,
                   }}
                 />
-                <Pressable
+                <FeedbackPressable
                   onPress={handleSaveNote}
                   disabled={!noteIsDirty || setNote.isPending}
-                  style={({ pressed }) => [
-                    {
-                      marginTop: 12,
-                      alignSelf: 'flex-end',
-                      paddingHorizontal: 18,
-                      paddingVertical: 9,
-                      borderRadius: 999,
-                      borderWidth: 1,
-                      borderColor: !noteIsDirty || setNote.isPending ? colors.lineSofter : 'rgba(255,200,175,0.65)',
-                      backgroundColor: !noteIsDirty || setNote.isPending ? '#E5E0D7' : colors.brandCoral,
-                      opacity: !noteIsDirty || setNote.isPending ? 0.55 : 1,
-                      ...(!noteIsDirty || setNote.isPending ? {} : shadows.cta),
-                    },
-                    pressed ? { transform: [{ scale: 0.97 }] } : null,
-                  ]}
+                  style={{
+                    marginTop: 12,
+                    alignSelf: 'flex-end',
+                    paddingHorizontal: 18,
+                    paddingVertical: 9,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: !noteIsDirty || setNote.isPending ? colors.lineSofter : 'rgba(255,200,175,0.65)',
+                    backgroundColor: !noteIsDirty || setNote.isPending ? '#E5E0D7' : colors.brandCoral,
+                    opacity: !noteIsDirty || setNote.isPending ? 0.55 : 1,
+                    ...(!noteIsDirty || setNote.isPending ? {} : shadows.cta),
+                  }}
+                  pressedStyle={{ transform: [{ scale: 0.97 }] }}
                 >
                   {setNote.isPending ? (
                     <ActivityIndicator size="small" color="#FFFFFF" />
@@ -497,7 +492,7 @@ export function OdysseyDetailModal({ visible, node, state, onClose, onTaskComple
                       {t.tasks.detail_notes_save}
                     </Text>
                   )}
-                </Pressable>
+                </FeedbackPressable>
               </GlassCard>
             </ScrollView>
           </KeyboardAvoidingView>

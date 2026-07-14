@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 
+import { usePressedFeedback } from '../hooks/usePressedFeedback';
 import { colors, radius, spacing, typography } from '../theme/tokens';
 import { SurfaceCard } from './SurfaceCard';
 
@@ -37,6 +38,7 @@ export function StateBlock({
   testID,
 }: StateBlockProps) {
   const toneConfig = TONES[tone];
+  const [pressed, pressHandlers] = usePressedFeedback();
   return (
     <SurfaceCard tone={toneConfig.surface} shadow="none" style={[styles.shell, style]} testID={testID}>
       <View style={[styles.iconShell, { backgroundColor: toneConfig.bg }]}>
@@ -45,7 +47,12 @@ export function StateBlock({
       <Text style={styles.title}>{title}</Text>
       {message ? <Text style={styles.message}>{message}</Text> : null}
       {actionLabel && onAction ? (
-        <Pressable onPress={onAction} accessibilityRole="button" style={({ pressed }) => [styles.action, pressed ? styles.actionPressed : null]}>
+        <Pressable
+          onPress={onAction}
+          accessibilityRole="button"
+          {...pressHandlers}
+          style={[styles.action, pressed ? styles.actionPressed : null]}
+        >
           <Text style={styles.actionLabel}>{actionLabel}</Text>
         </Pressable>
       ) : null}

@@ -54,6 +54,11 @@
       "use_when": "Static card or panel shell where layout must not depend on Pressable callback styles."
     },
     {
+      "name": "FeedbackPressable",
+      "path": "components/FeedbackPressable.tsx",
+      "use_when": "Any pressable needing press feedback: static `style` + `pressedStyle` props. Never use style={({ pressed }) => ...} — nativewind css-interop drops callback-style output on native (GOTCHAS 坑 #7); usePressedFeedback (hooks/usePressedFeedback.ts) is the hook form for custom components."
+    },
+    {
       "name": "ListRow",
       "path": "components/ListRow.tsx",
       "use_when": "Reusable one-row item with leading icon, copy, optional meta, and optional chevron."
@@ -90,6 +95,18 @@
     }
   ],
   "current_recipes": [
+    {
+      "name": "Buddy wish creation",
+      "path": "components/buddy/BuddyCreateMenu.tsx",
+      "status": "expandable entry plus image-first wish recipe, rendered by /dev/buddy-wish",
+      "invariant": "The primary plus expands upward into explicit companion and wish actions; wish photos remain optional and user-controlled."
+    },
+    {
+      "name": "Buddy wish photo picker",
+      "path": "components/buddy/BuddyPhotoPicker.tsx",
+      "status": "shared wish media recipe, rendered by /dev/buddy-wish",
+      "invariant": "Up to five images, first image is the cover, and upload failures keep existing form state."
+    },
     {
       "name": "OdysseyTaskLineCard",
       "path": "components/recipes/OdysseyTaskLineCard.tsx",
@@ -135,7 +152,8 @@
     },
     {
       "pattern": "Essential layout/shell styles placed only in Pressable callback style",
-      "use_instead": "Static View shell plus Pressable hit layer"
+      "use_instead": "FeedbackPressable (or usePressedFeedback) with static style + pressedStyle",
+      "enforced_by": "npm run verify:ui (any resting styles inside style={({ pressed }) => ...} fail; app/dev/pressable-probe.tsx allowlisted as the intentional broken specimen)"
     },
     {
       "pattern": "New user-visible copy written directly in a component",
@@ -153,6 +171,10 @@
   "verification_surfaces": {
     "dev_gallery_hub": "app/dev/index.tsx",
     "routes": [
+      {
+        "path": "/dev/buddy-wish",
+        "covers": ["BuddyCreateMenu", "BuddyPhotoPicker", "BuddyPostCard", "normal", "long German", "empty", "loading", "own", "other"]
+      },
       {
         "path": "/dev/screen-preview",
         "covers": ["Screen primitive", "normal", "long German", "empty", "loading", "tab bar clearance"]
@@ -172,6 +194,10 @@
       {
         "path": "/dev/network-resilience",
         "covers": ["comment pending/failed", "chat pending/failed", "weak network banner"]
+      },
+      {
+        "path": "/dev/pressable-probe",
+        "covers": ["GOTCHAS 坑 #7 on-device probe", "callback vs static vs FeedbackPressable"]
       }
     ],
     "commands": [

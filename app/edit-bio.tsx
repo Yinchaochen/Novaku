@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppBackground } from '../components/AppBackground';
+import { FeedbackPressable } from '../components/FeedbackPressable';
 import { GlassCard } from '../components/GlassCard';
 import { useLanguage } from '../context/LanguageContext';
 import { useUpdateProfile } from '../features/auth/useAuth';
@@ -68,26 +69,24 @@ export default function EditBioScreen() {
               paddingVertical: 14,
             }}
           >
-            <Pressable
+            <FeedbackPressable
               onPress={handleBack}
               hitSlop={8}
-              style={({ pressed }) => [
-                {
-                  height: 42,
-                  width: 42,
-                  borderRadius: 21,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: 'rgba(255,255,255,0.86)',
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.85)',
-                  ...shadows.iconButton,
-                },
-                pressed ? { transform: [{ scale: 0.94 }] } : null,
-              ]}
+              style={{
+                height: 42,
+                width: 42,
+                borderRadius: 21,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(255,255,255,0.86)',
+                borderWidth: 1,
+                borderColor: 'rgba(255,255,255,0.85)',
+                ...shadows.iconButton,
+              }}
+              pressedStyle={{ transform: [{ scale: 0.94 }] }}
             >
               <Ionicons name="chevron-back" size={22} color={colors.textMain} />
-            </Pressable>
+            </FeedbackPressable>
             <Text style={{ fontSize: 17, fontWeight: '800', color: colors.textMain, letterSpacing: -0.2 }}>
               {t.profile.edit_bio_title}
             </Text>

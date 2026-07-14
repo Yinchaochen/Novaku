@@ -112,6 +112,87 @@ if (fs.existsSync(tabsDir)) {
   }
 }
 
+// Ratchet: Pressable callback styles lose their output on native (nativewind
+// v4 css-interop, upstream nativewind#1105/#1781; see
+// docs/MOBILE_PLATFORM_GOTCHAS.md 坑 #7). Shell/layout styles must be attached
+// statically; a `({ pressed }) => ...` callback may only gate press feedback
+// (opacity/transform) behind `pressed`. Anything the callback returns at rest
+// is a violation.
+const CALLBACK_STYLE_ALLOWLIST = new Set([
+  'app/dev/pressable-probe.tsx', // intentional broken specimen for on-device probing
+]);
+const FEEDBACK_KEYS = new Set(['opacity', 'transform']);
+const SCAN_DIRS = ['app', 'components', 'features'];
+
+function* walkTsx(dir) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) yield* walkTsx(full);
+    else if (entry.name.endsWith('.tsx')) yield full;
+  }
+}
+
+function scanBalanced(text, start, open, close) {
+  let depth = 0;
+  for (let i = start; i < text.length; i++) {
+    if (text[i] === open) depth++;
+    else if (text[i] === close) { depth--; if (depth === 0) return i; }
+  }
+  return -1;
+}
+
+function splitTopLevel(body) {
+  const parts = [];
+  let depth = 0;
+  let current = '';
+  for (const char of body) {
+    if ('([{'.includes(char)) depth++;
+    if (')]}'.includes(char)) depth--;
+    if (char === ',' && depth === 0) { parts.push(current); current = ''; continue; }
+    current += char;
+  }
+  if (current.trim()) parts.push(current);
+  return parts;
+}
+
+for (const scanDir of SCAN_DIRS) {
+  const absDir = path.join(appRoot, scanDir);
+  if (!fs.existsSync(absDir)) continue;
+  for (const file of walkTsx(absDir)) {
+    const rel = path.relative(appRoot, file).replaceAll('\\', '/');
+    if (CALLBACK_STYLE_ALLOWLIST.has(rel)) continue;
+    const text = fs.readFileSync(file, 'utf8');
+    const callbackRe = /style=\{\(\{\s*pressed[^}]*\}\)\s*=>/g;
+    let match;
+    while ((match = callbackRe.exec(text)) !== null) {
+      const line = text.slice(0, match.index).split('\n').length;
+      const afterArrow = match.index + match[0].length;
+      const rest = text.slice(afterArrow).trimStart();
+      const bodyStart = afterArrow + (text.slice(afterArrow).length - rest.length);
+      let body = '';
+      if (rest[0] === '(') body = text.slice(bodyStart + 1, scanBalanced(text, bodyStart, '(', ')'));
+      else if (rest[0] === '[') body = text.slice(bodyStart, scanBalanced(text, bodyStart, '[', ']') + 1);
+      else if (rest[0] === '{') body = text.slice(bodyStart, scanBalanced(text, bodyStart, '{', '}') + 1);
+      body = body.trim();
+
+      const inner = body.startsWith('[') || body.startsWith('{') ? body.slice(1, -1) : body;
+      const restingParts = splitTopLevel(inner).filter((part) => part.trim() && !/\bpressed\b/.test(part));
+      const offending = restingParts.filter((part) => {
+        const keyMatches = [...part.matchAll(/(^|[\s{,])(\w+):/g)].map((k) => k[2]);
+        if (keyMatches.length > 0) return keyMatches.some((key) => !FEEDBACK_KEYS.has(key));
+        return true; // styles.x refs / variables / prop passthrough at rest = essential styles in callback
+      });
+      if (offending.length > 0) {
+        fail(
+          `${rel}:${line} Pressable callback style carries resting styles (native drops them, GOTCHAS 坑 #7): ` +
+          offending.map((part) => part.trim().slice(0, 40)).join(' | '),
+        );
+      }
+    }
+  }
+}
+
 if (failures.length > 0) {
   console.error('UI system verification failed:');
   for (const failure of failures) console.error(`- ${failure}`);

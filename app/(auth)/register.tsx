@@ -29,6 +29,7 @@ import {
 } from '../../features/auth/useOAuth';
 import { tap } from '../../lib/haptics';
 import { colors } from '../../theme/tokens';
+import { FeedbackPressable } from '../../components/FeedbackPressable';
 import { GoogleSignInButton } from '../../components/GoogleSignInButton';
 
 const CONSENT_DOCUMENT_VERSION = '2026-05-05.v1';
@@ -229,7 +230,7 @@ export default function RegisterScreen() {
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Pressable
+          <FeedbackPressable
             onPress={() => {
               tap('light');
               if (router.canGoBack()) {
@@ -239,15 +240,13 @@ export default function RegisterScreen() {
               }
             }}
             hitSlop={12}
-            style={({ pressed }) => [
-              { padding: 4 },
-              pressed ? { opacity: 0.7 } : null,
-            ]}
+            style={{ padding: 4 }}
+            pressedStyle={{ opacity: 0.7 }}
             accessibilityRole="button"
             accessibilityLabel={t.common.back}
           >
             <Ionicons name="chevron-back" size={28} color={colors.brandCoral} />
-          </Pressable>
+          </FeedbackPressable>
           <View style={{ flex: 1, alignItems: 'center', marginRight: 32 /* offset back-button width */ }}>
             <Text
               style={{

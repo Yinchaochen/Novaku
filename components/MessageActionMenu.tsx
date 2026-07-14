@@ -2,6 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Dimensions, Pressable, Text, View, ViewStyle } from 'react-native';
 
+import { FeedbackPressable } from './FeedbackPressable';
+
 export type MenuAction = {
   id: string;
   icon: React.ComponentProps<typeof Ionicons>['name'];
@@ -86,15 +88,15 @@ export function MessageActionMenu({ visible, pageY, pageX, row1, row2, onAction,
         }}
       >
         {actions.map((action) => (
-          <Pressable
+          <FeedbackPressable
             key={action.id}
             onPress={() => { onAction(action.id); }}
-            style={({ pressed }) => ({
+            style={{
               width: ITEM_WIDTH,
               alignItems: 'center',
               paddingVertical: 4,
-              opacity: pressed ? 0.65 : 1,
-            })}
+            }}
+            pressedStyle={{ opacity: 0.65 }}
           >
             <View
               style={{
@@ -124,7 +126,7 @@ export function MessageActionMenu({ visible, pageY, pageX, row1, row2, onAction,
             >
               {action.label}
             </Text>
-          </Pressable>
+          </FeedbackPressable>
         ))}
       </View>
     );

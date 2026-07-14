@@ -15,11 +15,13 @@ import { Screen } from '../../components/Screen';
 const devRoute = (p: string) => p as unknown as Href;
 
 const PAGES: { href: string; title: string; blurb: string }[] = [
+  { href: '/dev/buddy-wish', title: 'Buddy wish', blurb: 'Expandable entry and image-first wish in all 6 states' },
   { href: '/dev/screen-preview', title: 'Screen preview', blurb: '<Screen> primitive in all 6 states' },
   { href: '/dev/ui-system', title: 'UI system', blurb: 'Agent-operable primitives and Odyssey recipes' },
   { href: '/dev/components', title: 'Components', blurb: 'Buttons, pills, cards, long-German stress' },
   { href: '/dev/button-audit', title: 'Button audit', blurb: '103-locale label overflow, web only' },
   { href: '/dev/network-resilience', title: 'Network resilience', blurb: 'Weak-network send states: comment, chat, banner' },
+  { href: '/dev/pressable-probe', title: 'Pressable probe', blurb: 'GOTCHAS 坑 #7: callback vs static styles on device' },
 ];
 
 export default function DevGalleryHub() {

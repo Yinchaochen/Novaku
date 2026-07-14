@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { Pressable, PressableProps, StyleProp, StyleSheet, View, ViewProps, ViewStyle } from 'react-native';
 
+import { usePressedFeedback } from '../hooks/usePressedFeedback';
 import { colors, radius, shadows, spacing } from '../theme/tokens';
 
 type SurfaceTone = 'white' | 'cream' | 'warm' | 'lavender' | 'sage';
@@ -80,13 +81,17 @@ export function PressableSurfaceCard({
   style,
   pressedStyle,
   disabled,
+  onPressIn,
+  onPressOut,
   ...rest
 }: PressableSurfaceCardProps) {
   const surface = buildSurfaceStyle({ tone, radiusKey, padding, shadow, bordered });
+  const [pressed, pressHandlers] = usePressedFeedback({ onPressIn, onPressOut });
   return (
     <Pressable
       disabled={disabled}
-      style={({ pressed }) => [
+      {...pressHandlers}
+      style={[
         surface,
         style,
         pressed && !disabled ? styles.pressed : null,

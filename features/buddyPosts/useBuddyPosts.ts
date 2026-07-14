@@ -3,6 +3,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { useLanguage } from '../../context/LanguageContext';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
+import type { BuddyPricingMode } from './pricing';
 
 export type BuddyPostType = 'companion' | 'errand_carry';
 
@@ -16,7 +17,14 @@ export type BuddyPostCategory =
   | 'errand_carry'
   | 'other';
 
-export type BuddyPostPricingMode = 'fixed' | 'free' | 'negotiable';
+export type BuddyPostPricingMode = BuddyPricingMode;
+
+export interface BuddyPostMedia {
+  id?: string | null;
+  media_url: string;
+  mime_type?: string | null;
+  sort_order: number;
+}
 
 export interface BuddyPostAuthor {
   id: string;
@@ -45,7 +53,10 @@ export interface BuddyPost {
   return_date: string | null;
   from_city: string | null;
   to_city: string | null;
+  accepted_country: string | null;
+  accepted_city: string | null;
   accepts_shipping: boolean;
+  media_items: BuddyPostMedia[];
   expired_at: string;
   created_at: string;
   is_owner: boolean;
@@ -129,7 +140,10 @@ export interface CreateBuddyPostInput {
   return_date?: string;
   from_city?: string;
   to_city?: string;
+  accepted_country?: string;
+  accepted_city?: string;
   accepts_shipping?: boolean;
+  media_items?: Array<Pick<BuddyPostMedia, 'media_url' | 'mime_type'>>;
 }
 
 export function useCreateBuddyPost() {
@@ -141,6 +155,20 @@ export function useCreateBuddyPost() {
     },
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ['buddy_posts'] });
+    },
+  });
+}
+
+export function useUploadBuddyMedia() {
+  return useMutation({
+    mutationFn: async ({ uri, mimeType, fileName }: { uri: string; mimeType: string; fileName: string }) => {
+      const form = new FormData();
+      form.append('file', { uri, name: fileName, type: mimeType } as any);
+      const res = await api.post('/buddy/posts/media/upload', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 60_000,
+      });
+      return res.data.data as BuddyPostMedia;
     },
   });
 }

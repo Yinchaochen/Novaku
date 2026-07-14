@@ -13,6 +13,8 @@ import { api } from '../../lib/api';
 import { addSentryBreadcrumb } from '../../lib/sentry';
 import { useAuthStore } from '../../store/authStore';
 
+const COMMUNITY_POST_WRITE_TIMEOUT_MS = 30_000;
+
 // P2.6 (audit FE-CRIT-8): every optimistic-update onError below adds a
 // breadcrumb tagged with the mutation name. Sentry event capture for 5xx /
 // network failures still happens in the axios response interceptor — this
@@ -191,6 +193,7 @@ export interface PersonalOdyssey {
   reliability_score: number;
   last_verified_at?: string | null;
   next_verify_at?: string | null;
+  source_changed_at?: string | null;
   started_at?: string | null;
   completed_at?: string | null;
   created_at: string;
@@ -353,7 +356,9 @@ export function useCreateCommunityPost() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: CommunityPostCreateInput) => {
-      const res = await api.post('/community/posts', input);
+      const res = await api.post('/community/posts', input, {
+        timeout: COMMUNITY_POST_WRITE_TIMEOUT_MS,
+      });
       return res.data.data as CommunityPost;
     },
     onSuccess: () => {
@@ -487,7 +492,9 @@ export function useUpdateCommunityPost(postId?: string | null) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: CommunityPostUpdateInput) => {
-      const res = await api.patch(`/community/posts/${postId}`, input);
+      const res = await api.patch(`/community/posts/${postId}`, input, {
+        timeout: COMMUNITY_POST_WRITE_TIMEOUT_MS,
+      });
       return res.data.data as CommunityPost;
     },
     onSuccess: () => {

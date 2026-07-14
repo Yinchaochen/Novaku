@@ -50,8 +50,8 @@ export function LangPill() {
         style={StyleSheet.absoluteFill}
       />
       <View
-        pointerEvents="none"
         style={{
+          pointerEvents: 'none',
           position: 'absolute',
           top: 0,
           left: 12,

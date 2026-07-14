@@ -6,6 +6,7 @@ import { ActivityIndicator, Animated, Pressable, ScrollView, StyleSheet, Text, V
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppBackground } from '../components/AppBackground';
+import { FeedbackPressable } from '../components/FeedbackPressable';
 import { GlassCard } from '../components/GlassCard';
 import { Pill } from '../components/Pill';
 import { Toast, type ToastMessage } from '../components/Toast';
@@ -80,25 +81,23 @@ function HistoryRow({
           ) : null}
         </View>
 
-        <Pressable
+        <FeedbackPressable
           onPress={() => onRestore(item)}
           disabled={restoringId === item.node.id}
-          style={({ pressed }) => [
-            {
-              paddingHorizontal: 14,
-              paddingVertical: 8,
-              borderRadius: 999,
-              backgroundColor: '#FFE8DA',
-              borderWidth: 1,
-              borderColor: 'rgba(246,118,115,0.18)',
-            },
-            pressed ? { transform: [{ scale: 0.96 }] } : null,
-          ]}
+          style={{
+            paddingHorizontal: 14,
+            paddingVertical: 8,
+            borderRadius: 999,
+            backgroundColor: '#FFE8DA',
+            borderWidth: 1,
+            borderColor: 'rgba(246,118,115,0.18)',
+          }}
+          pressedStyle={{ transform: [{ scale: 0.96 }] }}
         >
           <Text style={{ fontSize: 12, fontWeight: '700', color: colors.brandCoral }}>
             {restoringId === item.node.id ? '...' : t.tasks.restore_action}
           </Text>
-        </Pressable>
+        </FeedbackPressable>
       </View>
     </GlassCard>
   );
@@ -167,26 +166,24 @@ export default function OdysseyHistoryScreen() {
     <AppBackground>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 14, gap: 10 }}>
-          <Pressable
+          <FeedbackPressable
             onPress={() => router.back()}
             hitSlop={8}
-            style={({ pressed }) => [
-              {
-                height: 42,
-                width: 42,
-                borderRadius: 21,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: 'rgba(255,255,255,0.86)',
-                borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.85)',
-                ...shadows.iconButton,
-              },
-              pressed ? { transform: [{ scale: 0.94 }] } : null,
-            ]}
+            style={{
+              height: 42,
+              width: 42,
+              borderRadius: 21,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'rgba(255,255,255,0.86)',
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.85)',
+              ...shadows.iconButton,
+            }}
+            pressedStyle={{ transform: [{ scale: 0.94 }] }}
           >
             <Ionicons name="chevron-back" size={22} color={colors.textMain} />
-          </Pressable>
+          </FeedbackPressable>
           <Text style={{ fontSize: 22, fontWeight: '800', color: colors.textMain, letterSpacing: -0.3 }}>
             {t.tasks.history_title}
           </Text>

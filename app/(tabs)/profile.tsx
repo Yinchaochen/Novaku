@@ -26,6 +26,7 @@ import ViewShot from 'react-native-view-shot';
 import { AppBackground } from '../../components/AppBackground';
 import { AvatarCropper } from '../../components/AvatarCropper';
 import { ChalkIcon } from '../../components/ChalkIcon';
+import { FeedbackPressable } from '../../components/FeedbackPressable';
 import { GlassCard } from '../../components/GlassCard';
 import { LanguagePicker } from '../../components/LanguagePicker';
 import { OnboardingModal } from '../../components/OnboardingModal';
@@ -326,20 +327,18 @@ function CommentRecordRow({
   const excerpt = post.viewer_commented_excerpt ?? '';
 
   return (
-    <Pressable
+    <FeedbackPressable
       onPress={() => onPress(post)}
-      style={({ pressed }) => [
-        {
-          marginBottom: 10,
-          flexDirection: 'row',
-          gap: 12,
-          padding: 12,
-          borderRadius: 20,
-          backgroundColor: '#FFFFFF',
-          ...shadows.iconButton,
-        },
-        pressed ? { transform: [{ scale: 0.99 }], opacity: 0.96 } : null,
-      ]}
+      style={{
+        marginBottom: 10,
+        flexDirection: 'row',
+        gap: 12,
+        padding: 12,
+        borderRadius: 20,
+        backgroundColor: '#FFFFFF',
+        ...shadows.iconButton,
+      }}
+      pressedStyle={{ transform: [{ scale: 0.99 }], opacity: 0.96 }}
     >
       {coverUri ? (
         <Image source={coverUri} contentFit="cover" style={{ width: 64, height: 64, borderRadius: 16 }} />
@@ -370,7 +369,7 @@ function CommentRecordRow({
           {postDate ? `${postDate} · ` : ''}@{post.author.display_name}
         </Text>
       </View>
-    </Pressable>
+    </FeedbackPressable>
   );
 }
 
@@ -772,62 +771,56 @@ export default function ProfileScreen() {
           <View className="px-5 pb-6 pt-3">
             {/* TOP BAR */}
             <View className="flex-row items-center justify-between">
-              <Pressable
+              <FeedbackPressable
                 onPress={() => setShowMenuSheet(true)}
-                style={({ pressed }) => [
-                  {
-                    height: 42,
-                    width: 42,
-                    borderRadius: 21,
+                style={{
+                  height: 42,
+                  width: 42,
+                  borderRadius: 21,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.35)',
+                  backgroundColor: 'rgba(255,255,255,0.18)',
+                }}
+                pressedStyle={{ transform: [{ scale: 0.94 }] }}
+              >
+                <ChalkIcon name="menu" size={24} color="#FFFFFF" />
+              </FeedbackPressable>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}>
+                <LanguagePicker currentCode={user?.locale ?? langCode} onSelect={handleLocaleSelect} />
+                <FeedbackPressable
+                  onPress={() => router.push('/scan' as never)}
+                  style={{
+                    height: PROFILE_ACTION_BUTTON_SIZE,
+                    width: PROFILE_ACTION_BUTTON_SIZE,
+                    borderRadius: PROFILE_ACTION_BUTTON_SIZE / 2,
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderWidth: 1,
-                    borderColor: 'rgba(255,255,255,0.35)',
-                    backgroundColor: 'rgba(255,255,255,0.18)',
-                  },
-                  pressed ? { transform: [{ scale: 0.94 }] } : null,
-                ]}
-              >
-                <ChalkIcon name="menu" size={24} color="#FFFFFF" />
-              </Pressable>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}>
-                <LanguagePicker currentCode={user?.locale ?? langCode} onSelect={handleLocaleSelect} />
-                <Pressable
-                  onPress={() => router.push('/scan' as never)}
-                  style={({ pressed }) => [
-                    {
-                      height: PROFILE_ACTION_BUTTON_SIZE,
-                      width: PROFILE_ACTION_BUTTON_SIZE,
-                      borderRadius: PROFILE_ACTION_BUTTON_SIZE / 2,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderWidth: 1,
-                      borderColor: 'rgba(255,255,255,0.42)',
-                      backgroundColor: 'rgba(255,255,255,0.20)',
-                    },
-                    pressed ? { transform: [{ scale: 0.94 }] } : null,
-                  ]}
+                    borderColor: 'rgba(255,255,255,0.42)',
+                    backgroundColor: 'rgba(255,255,255,0.20)',
+                  }}
+                  pressedStyle={{ transform: [{ scale: 0.94 }] }}
                 >
                   <ScanQrMark />
-                </Pressable>
-                <Pressable
+                </FeedbackPressable>
+                <FeedbackPressable
                   onPress={handleShareProfile}
-                  style={({ pressed }) => [
-                    {
-                      height: PROFILE_ACTION_BUTTON_SIZE,
-                      width: PROFILE_ACTION_BUTTON_SIZE,
-                      borderRadius: PROFILE_ACTION_BUTTON_SIZE / 2,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderWidth: 1,
-                      borderColor: 'rgba(255,255,255,0.42)',
-                      backgroundColor: 'rgba(255,255,255,0.20)',
-                    },
-                    pressed ? { transform: [{ scale: 0.94 }] } : null,
-                  ]}
+                  style={{
+                    height: PROFILE_ACTION_BUTTON_SIZE,
+                    width: PROFILE_ACTION_BUTTON_SIZE,
+                    borderRadius: PROFILE_ACTION_BUTTON_SIZE / 2,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderWidth: 1,
+                    borderColor: 'rgba(255,255,255,0.42)',
+                    backgroundColor: 'rgba(255,255,255,0.20)',
+                  }}
+                  pressedStyle={{ transform: [{ scale: 0.94 }] }}
                 >
                   <Ionicons name="share-social-outline" size={23} color="#FFFFFF" />
-                </Pressable>
+                </FeedbackPressable>
               </View>
             </View>
 
@@ -916,20 +909,18 @@ export default function ProfileScreen() {
             </View>
 
             {/* BIO — translucent glass capsule */}
-            <Pressable
+            <FeedbackPressable
               onPress={() => router.push('/edit-bio' as never)}
-              style={({ pressed }) => [
-                {
-                  marginTop: 18,
-                  borderRadius: 20,
-                  paddingHorizontal: 16,
-                  paddingVertical: 12,
-                  backgroundColor: 'rgba(255,255,255,0.16)',
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.22)',
-                },
-                pressed ? { opacity: 0.85 } : null,
-              ]}
+              style={{
+                marginTop: 18,
+                borderRadius: 20,
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                backgroundColor: 'rgba(255,255,255,0.16)',
+                borderWidth: 1,
+                borderColor: 'rgba(255,255,255,0.22)',
+              }}
+              pressedStyle={{ opacity: 0.85 }}
             >
               <Text
                 style={{
@@ -941,7 +932,7 @@ export default function ProfileScreen() {
               >
                 {user?.bio?.trim() || t.profile.bio_placeholder}
               </Text>
-            </Pressable>
+            </FeedbackPressable>
 
             {/* STATS — slim translucent strip, not a thick card */}
             <View
@@ -980,23 +971,21 @@ export default function ProfileScreen() {
                 32-34 chalk icon at 75% white. Translucent tile bg keeps the
                 glass treatment that came in with the Profile redesign. */}
             <View className="mt-3 flex-row gap-3">
-              <Pressable
+              <FeedbackPressable
                 onPress={() => setShowBrowsingHistory(true)}
-                style={({ pressed }) => [
-                  {
-                    flex: 1,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 12,
-                    borderRadius: 18,
-                    paddingHorizontal: 14,
-                    paddingVertical: 12,
-                    backgroundColor: 'rgba(255,255,255,0.16)',
-                    borderWidth: 1,
-                    borderColor: 'rgba(255,255,255,0.24)',
-                  },
-                  pressed ? { transform: [{ scale: 0.99 }] } : null,
-                ]}
+                style={{
+                  flex: 1,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 12,
+                  borderRadius: 18,
+                  paddingHorizontal: 14,
+                  paddingVertical: 12,
+                  backgroundColor: 'rgba(255,255,255,0.16)',
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.24)',
+                }}
+                pressedStyle={{ transform: [{ scale: 0.99 }] }}
               >
                 <View
                   style={{
@@ -1017,24 +1006,22 @@ export default function ProfileScreen() {
                     {t.profile.browsing_history_hint}
                   </Text>
                 </View>
-              </Pressable>
-              <Pressable
+              </FeedbackPressable>
+              <FeedbackPressable
                 onPress={() => router.navigate('/(tabs)/tasks')}
-                style={({ pressed }) => [
-                  {
-                    flex: 1,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 12,
-                    borderRadius: 18,
-                    paddingHorizontal: 14,
-                    paddingVertical: 12,
-                    backgroundColor: 'rgba(255,255,255,0.16)',
-                    borderWidth: 1,
-                    borderColor: 'rgba(255,255,255,0.24)',
-                  },
-                  pressed ? { transform: [{ scale: 0.99 }] } : null,
-                ]}
+                style={{
+                  flex: 1,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 12,
+                  borderRadius: 18,
+                  paddingHorizontal: 14,
+                  paddingVertical: 12,
+                  backgroundColor: 'rgba(255,255,255,0.16)',
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.24)',
+                }}
+                pressedStyle={{ transform: [{ scale: 0.99 }] }}
               >
                 <View
                   style={{
@@ -1055,7 +1042,7 @@ export default function ProfileScreen() {
                     {displayBaseCity}
                   </Text>
                 </View>
-              </Pressable>
+              </FeedbackPressable>
             </View>
           </View>
         </View>

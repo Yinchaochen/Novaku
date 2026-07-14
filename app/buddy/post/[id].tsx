@@ -1,31 +1,26 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { GradientButton } from '../../../components/GradientButton';
+import { IconCircleButton } from '../../../components/IconCircleButton';
+import { LinkText } from '../../../components/LinkText';
+import { PageHeader } from '../../../components/PageHeader';
+import { Pill } from '../../../components/Pill';
+import { Screen } from '../../../components/Screen';
+import { SurfaceCard } from '../../../components/SurfaceCard';
 import { useLanguage } from '../../../context/LanguageContext';
 import {
   type BuddyPost,
-  type BuddyPostCategory,
   useBuddyPost,
   useChatByBuddyPost,
   useDeleteBuddyPost,
 } from '../../../features/buddyPosts/useBuddyPosts';
-import { LinkText } from '../../../components/LinkText';
 import { resolveMediaUrl } from '../../../lib/media';
+import { reportToSentry } from '../../../lib/sentry';
 import { useSearchIntentStore } from '../../../store/searchIntentStore';
-
-const CATEGORY_ICON: Record<BuddyPostCategory, keyof typeof Ionicons.glyphMap> = {
-  anmeldung: 'document-text-outline',
-  medical: 'medkit-outline',
-  shopping: 'bag-handle-outline',
-  meal: 'restaurant-outline',
-  walking: 'walk-outline',
-  language_help: 'chatbubbles-outline',
-  errand_carry: 'airplane-outline',
-  other: 'ellipsis-horizontal-circle-outline',
-};
+import { colors, radius, spacing, typography } from '../../../theme/tokens';
 
 function formatPrice(cents: number, currency: string): string {
   if (cents === 0) return '';
@@ -44,56 +39,46 @@ function formatPrice(cents: number, currency: string): string {
 function formatTime(post: BuddyPost, langCode: string): string {
   try {
     if (post.type === 'companion' && post.available_at && post.available_until) {
-      const s = new Date(post.available_at);
-      const e = new Date(post.available_until);
-      const dateFmt = new Intl.DateTimeFormat(langCode, {
+      const start = new Date(post.available_at);
+      const end = new Date(post.available_until);
+      const date = new Intl.DateTimeFormat(langCode, {
         weekday: 'long',
         month: 'short',
         day: 'numeric',
         year: 'numeric',
       });
-      const timeFmt = new Intl.DateTimeFormat(langCode, {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-      });
-      return `${dateFmt.format(s)} · ${timeFmt.format(s)}–${timeFmt.format(e)}`;
+      const time = new Intl.DateTimeFormat(langCode, { hour: 'numeric', minute: '2-digit' });
+      return `${date.format(start)} · ${time.format(start)}–${time.format(end)}`;
     }
     if (post.type === 'errand_carry' && post.depart_date && post.return_date) {
-      const fmt = new Intl.DateTimeFormat(langCode, { month: 'long', day: 'numeric' });
-      return `${fmt.format(new Date(post.depart_date))} → ${fmt.format(new Date(post.return_date))}`;
+      const date = new Intl.DateTimeFormat(langCode, { month: 'long', day: 'numeric' });
+      return `${date.format(new Date(post.depart_date))} → ${date.format(new Date(post.return_date))}`;
     }
   } catch {
-    // fall through
+    return '';
   }
   return '';
 }
 
 export default function BuddyPostDetailScreen() {
   const { t, langCode } = useLanguage();
-  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ id: string }>();
   const postId = typeof params.id === 'string' ? params.id : null;
-
   const query = useBuddyPost(postId);
   const startChat = useChatByBuddyPost();
   const deletePost = useDeleteBuddyPost();
-  const setOpenIntent = useSearchIntentStore((s) => s.setOpenIntent);
-
+  const setOpenIntent = useSearchIntentStore((state) => state.setOpenIntent);
   const post = query.data;
 
   const handleContact = async () => {
     if (!post) return;
     try {
-      const res = await startChat.mutateAsync(post.id);
-      // Hand the Social tab the conversation id + origin via the intent store.
-      // Its useEffect picks this up, flips conversationOrigin to 'buddy_post',
-      // and auto-opens the chat — so the user lands inside the conversation,
-      // not on a generic Social landing.
-      setOpenIntent({ conversationId: res.id, origin: 'buddy_post' });
+      const conversation = await startChat.mutateAsync(post.id);
+      setOpenIntent({ conversationId: conversation.id, origin: 'buddy_post' });
       router.push('/(tabs)/social' as never);
-    } catch (err) {
-      Alert.alert(t.common.error, (err as Error).message ?? '');
+    } catch (error) {
+      reportToSentry(error, { source: 'buddy.detail.contact', postId: post.id });
+      Alert.alert(t.common.error, t.common.network_error);
     }
   };
 
@@ -108,193 +93,302 @@ export default function BuddyPostDetailScreen() {
           try {
             await deletePost.mutateAsync(post.id);
             router.back();
-          } catch (err) {
-            Alert.alert(t.common.error, (err as Error).message ?? '');
+          } catch (error) {
+            reportToSentry(error, { source: 'buddy.detail.delete', postId: post.id });
+            Alert.alert(t.common.error, t.common.network_error);
           }
         },
       },
     ]);
   };
 
+  const header = (
+    <PageHeader
+      title={post ? t.buddy[`cat_${post.category}` as const] : t.buddy.post_detail_title}
+      trailing={(
+        <View style={styles.headerActions}>
+          {post?.is_owner ? (
+            <IconCircleButton accessibilityLabel={t.buddy.delete_post_confirm} onPress={handleDelete} size={42}>
+              <Ionicons name="trash-outline" size={19} color={colors.brandCoral} />
+            </IconCircleButton>
+          ) : null}
+          <IconCircleButton accessibilityLabel={t.common.back} onPress={() => router.back()} size={42}>
+            <Ionicons name="chevron-back" size={21} color={colors.textBrown} />
+          </IconCircleButton>
+        </View>
+      )}
+    />
+  );
+
   if (query.isLoading) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-white" edges={['top']}>
-        <ActivityIndicator size="large" color="#F47C7C" />
-      </SafeAreaView>
+      <Screen header={header} contentClassName="items-center justify-center" testID="screen.buddy.detail.loading">
+        <ActivityIndicator size="large" color={colors.brandCoral} />
+      </Screen>
     );
   }
 
   if (query.isError || !post) {
     return (
-      <SafeAreaView className="flex-1 bg-white" edges={['top']}>
-        <View className="flex-row items-center px-4 py-3">
-          <Pressable onPress={() => router.back()} hitSlop={8}>
-            <Ionicons name="chevron-back" size={26} color="#111111" />
-          </Pressable>
-        </View>
-        <View className="flex-1 items-center justify-center px-8">
-          <Ionicons name="alert-circle-outline" size={56} color="#D1D5DB" />
-          <Text className="mt-3 text-[15px] font-medium text-neutral-700">
-            {t.buddy.errors.post_not_found}
-          </Text>
-        </View>
-      </SafeAreaView>
+      <Screen header={header} contentClassName="items-center justify-center px-8" testID="screen.buddy.detail.error">
+        <Ionicons name="alert-circle-outline" size={58} color={colors.lavenderSoft} />
+        <Text style={styles.errorText}>{t.buddy.errors.post_not_found}</Text>
+      </Screen>
     );
   }
 
   const avatar = resolveMediaUrl(post.author.avatar_url);
+  const mediaItems = post.media_items ?? [];
   const priceLabel = formatPrice(post.price_cents, post.currency);
   const timeLabel = formatTime(post, langCode);
-  const cityLabel =
-    post.type === 'errand_carry' && post.from_city && post.to_city
-      ? `${post.from_city} → ${post.to_city}`
-      : post.from_city ?? '';
+  const acceptedLocation = [post.accepted_city, post.accepted_country].filter(Boolean).join(', ');
+  const routeLabel = post.type === 'errand_carry'
+    ? `${post.accepted_city ?? post.from_city ?? ''} → ${post.to_city ?? ''}`
+    : post.from_city ?? '';
+
+  const priceText = post.pricing_mode === 'free'
+    ? t.buddy.field_price_free
+    : post.pricing_mode === 'negotiable' && post.price_cents === 0
+      ? t.buddy.field_price_negotiable
+      : priceLabel;
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F4F5F8]" edges={['top']}>
-      <View className="flex-row items-center justify-between border-b border-neutral-100 bg-white px-4 py-3">
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Ionicons name="chevron-back" size={26} color="#111111" />
-        </Pressable>
-        <Text className="text-[16px] font-semibold text-black" numberOfLines={1}>
-          {t.buddy[`cat_${post.category}` as const]}
-        </Text>
-        {post.is_owner ? (
-          <Pressable onPress={handleDelete} hitSlop={8}>
-            <Ionicons name="trash-outline" size={20} color="#F47C7C" />
-          </Pressable>
-        ) : (
-          <View style={{ width: 20 }} />
-        )}
-      </View>
+    <Screen header={header} testID="screen.buddy.detail">
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        {mediaItems.length > 0 ? (
+          <SurfaceCard padding={0} style={styles.gallery}>
+            <Image
+              source={resolveMediaUrl(mediaItems[0].media_url) ?? mediaItems[0].media_url}
+              contentFit="cover"
+              transition={160}
+              style={styles.heroImage}
+            />
+            {mediaItems.length > 1 ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbnails}>
+                {mediaItems.map((item) => (
+                  <Image
+                    key={`${item.media_url}-${item.sort_order}`}
+                    source={resolveMediaUrl(item.media_url) ?? item.media_url}
+                    contentFit="cover"
+                    style={styles.thumbnail}
+                  />
+                ))}
+              </ScrollView>
+            ) : null}
+          </SurfaceCard>
+        ) : null}
 
-      <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
-        {/* Author card */}
         <Pressable
           onPress={() => router.push({ pathname: '/users/[id]', params: { id: post.author.id } })}
-          className="mb-3 flex-row items-center rounded-3xl bg-white px-4 py-3"
-          style={{ shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}
         >
-          {avatar ? (
-            <Image source={avatar} style={{ width: 50, height: 50, borderRadius: 25 }} contentFit="cover" />
-          ) : (
-            <View className="h-12 w-12 items-center justify-center rounded-full bg-[#FFE6EA]">
-              <Text className="text-[18px] font-bold text-[#F47C7C]">
-                {post.author.display_name.slice(0, 1).toUpperCase()}
+          <SurfaceCard style={styles.authorCard}>
+            {avatar ? (
+              <Image source={avatar} style={styles.avatar} contentFit="cover" />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarLetter}>{post.author.display_name.slice(0, 1).toUpperCase()}</Text>
+              </View>
+            )}
+            <View style={styles.authorCopy}>
+              <Text style={styles.authorName}>{post.author.display_name}</Text>
+              <Text style={styles.authorMeta} numberOfLines={1}>
+                #{post.author.display_id}
+                {post.author.age ? ` · ${post.author.age}` : ''}
+                {post.author.city ? ` · ${post.author.city}` : ''}
               </Text>
             </View>
-          )}
-          <View className="ml-3 flex-1">
-            <Text className="text-[16px] font-bold text-neutral-900">{post.author.display_name}</Text>
-            <View className="mt-0.5 flex-row items-center">
-              <Text className="text-[12px] text-neutral-400">#{post.author.display_id}</Text>
-              {post.author.gender && post.author.gender !== 'prefer_not_to_say' ? (
-                <Text className="ml-2 text-[12px] text-neutral-500">
-                  {post.author.gender === 'male'
-                    ? t.buddy.gender_male
-                    : post.author.gender === 'female'
-                      ? t.buddy.gender_female
-                      : t.buddy.gender_non_binary}
-                </Text>
-              ) : null}
-              {post.author.age ? (
-                <Text className="ml-2 text-[12px] text-neutral-500">{post.author.age}</Text>
-              ) : null}
-              {post.author.city ? (
-                <Text className="ml-2 text-[12px] text-neutral-500">· {post.author.city}</Text>
-              ) : null}
-            </View>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
+            <Ionicons name="chevron-forward" size={18} color={colors.textSubtle} />
+          </SurfaceCard>
         </Pressable>
 
-        {/* Title + body */}
-        <View className="mb-3 rounded-3xl bg-white px-4 py-4" style={{ shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}>
-          <View className="mb-2 flex-row items-center">
-            <Ionicons name={CATEGORY_ICON[post.category]} size={16} color="#F47C7C" />
-            <Text className="ml-2 text-[12px] font-semibold uppercase tracking-wider text-[#F47C7C]">
-              {t.buddy[`type_${post.type}` as const]} · {t.buddy[`cat_${post.category}` as const]}
-            </Text>
+        <SurfaceCard style={styles.copyCard}>
+          <View style={styles.pillRow}>
+            <Pill label={t.buddy[`type_${post.type}` as const]} tone="coral" />
+            <Pill label={t.buddy[`cat_${post.category}` as const]} tone="lavender" />
           </View>
-          <Text className="text-[19px] font-extrabold text-black">{post.title}</Text>
-          <LinkText className="mt-2 text-[14px] leading-6 text-neutral-700" text={post.body} />
-        </View>
+          <Text style={styles.title}>{post.title}</Text>
+          <LinkText style={styles.body} text={post.body} />
+        </SurfaceCard>
 
-        {/* Time */}
-        {timeLabel ? (
-          <View className="mb-3 flex-row items-center rounded-3xl bg-white px-4 py-3.5" style={{ shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}>
-            <Ionicons name="time-outline" size={18} color="#94A3B8" />
-            <Text className="ml-2 flex-1 text-[14px] text-neutral-700">{timeLabel}</Text>
-          </View>
-        ) : null}
-
-        {/* Location */}
-        {cityLabel ? (
-          <View className="mb-3 rounded-3xl bg-white px-4 py-3.5" style={{ shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}>
-            <View className="flex-row items-center">
-              <Ionicons name="location-outline" size={18} color="#94A3B8" />
-              <Text className="ml-2 flex-1 text-[14px] text-neutral-700">{cityLabel}</Text>
-            </View>
-            {post.type === 'errand_carry' && post.accepts_shipping ? (
-              <View className="mt-2 flex-row items-center">
-                <Ionicons name="cube-outline" size={14} color="#5B7FE8" />
-                <Text className="ml-1.5 text-[12px] text-[#5B7FE8]">
-                  {t.buddy.field_accepts_shipping}
-                </Text>
+        <SurfaceCard style={styles.detailCard}>
+          {acceptedLocation ? (
+            <View style={styles.detailRow}>
+              <Ionicons name="earth-outline" size={20} color={colors.brandCoral} />
+              <View style={styles.detailCopy}>
+                <Text style={styles.detailLabel}>{t.buddy.accepted_location_label}</Text>
+                <Text style={styles.detailValue}>{acceptedLocation}</Text>
               </View>
-            ) : null}
-          </View>
-        ) : null}
+            </View>
+          ) : null}
+          {routeLabel ? (
+            <View style={styles.detailRow}>
+              <Ionicons name="location-outline" size={20} color={colors.lavender} />
+              <View style={styles.detailCopy}>
+                <Text style={styles.detailLabel}>{t.buddy.section_route}</Text>
+                <Text style={styles.detailValue}>{routeLabel}</Text>
+              </View>
+            </View>
+          ) : null}
+          {timeLabel ? (
+            <View style={styles.detailRow}>
+              <Ionicons name="time-outline" size={20} color={colors.brandPeach} />
+              <View style={styles.detailCopy}>
+                <Text style={styles.detailLabel}>{t.buddy.field_when}</Text>
+                <Text style={styles.detailValue}>{timeLabel}</Text>
+              </View>
+            </View>
+          ) : null}
+          {post.type === 'errand_carry' && post.accepts_shipping ? (
+            <View style={styles.detailRow}>
+              <Ionicons name="cube-outline" size={20} color={colors.success} />
+              <Text style={styles.detailValue}>{t.buddy.field_accepts_shipping}</Text>
+            </View>
+          ) : null}
+        </SurfaceCard>
 
-        {/* Price — pricing_mode decides whether the user picked Free,
-            Negotiable (with or without a starting amount), or a Fixed price. */}
-        <View className="rounded-3xl bg-white px-4 py-4" style={{ shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}>
-          <Text className="text-[12px] font-semibold uppercase tracking-wider text-neutral-500">
-            {t.buddy.field_price}
-          </Text>
-          {post.pricing_mode === 'free' ? (
-            <Text className="mt-1 text-[24px] font-extrabold" style={{ color: '#94A3B8' }}>
-              {t.buddy.field_price_free}
-            </Text>
-          ) : post.pricing_mode === 'negotiable' && post.price_cents === 0 ? (
-            <Text className="mt-1 text-[24px] font-extrabold" style={{ color: '#94A3B8' }}>
-              {t.buddy.field_price_negotiable}
-            </Text>
-          ) : (
-            <>
-              <Text className="mt-1 text-[24px] font-extrabold" style={{ color: '#F47C7C' }}>
-                {priceLabel}
-              </Text>
-              {post.pricing_mode === 'negotiable' ? (
-                <Text className="mt-1 text-[12px] font-medium text-neutral-500">
-                  · {t.buddy.field_price_negotiable}
-                </Text>
-              ) : null}
-            </>
-          )}
-        </View>
+        <SurfaceCard tone="cream" style={styles.priceCard}>
+          <Text style={styles.detailLabel}>{t.buddy.field_price}</Text>
+          <Text style={styles.price}>{priceText}</Text>
+          {post.pricing_mode === 'negotiable' && post.price_cents > 0 ? (
+            <Pill label={t.buddy.field_price_negotiable} tone="neutral" />
+          ) : null}
+        </SurfaceCard>
       </ScrollView>
 
-      {/* Sticky bottom: contact button (hidden if owner) */}
       {!post.is_owner ? (
-        <View
-          className="border-t border-neutral-100 bg-white px-4 pb-4 pt-3"
-          style={{ paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 24) : 24 }}
-        >
-          <Pressable
-            testID="buddy.contact"
+        <View style={styles.footer}>
+          <GradientButton
+            label={t.buddy.contact_button}
+            loading={startChat.isPending}
+            fullWidth
+            size="lg"
+            leadingIcon={<Ionicons name="chatbubble-ellipses" size={18} color="#FFFFFF" />}
             onPress={() => void handleContact()}
-            disabled={startChat.isPending}
-            className="items-center justify-center rounded-full bg-[#111827] py-3.5"
-          >
-            {startChat.isPending ? (
-              <ActivityIndicator size="small" color="#FFF" />
-            ) : (
-              <Text className="text-[15px] font-bold text-white">{t.buddy.contact_button}</Text>
-            )}
-          </Pressable>
+          />
         </View>
       ) : null}
-    </SafeAreaView>
+    </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  headerActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  content: {
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xl,
+  },
+  gallery: {
+    overflow: 'hidden',
+  },
+  heroImage: {
+    width: '100%',
+    height: 310,
+    backgroundColor: colors.bgWarm,
+  },
+  thumbnails: {
+    gap: spacing.sm,
+    padding: spacing.md,
+  },
+  thumbnail: {
+    width: 74,
+    height: 74,
+    borderRadius: radius.md,
+    backgroundColor: colors.bgWarm,
+  },
+  authorCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  avatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
+  avatarFallback: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFE6EA',
+  },
+  avatarLetter: {
+    ...typography.subheading,
+    color: colors.brandCoral,
+  },
+  authorCopy: {
+    flex: 1,
+  },
+  authorName: {
+    ...typography.subheading,
+    color: colors.textMain,
+  },
+  authorMeta: {
+    ...typography.caption,
+    marginTop: 2,
+    color: colors.textMuted,
+  },
+  copyCard: {
+    gap: spacing.md,
+  },
+  pillRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  title: {
+    ...typography.heading,
+    color: colors.textMain,
+  },
+  body: {
+    ...typography.body,
+    color: colors.textBrown,
+  },
+  detailCard: {
+    gap: spacing.lg,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  detailCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  detailLabel: {
+    ...typography.overline,
+    color: colors.textMuted,
+  },
+  detailValue: {
+    ...typography.bodyStrong,
+    flex: 1,
+    color: colors.textBrown,
+  },
+  priceCard: {
+    gap: spacing.sm,
+  },
+  price: {
+    ...typography.title,
+    color: colors.brandCoral,
+  },
+  footer: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.lineSoft,
+    backgroundColor: 'rgba(255,248,241,0.96)',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+  },
+  errorText: {
+    ...typography.bodyStrong,
+    marginTop: spacing.lg,
+    color: colors.textBrown,
+    textAlign: 'center',
+  },
+});

@@ -91,6 +91,32 @@ function LocationQuestCard({ task, t }: { task: PersonalOdyssey; t: ReturnType<t
           </View>
         </View>
 
+        {task.source_changed_at && task.status !== 'done' ? (
+          <Pressable
+            className="mb-3 flex-row items-center gap-2 rounded-full px-3 py-2"
+            style={{ backgroundColor: 'rgba(176, 122, 30, 0.12)', alignSelf: 'flex-start' }}
+            onPress={() => {
+              if (task.source_url) void Linking.openURL(task.source_url);
+            }}
+            disabled={!task.source_url}
+          >
+            <Text className="text-xs font-bold" style={{ color: '#B07A1E' }}>
+              {t.tasks.source_updated_hint}
+            </Text>
+          </Pressable>
+        ) : null}
+
+        {task.verification_status === 'stale' ? (
+          <View
+            className="mb-3 rounded-full px-3 py-2"
+            style={{ backgroundColor: 'rgba(194, 94, 94, 0.12)', alignSelf: 'flex-start' }}
+          >
+            <Text className="text-xs font-bold" style={{ color: '#C25E5E' }}>
+              {t.tasks.source_dead}
+            </Text>
+          </View>
+        ) : null}
+
         {showInfoBubble ? (
           <View className="mb-4 rounded-[20px] px-3 py-3" style={{ backgroundColor: '#FFE8DA' }}>
             {venueSummary ? (

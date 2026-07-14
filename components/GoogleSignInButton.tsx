@@ -1,6 +1,7 @@
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
+import { usePressedFeedback } from '../hooks/usePressedFeedback';
 import { tap } from '../lib/haptics';
 
 // Official Google "G" mark (4-color), per Google's Sign in with Google
@@ -44,6 +45,7 @@ export function GoogleSignInButton({
   disabled?: boolean;
   loading?: boolean;
 }) {
+  const [pressed, pressHandlers] = usePressedFeedback();
   return (
     <Pressable
       onPress={() => {
@@ -51,7 +53,8 @@ export function GoogleSignInButton({
         onPress();
       }}
       disabled={disabled}
-      style={({ pressed }) => [
+      {...pressHandlers}
+      style={[
         {
           width: '100%',
           height: 52,

@@ -53,7 +53,7 @@ export function OdysseyTaskLineCard({
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel ?? title}
         onPress={onPress}
-        style={({ pressed }) => [styles.pressable, pressed ? styles.pressed : null]}
+        style={styles.pressable}
       >
         <View style={[styles.iconShell, { backgroundColor: toneConfig.iconBg }]}>
           <Ionicons name={icon} size={23} color={toneConfig.icon} />
@@ -97,9 +97,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: radius['2xl'],
-  },
-  pressed: {
-    opacity: 0.92,
   },
   iconShell: {
     width: 52,

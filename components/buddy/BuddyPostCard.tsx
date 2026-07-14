@@ -78,6 +78,8 @@ export interface BuddyPostCardProps {
 export function BuddyPostCard({ post, onPress }: BuddyPostCardProps) {
   const { t, langCode } = useLanguage();
   const avatar = resolveMediaUrl(post.author.avatar_url);
+  const heroMedia = post.media_items?.[0];
+  const heroUrl = resolveMediaUrl(heroMedia?.media_url ?? null);
   const priceLabel = formatPrice(post.price_cents, post.currency);
   // Price column reads pricing_mode first. 'free' and 'negotiable-without-amount'
   // both render as a muted text label (no €); 'negotiable-with-amount' and
@@ -101,16 +103,28 @@ export function BuddyPostCard({ post, onPress }: BuddyPostCardProps) {
 
   const cityLabel =
     post.type === 'errand_carry'
-      ? `${post.from_city ?? ''} → ${post.to_city ?? ''}`
+      ? `${post.accepted_city ?? post.from_city ?? ''} → ${post.to_city ?? ''}`
       : (post.from_city ?? '');
 
   return (
     <Pressable
       testID={post.is_owner ? 'buddy.post.owner' : 'buddy.post.contactable'}
       onPress={() => onPress(post)}
-      className="mb-3 overflow-hidden rounded-3xl bg-white px-4 py-3"
+      className="mb-3 overflow-hidden rounded-3xl bg-white"
       style={{ shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}
     >
+      {heroUrl ? (
+        <View>
+          <Image source={heroUrl} style={{ width: '100%', height: 196 }} contentFit="cover" transition={140} />
+          {post.media_items.length > 1 ? (
+            <View className="absolute bottom-3 right-3 flex-row items-center rounded-full bg-black/55 px-2.5 py-1">
+              <Ionicons name="images-outline" size={12} color="#FFFFFF" />
+              <Text className="ml-1 text-[11px] font-bold text-white">{post.media_items.length}</Text>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+      <View className="px-4 py-3">
       {/* Top row: author */}
       <View className="flex-row items-center">
         {avatar ? (
@@ -159,6 +173,15 @@ export function BuddyPostCard({ post, onPress }: BuddyPostCardProps) {
         </Text>
       ) : null}
 
+      {post.type === 'errand_carry' && (post.accepted_country || post.accepted_city) ? (
+        <View className="mt-2 flex-row items-center rounded-2xl bg-[#FFF4E8] px-3 py-2">
+          <Ionicons name="earth-outline" size={14} color="#F47C7C" />
+          <Text className="ml-1.5 flex-1 text-[11.5px] font-semibold text-[#623928]" numberOfLines={1}>
+            {t.buddy.accepted_location_label}: {[post.accepted_city, post.accepted_country].filter(Boolean).join(', ')}
+          </Text>
+        </View>
+      ) : null}
+
       {/* Bottom row: time + city + price */}
       <View className="mt-2.5 flex-row items-center">
         <View className="flex-row items-center">
@@ -182,6 +205,7 @@ export function BuddyPostCard({ post, onPress }: BuddyPostCardProps) {
         >
           {priceText}
         </Text>
+      </View>
       </View>
     </Pressable>
   );

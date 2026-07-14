@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useLanguage } from '../../context/LanguageContext';
+import { FeedbackPressable } from '../FeedbackPressable';
 import { YearMonthPickerModal } from './YearMonthPickerModal';
 
 const CORAL = '#F47C7C';
@@ -90,15 +91,13 @@ export function CalendarMonth({
   return (
     <View className="rounded-2xl bg-white px-3 py-3" style={{ shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}>
       <View className="mb-2 items-center px-1 py-1">
-        <Pressable
+        <FeedbackPressable
           onPress={() => setPickerOpen(true)}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityState={{ expanded: pickerOpen }}
-          style={({ pressed }) => [
-            styles.monthPickerTrigger,
-            pressed ? styles.monthPickerTriggerPressed : null,
-          ]}
+          style={styles.monthPickerTrigger}
+          pressedStyle={styles.monthPickerTriggerPressed}
         >
           <Text
             style={styles.monthPickerLabel}
@@ -110,7 +109,7 @@ export function CalendarMonth({
           <View style={styles.monthPickerChevron}>
             <Ionicons name="chevron-down" size={16} color="#C85C63" />
           </View>
-        </Pressable>
+        </FeedbackPressable>
       </View>
 
       <YearMonthPickerModal

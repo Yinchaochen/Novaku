@@ -4,6 +4,7 @@ import { Modal, Platform, Pressable, Text, View, useWindowDimensions } from 'rea
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useLanguage } from '../context/LanguageContext';
+import { FeedbackPressable } from './FeedbackPressable';
 import {
   copyLink,
   shareToInstagramStory,
@@ -164,16 +165,16 @@ export function ShareSheet({
 
           <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg }}>
             {targets.map((tg) => (
-              <Pressable
+              <FeedbackPressable
                 key={tg.key}
                 onPress={() => select(tg.key)}
                 accessibilityRole="button"
                 accessibilityLabel={tg.label}
-                style={({ pressed }) => ({
+                style={{
                   width: itemWidth,
                   alignItems: 'center',
-                  opacity: pressed ? 0.6 : 1,
-                })}
+                }}
+                pressedStyle={{ opacity: 0.6 }}
               >
                 <View
                   style={{
@@ -200,7 +201,7 @@ export function ShareSheet({
                 >
                   {tg.label}
                 </Text>
-              </Pressable>
+              </FeedbackPressable>
             ))}
           </View>
         </Pressable>

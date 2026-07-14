@@ -1,7 +1,7 @@
 import NetInfo from '@react-native-community/netinfo';
 import { QueryClient, onlineManager } from '@tanstack/react-query';
 
-import { api } from './api';
+import { api, API_BASE } from './api';
 import { CHAT_SEND_MUTATION_KEY } from './queryPersister';
 import type {
   ChatMessage,
@@ -10,6 +10,11 @@ import type {
 } from '../features/chat/useChat';
 import { useAuthStore } from '../store/authStore';
 import { useChatOutboxStore } from '../store/chatOutboxStore';
+
+function apiReachabilityUrl(): string {
+  const base = API_BASE.replace(/\/+$/, '').replace(/\/v1$/, '');
+  return `${base}/healthz`;
+}
 
 // P3.9 — wire React Native's network state into TanStack Query's
 // onlineManager. Without this, the library falls back to
@@ -23,6 +28,15 @@ import { useChatOutboxStore } from '../store/chatOutboxStore';
 // it called the legacy `RCTEventEmitter` callable JS module which is never
 // registered under RN 0.81 + Fabric. Bumped to 12.0.1, which routes events
 // through TurboModule. POSTERVIA-IOS-5/6 should no longer reproduce.
+NetInfo.configure({
+  reachabilityUrl: apiReachabilityUrl(),
+  reachabilityMethod: 'GET',
+  reachabilityTest: async (response) => response.status >= 200 && response.status < 600,
+  reachabilityShortTimeout: 5000,
+  reachabilityLongTimeout: 60_000,
+  reachabilityRequestTimeout: 8000,
+});
+
 onlineManager.setEventListener((setOnline) => {
   const subscription = NetInfo.addEventListener((state) => {
     // `isConnected` is null while NetInfo determines initial state — treat

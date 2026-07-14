@@ -32,6 +32,7 @@ import {
   clearRememberedEmail,
 } from '../../lib/rememberedEmail';
 import { colors } from '../../theme/tokens';
+import { FeedbackPressable } from '../../components/FeedbackPressable';
 import { GoogleSignInButton } from '../../components/GoogleSignInButton';
 
 const HERO_YELLOW = '#FFD17E';
@@ -148,18 +149,19 @@ export default function LoginScreen() {
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Pressable
+          <FeedbackPressable
             onPress={() => {
               tap('light');
               router.back();
             }}
             hitSlop={12}
-            style={({ pressed }) => [{ padding: 4 }, pressed ? { opacity: 0.7 } : null]}
+            style={{ padding: 4 }}
+            pressedStyle={{ opacity: 0.7 }}
             accessibilityRole="button"
             accessibilityLabel={t.common.back}
           >
             <Ionicons name="chevron-back" size={28} color={colors.brandCoral} />
-          </Pressable>
+          </FeedbackPressable>
           <View style={{ flex: 1, alignItems: 'center', marginRight: 32 }}>
             <Text
               style={{
@@ -376,23 +378,21 @@ export default function LoginScreen() {
 
         {/* Biometric button — only if device supports + user opted in earlier */}
         {biometricVisible ? (
-          <Pressable
+          <FeedbackPressable
             onPress={handleBiometric}
-            style={({ pressed }) => [
-              {
-                marginTop: 14,
-                paddingVertical: 14,
-                borderRadius: 999,
-                alignItems: 'center',
-                flexDirection: 'row',
-                justifyContent: 'center',
-                gap: 8,
-                borderWidth: 1.5,
-                borderColor: 'rgba(246, 118, 115, 0.45)',
-                backgroundColor: 'rgba(255, 232, 218, 0.85)',
-              },
-              pressed ? { transform: [{ scale: 0.98 }] } : null,
-            ]}
+            style={{
+              marginTop: 14,
+              paddingVertical: 14,
+              borderRadius: 999,
+              alignItems: 'center',
+              flexDirection: 'row',
+              justifyContent: 'center',
+              gap: 8,
+              borderWidth: 1.5,
+              borderColor: 'rgba(246, 118, 115, 0.45)',
+              backgroundColor: 'rgba(255, 232, 218, 0.85)',
+            }}
+            pressedStyle={{ transform: [{ scale: 0.98 }] }}
             accessibilityRole="button"
             accessibilityLabel={t.auth.login_with_biometric}
           >
@@ -408,7 +408,7 @@ export default function LoginScreen() {
             >
               {t.auth.login_with_biometric}
             </Text>
-          </Pressable>
+          </FeedbackPressable>
         ) : null}
 
         {/* OAuth — official Sign in with Apple button (Guideline 4) + full-width Google */}

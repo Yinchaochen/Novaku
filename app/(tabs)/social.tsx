@@ -26,6 +26,7 @@ import { AppBackground } from '../../components/AppBackground';
 import { LinkPreviewCard } from '../../components/LinkPreviewCard';
 import { LinkText } from '../../components/LinkText';
 import { ChalkIcon } from '../../components/ChalkIcon';
+import { FeedbackPressable } from '../../components/FeedbackPressable';
 import { DateTimeRangePicker } from '../../components/datetime/DateTimeRangePicker';
 import { PlacePicker, type PickedPlace } from '../../components/places/PlacePicker';
 import { useLanguage } from '../../context/LanguageContext';
@@ -1261,20 +1262,18 @@ export default function SocialScreen() {
           {incomingRequests.length > 0 ? (
             <>
               <SectionTitle>{t.social.incoming_requests}</SectionTitle>
-              <Pressable
+              <FeedbackPressable
                 onPress={() => setIsConnectionsVisible(true)}
-                style={({ pressed }) => [
-                  {
-                    marginHorizontal: 20,
-                    marginBottom: 8,
-                    borderRadius: 22,
-                    paddingHorizontal: 20,
-                    paddingVertical: 16,
-                    backgroundColor: '#FFFFFF',
-                    ...shadows.card,
-                  },
-                  pressed ? { transform: [{ scale: 0.99 }] } : null,
-                ]}
+                style={{
+                  marginHorizontal: 20,
+                  marginBottom: 8,
+                  borderRadius: 22,
+                  paddingHorizontal: 20,
+                  paddingVertical: 16,
+                  backgroundColor: '#FFFFFF',
+                  ...shadows.card,
+                }}
+                pressedStyle={{ transform: [{ scale: 0.99 }] }}
               >
                 <View className="flex-row items-center">
                   {/* Leading icon sized like ConversationAvatar (56) so the
@@ -1302,7 +1301,7 @@ export default function SocialScreen() {
                   </View>
                   <Ionicons name="chevron-forward" size={20} color={colors.textSubtle} />
                 </View>
-              </Pressable>
+              </FeedbackPressable>
             </>
           ) : null}
 

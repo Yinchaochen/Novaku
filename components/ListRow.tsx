@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ReactNode } from 'react';
 import { Pressable, PressableProps, StyleProp, StyleSheet, Text, View, ViewProps, ViewStyle } from 'react-native';
 
+import { usePressedFeedback } from '../hooks/usePressedFeedback';
 import { colors, radius, spacing, typography } from '../theme/tokens';
 
 type ListRowTone = 'neutral' | 'coral' | 'lavender' | 'sage' | 'gold';
@@ -49,6 +50,7 @@ export function ListRow({
 }: ListRowProps) {
   const toneConfig = TONES[tone];
   const shouldShowChevron = showChevron ?? Boolean(onPress);
+  const [pressed, pressHandlers] = usePressedFeedback();
   const content = (
     <>
       {leading ?? (
@@ -87,7 +89,8 @@ export function ListRow({
         disabled={disabled}
         onPress={onPress}
         testID={testID}
-        style={({ pressed }) => [styles.row, style, pressed && !disabled ? styles.pressed : null, disabled ? styles.disabled : null]}
+        {...pressHandlers}
+        style={[styles.row, style, pressed && !disabled ? styles.pressed : null, disabled ? styles.disabled : null]}
       >
         {content}
       </Pressable>

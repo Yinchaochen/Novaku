@@ -167,6 +167,12 @@ export default function SettingsHubScreen() {
               hint={t.settings.admin_moderation_hint}
               onPress={() => router.push('/admin/moderation' as never)}
             />
+            <SettingsRow
+              icon="refresh-circle-outline"
+              label={t.settings.admin_freshness}
+              hint={t.settings.admin_freshness_hint}
+              onPress={() => router.push('/admin/odyssey-freshness' as never)}
+            />
           </SettingsSection>
         ) : null}
       </ScrollView>

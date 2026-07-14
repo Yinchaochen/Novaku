@@ -294,6 +294,27 @@ visible={isConversationVisible && !isCreateMeetupVisible}
 
 ---
 
+### 坑 #7 — Pressable 的 callback 样式在原生会丢关键布局(同一处咬了两次)
+
+**症状**:
+- Web(Expo Web / css-interop)渲染完全正常;真机上同一组件**静态样式都在、callback 样式全丢**。
+- 第一次(2026-06-30,Odyssey 任务线卡):外壳 + 布局全在 `style={({ pressed }) => [...]}` 里 → 真机渲染成"裸垂直列表"(无白卡/无边框/无阴影)。
+- 第二次(2026-07-13,同一张卡):7-01 修复把外壳搬到静态 View 后,7-03 抽 recipe 时 `({ pressed }) => [...]` 写法**又被装了回去**,`flexDirection: 'row'` + padding + 居中留在 callback 里 → 真机上图标顶死左上角、文字/徽章/箭头纵向堆叠贴边,web 正常。
+
+**根因(2026-07-13 定位到上游)**:
+这是 NativeWind v4 css-interop 的**已知上游 bug 家族**:[nativewind#1105](https://github.com/nativewind/nativewind/issues/1105)(Pressable 的 style callback 在原生端不被调用,样式整体丢失;#847 是同 bug 的更早复现,PR #1383 是修复尝试)+ [nativewind#1781](https://github.com/nativewind/nativewind/issues/1781)(4.2.3 比 4.2.1 多丢样式,疑似 ref 重排 commit b1c1378)+ [#924](https://github.com/nativewind/nativewind/issues/924)(间歇性丢样式)。css-interop 只接管原生端渲染路径,web 路径正常调用 callback → 完美解释「web 永远好、真机坏」。**触发仍有条件性**(同版本下部分组件正常),精确条件未复现,但方向已明确:callback 形式的 style 在 css-interop 包裹链上不可靠,版本敏感。
+
+**系统性修复(2026-07-13,全库清零)**:
+1. **新 blessed 路径**:[`components/FeedbackPressable.tsx`](../components/FeedbackPressable.tsx)(静态 `style` + `pressedStyle` 两个 prop)+ [`hooks/usePressedFeedback.ts`](../hooks/usePressedFeedback.ts)(useState + onPressIn/Out,style 回到纯静态数组)。按压反馈保留且**两端都生效**——不再依赖 callback 接缝,丢无可丢。
+2. **存量 35 处全部改造**:12 个共享组件(GradientButton / GoogleSignInButton / IconCircleButton / ListRow / StateBlock / PressableGlassCard / PressableSurfaceCard / ActionSheet / MessageActionMenu / ShareSheet / LanguagePicker / CalendarMonth)+ 22 处屏幕内联(auth×6 / profile×7 / plaza×2 / social / edit-bio / odyssey-history×2 / OdysseyDetailModal×3)。
+3. **CI 棘轮**:`npm run verify:ui` 现在扫描所有 `style={({ pressed }) => ...}`,静息态输出含任何非 opacity/transform 内容 → fail。唯一 allowlist 是探针页。
+4. **版本锁死**:package.json `nativewind` 从 `^4.2.3` 锁成 exact `4.2.3`(#1781 表明 4.2.x 小版本间行为漂移,禁止 npm install 静默升级)。
+5. **真机探针**:[`/dev/pressable-probe`](../app/dev/pressable-probe.tsx)——6 个 cell(callback 裸用 / callback 嵌 SurfaceCard / callback 嵌 collapsable=false / 静态对照 / FeedbackPressable / hook),真机打开一眼看出哪个场景丢。cell 1-3 故意保留坏模式作为观测样本。
+
+**规则**:**外壳与布局样式(背景/边框/圆角/阴影/flexDirection/padding/对齐)永远走静态挂法**——需要按压反馈用 `FeedbackPressable` / `usePressedFeedback`,不需要就 `style={styles.x}`;`({ pressed }) => ...` 写法一律不再新增(CI 会拒)。review 时看到 callback style,直接打回。
+
+---
+
 ## 3. iOS vs Android 关键差异速查表
 
 ### Modal

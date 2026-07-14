@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ReactNode } from 'react';
 import { Platform, Pressable, StyleSheet, View, ViewStyle } from 'react-native';
 
+import { usePressedFeedback } from '../hooks/usePressedFeedback';
 import { tap } from '../lib/haptics';
 import { colors, gradients, shadows } from '../theme/tokens';
 
@@ -35,6 +36,7 @@ export function IconCircleButton({
   // the gradient opacity so the frosted blur shows through. Other tones are
   // already filled colors, so no change needed.
   const useBlur = Platform.OS === 'ios' && tone === 'glass';
+  const [pressed, pressHandlers] = usePressedFeedback();
   const colorsForTone =
     tone === 'coral'
       ? gradients.brandCta
@@ -56,7 +58,8 @@ export function IconCircleButton({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       hitSlop={8}
-      style={({ pressed }) => [
+      {...pressHandlers}
+      style={[
         {
           width: size,
           height: size,

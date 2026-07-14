@@ -38,8 +38,7 @@ export function AppBackground({ children, style, variant = 'default', ...rest }:
         colors={baseColors as unknown as [string, string]}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
-        style={StyleSheet.absoluteFill}
-        pointerEvents="none"
+        style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
       />
       {children}
     </View>

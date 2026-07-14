@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useLanguage } from '../context/LanguageContext';
 import { colors, fontFamily, radius, shadows, spacing } from '../theme/tokens';
+import { FeedbackPressable } from './FeedbackPressable';
 
 export interface ActionSheetAction {
   label: string;
@@ -150,13 +151,13 @@ export function ActionSheet({ visible, title, actions, onClose }: Props) {
                 : colors.bgWarm;
 
               return (
-                <Pressable
+                <FeedbackPressable
                   key={`${action.icon ?? 'action'}-${action.label}`}
                   onPress={() => runAction(action)}
                   accessibilityRole="button"
                   accessibilityLabel={action.label}
                   android_ripple={{ color: colors.lineSofter }}
-                  style={({ pressed }) => ({
+                  style={{
                     minHeight: 62,
                     flexDirection: 'row',
                     alignItems: 'center',
@@ -164,8 +165,9 @@ export function ActionSheet({ visible, title, actions, onClose }: Props) {
                     paddingVertical: spacing.sm,
                     borderTopWidth: index === 0 ? 0 : 1,
                     borderTopColor: colors.lineSofter,
-                    backgroundColor: pressed ? colors.bgCream : colors.cardWhiteSolid,
-                  })}
+                    backgroundColor: colors.cardWhiteSolid,
+                  }}
+                  pressedStyle={{ backgroundColor: colors.bgCream }}
                 >
                   <View
                     style={{
@@ -205,17 +207,17 @@ export function ActionSheet({ visible, title, actions, onClose }: Props) {
                     size={18}
                     color={action.destructive ? colors.danger : colors.textSubtle}
                   />
-                </Pressable>
+                </FeedbackPressable>
               );
             })}
           </View>
 
-          <Pressable
+          <FeedbackPressable
             onPress={onClose}
             accessibilityRole="button"
             accessibilityLabel={t.common.cancel}
             android_ripple={{ color: colors.lineSofter }}
-            style={({ pressed }) => ({
+            style={{
               minHeight: 54,
               marginHorizontal: spacing.md,
               marginBottom: spacing.md,
@@ -224,8 +226,9 @@ export function ActionSheet({ visible, title, actions, onClose }: Props) {
               alignItems: 'center',
               justifyContent: 'center',
               borderRadius: radius.xl,
-              backgroundColor: pressed ? colors.bgWarmDeep : colors.bgWarm,
-            })}
+              backgroundColor: colors.bgWarm,
+            }}
+            pressedStyle={{ backgroundColor: colors.bgWarmDeep }}
           >
             <Ionicons name="close" size={19} color={colors.textMuted} />
             <Text
@@ -240,7 +243,7 @@ export function ActionSheet({ visible, title, actions, onClose }: Props) {
             >
               {t.common.cancel}
             </Text>
-          </Pressable>
+          </FeedbackPressable>
         </Pressable>
       </Pressable>
     </Modal>

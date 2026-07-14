@@ -18,6 +18,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod/v4';
 
+import { FeedbackPressable } from '../../components/FeedbackPressable';
 import { useLanguage } from '../../context/LanguageContext';
 import {
   getApiErrorCode,
@@ -338,18 +339,19 @@ function Hero({
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Pressable
+        <FeedbackPressable
           onPress={() => {
             tap('light');
             onBack();
           }}
           hitSlop={12}
-          style={({ pressed }) => [{ padding: 4 }, pressed ? { opacity: 0.7 } : null]}
+          style={{ padding: 4 }}
+          pressedStyle={{ opacity: 0.7 }}
           accessibilityRole="button"
           accessibilityLabel={backLabel}
         >
           <Ionicons name="chevron-back" size={28} color={colors.brandCoral} />
-        </Pressable>
+        </FeedbackPressable>
         <View style={{ flex: 1, alignItems: 'center', marginRight: 32 }}>
           <Text
             style={{
@@ -380,25 +382,23 @@ function PrimaryCta({
   inline?: boolean;
 }) {
   return (
-    <Pressable
+    <FeedbackPressable
       onPress={() => {
         tap('medium');
         onPress();
       }}
       disabled={loading}
-      style={({ pressed }) => [
-        {
-          paddingVertical: 16,
-          paddingHorizontal: inline ? 36 : 24,
-          borderRadius: 999,
-          alignItems: 'center',
-          overflow: 'hidden',
-          alignSelf: inline ? 'auto' : 'stretch',
-          opacity: loading ? 0.7 : 1,
-          ...shadows.cta,
-        },
-        pressed && !loading ? { transform: [{ scale: 0.98 }] } : null,
-      ]}
+      style={{
+        paddingVertical: 16,
+        paddingHorizontal: inline ? 36 : 24,
+        borderRadius: 999,
+        alignItems: 'center',
+        overflow: 'hidden',
+        alignSelf: inline ? 'auto' : 'stretch',
+        opacity: loading ? 0.7 : 1,
+        ...shadows.cta,
+      }}
+      pressedStyle={{ transform: [{ scale: 0.98 }] }}
     >
       <LinearGradient
         colors={gradients.brandCta as unknown as [string, string]}
@@ -421,6 +421,6 @@ function PrimaryCta({
           {label}
         </Text>
       )}
-    </Pressable>
+    </FeedbackPressable>
   );
 }

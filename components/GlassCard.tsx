@@ -1,6 +1,7 @@
 import { forwardRef, ReactNode } from 'react';
 import { Pressable, PressableProps, View, ViewProps, ViewStyle } from 'react-native';
 
+import { usePressedFeedback } from '../hooks/usePressedFeedback';
 import { radius, shadows } from '../theme/tokens';
 
 type Tone = 'white' | 'cream' | 'lavender' | 'solid';
@@ -99,13 +100,17 @@ export function PressableGlassCard({
   shadow = 'card',
   style,
   disabled,
+  onPressIn,
+  onPressOut,
   ...rest
 }: PressableGlassCardProps) {
   const shell = buildShellStyle(tone, radiusKey, padding, shadow);
+  const [pressed, pressHandlers] = usePressedFeedback({ onPressIn, onPressOut });
   return (
     <Pressable
       disabled={disabled}
-      style={({ pressed }) => [
+      {...pressHandlers}
+      style={[
         shell,
         style,
         pressed && !disabled ? { transform: [{ scale: 0.985 }], opacity: 0.96 } : null,

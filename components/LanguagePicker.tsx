@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { useLanguage } from '../context/LanguageContext';
+import { FeedbackPressable } from './FeedbackPressable';
 import { findLanguage, Language, LANGUAGES } from '../lib/languages';
 import { colors, fontFamily, radius, shadows, spacing } from '../theme/tokens';
 
@@ -127,17 +128,14 @@ export function LanguagePicker({ currentCode, onSelect }: Props) {
               renderItem={({ item }) => {
                 const isSelected = item.code === currentCode;
                 return (
-                  <Pressable
+                  <FeedbackPressable
                     testID={`language.option.${item.code}`}
                     onPress={() => handleSelect(item)}
                     className="flex-row items-center justify-between px-5 py-3"
-                    style={({ pressed }) => ({
-                      backgroundColor: isSelected
-                        ? 'rgba(246, 118, 115, 0.14)'
-                        : pressed
-                          ? colors.bgWarm
-                          : 'transparent',
-                    })}
+                    style={{
+                      backgroundColor: isSelected ? 'rgba(246, 118, 115, 0.14)' : 'transparent',
+                    }}
+                    pressedStyle={isSelected ? undefined : { backgroundColor: colors.bgWarm }}
                   >
                     <Text
                       className="font-medium text-sm flex-1"
@@ -167,7 +165,7 @@ export function LanguagePicker({ currentCode, onSelect }: Props) {
                         style={{ marginLeft: spacing.sm }}
                       />
                     ) : null}
-                  </Pressable>
+                  </FeedbackPressable>
                 );
               }}
               ItemSeparatorComponent={() => (
@@ -181,14 +179,15 @@ export function LanguagePicker({ currentCode, onSelect }: Props) {
               )}
             />
 
-            <Pressable
+            <FeedbackPressable
               onPress={closePicker}
               className="items-center py-4"
-              style={({ pressed }) => ({
+              style={{
                 borderTopWidth: 1,
                 borderTopColor: colors.lineSoft,
-                backgroundColor: pressed ? colors.bgWarmDeep : colors.bgWarm,
-              })}
+                backgroundColor: colors.bgWarm,
+              }}
+              pressedStyle={{ backgroundColor: colors.bgWarmDeep }}
             >
               <Text
                 className="text-sm"
@@ -200,7 +199,7 @@ export function LanguagePicker({ currentCode, onSelect }: Props) {
               >
                 {t.common.cancel}
               </Text>
-            </Pressable>
+            </FeedbackPressable>
           </Pressable>
         </Pressable>
       </Modal>

@@ -5,6 +5,7 @@
  * success moves it into the messages cache and clears the outbox.
  */
 import { api } from '../api';
+import NetInfo from '@react-native-community/netinfo';
 import { CHAT_SEND_MUTATION_KEY } from '../queryPersister';
 import { queryClient } from '../queryClient';
 import { useChatOutboxStore } from '../../store/chatOutboxStore';
@@ -31,7 +32,10 @@ jest.mock('../../store/authStore', () => ({
     },
   },
 }));
-jest.mock('../api', () => ({ api: { post: jest.fn() } }));
+jest.mock('../api', () => ({
+  API_BASE: 'https://api.test.invalid/v1',
+  api: { post: jest.fn() },
+}));
 
 const defaults = queryClient.getMutationDefaults([CHAT_SEND_MUTATION_KEY]);
 
@@ -76,6 +80,15 @@ describe('chat send mutation defaults', () => {
     expect(defaults.onError).toBeDefined();
     expect(defaults.onSuccess).toBeDefined();
     expect(defaults.networkMode).toBe('offlineFirst');
+  });
+
+  it('uses the configured Postervia API health endpoint for NetInfo reachability', () => {
+    expect(NetInfo.configure).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reachabilityUrl: 'https://api.test.invalid/healthz',
+        reachabilityMethod: 'GET',
+      }),
+    );
   });
 
   it('mutationFn posts to the conversation messages endpoint without client-only fields', async () => {

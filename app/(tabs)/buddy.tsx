@@ -5,6 +5,8 @@ import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, Tex
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BuddyPostCard } from '../../components/buddy/BuddyPostCard';
+import { BuddyCreateMenu } from '../../components/buddy/BuddyCreateMenu';
+import { Screen } from '../../components/Screen';
 import { useLanguage } from '../../context/LanguageContext';
 import {
   type BuddyPost,
@@ -14,7 +16,6 @@ import {
 import { useNotifications } from '../../features/community/useCommunity';
 import { tap } from '../../lib/haptics';
 import { addSentryBreadcrumb } from '../../lib/sentry';
-import { getTabBarHeight } from '../../theme/layout';
 import { colors, shadows } from '../../theme/tokens';
 import { useAuthStore } from '../../store/authStore';
 
@@ -43,7 +44,6 @@ function categoryLabel(t: ReturnType<typeof useLanguage>['t'], id: BuddyPostCate
 export default function BuddyTabScreen() {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
-  const tabBarHeight = getTabBarHeight(insets.bottom);
   const user = useAuthStore((s) => s.user);
   const [category, setCategory] = useState<BuddyPostCategory | 'all'>('all');
 
@@ -80,9 +80,8 @@ export default function BuddyTabScreen() {
     router.push(`/buddy/post/${post.id}` as never);
   };
 
-  return (
-    <View testID="screen.buddy" style={{ flex: 1, backgroundColor: '#FFFAF2' }}>
-      {/* Yellow header */}
+  const header = (
+    <>
       <View
         style={{
           backgroundColor: HERO_YELLOW,
@@ -148,7 +147,6 @@ export default function BuddyTabScreen() {
         </View>
       </View>
 
-      {/* Categories strip */}
       <View style={{ backgroundColor: HERO_CORAL, paddingVertical: 14 }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 14 }}>
           {CATEGORIES.map((cat) => {
@@ -195,9 +193,12 @@ export default function BuddyTabScreen() {
           })}
         </ScrollView>
       </View>
+    </>
+  );
 
-      {/* Feed */}
-      <View className="flex-1">
+  return (
+    <Screen header={header} tabBar background="none" testID="screen.buddy">
+      <View className="flex-1" style={{ backgroundColor: '#FFFAF2' }}>
         {feed.isLoading && items.length === 0 ? (
           <View className="flex-1 items-center justify-center">
             <ActivityIndicator size="large" color={colors.brandCoral} />
@@ -210,7 +211,7 @@ export default function BuddyTabScreen() {
             contentContainerStyle={{
               paddingHorizontal: 16,
               paddingTop: items.length === 0 ? 0 : 14,
-              paddingBottom: tabBarHeight + 12,
+              paddingBottom: 12,
               flexGrow: items.length === 0 ? 1 : undefined,
               justifyContent: items.length === 0 ? 'center' : undefined,
             }}
@@ -248,33 +249,21 @@ export default function BuddyTabScreen() {
             }
           />
         )}
+        <BuddyCreateMenu
+          companionLabel={t.buddy.type_companion}
+          wishLabel={t.buddy.type_errand_carry}
+          openLabel={t.buddy.create_menu_open}
+          closeLabel={t.buddy.create_menu_close}
+          onCompanionPress={() => {
+            router.push({ pathname: '/buddy/compose', params: { type: 'companion' } } as never);
+          }}
+          onWishPress={() => {
+            router.push({ pathname: '/buddy/compose', params: { type: 'errand_carry' } } as never);
+          }}
+          bottom={16}
+          right={18}
+        />
       </View>
-
-      {/* Floating compose */}
-      <Pressable
-        onPress={() => {
-          tap('medium');
-          router.push('/buddy/compose' as never);
-        }}
-        style={{
-          position: 'absolute',
-          right: 18,
-          bottom: tabBarHeight + 16,
-          width: 56,
-          height: 56,
-          borderRadius: 28,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: colors.brandCoral,
-          shadowColor: colors.brandCoral,
-          shadowOpacity: 0.4,
-          shadowOffset: { width: 0, height: 4 },
-          shadowRadius: 12,
-          elevation: 6,
-        }}
-      >
-        <Ionicons name="add" size={28} color="#FFFFFF" />
-      </Pressable>
-    </View>
+    </Screen>
   );
 }
