@@ -41,11 +41,18 @@ concurrency:
 jobs:
   build-ios:
     name: Build iOS IPA on macOS runner
-    # macos-latest 跟踪 GitHub Actions 提供的最新 macOS（2026 年是 macos-26 / Tahoe）。
-    # 之前用 macos-15 默认 Xcode 16.x，自带 iOS 18.5 SDK → 上传 TestFlight 被 Apple 拒绝：
+    # Pin 到 macos-26，不再用 macos-latest（Build #60 教训）：macos-latest 是
+    # GitHub 会迁移的别名，迁移窗口里（6/15–7/15 macos-15→26）同一 commit 两次
+    # 构建落在不同镜像上，工具链漂移直接炸发布管道。pin 后大版本跳变由我们择时。
+    # 注意：label 内镜像每周仍滚动更新（默认 Xcode 会变），那类漂移靠 step 3b
+    # 的健壮选择 + downloadPlatform 兜底，这里的 pin 只挡大版本跳变。
+    # ⏰ 复查触发点（预计 2027 年春两件事同时到）：
+    #   1) Apple 把上传要求提到 iOS 27 SDK（历年 4 月节奏）→ 升 macos-27 +
+    #      同步改 step 3b 的 iphoneos26 grep
+    #   2) GitHub 宣布 macos-26 退役（通常 ~1.5 年）→ 到期不升会排队/报错
+    # 历史：macos-15 默认 Xcode 16.x / iOS 18.5 SDK → TestFlight 被 Apple 拒绝
     #   "All iOS and iPadOS apps must be built with the iOS 26 SDK or later"
-    # 切到 macos-latest + 显式选 Xcode 26 可以拿到 iOS 26 SDK。
-    runs-on: macos-latest
+    runs-on: macos-26
     timeout-minutes: 75
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
@@ -108,28 +115,25 @@ jobs:
 
       # ── 3b. 选择 Xcode 26（含 iOS 26 SDK）─────────────────────────
       # Apple 2026 起要求上传 ASC 的 app 必须用 iOS 26 SDK 编译。
-      # GitHub macOS runner 通常多 Xcode 并存，default 不一定是最新。
-      # 主动找 Xcode 26 / Xcode latest 并切到它。
+      # GitHub runner 多 Xcode 并存，但只有默认 Xcode（/Applications/Xcode.app）
+      # 预装了 iOS platform 组件；其他版本 SDK 在但 platform 没下载，archive 时
+      # 报 "iOS 26.0 is not installed"（Build #60 教训：glob 字母序选中最老的
+      # Xcode_26.0.1 → exit 70）。所以默认 Xcode 优先，其余 26.x 从新到旧兜底。
       - name: Select Xcode with iOS 26 SDK
         run: |
           set -e
           XCODE_PATH=""
-          # 优先：Xcode_26.x（GA 版本）
-          for candidate in /Applications/Xcode_26*.app /Applications/Xcode-beta.app /Applications/Xcode_latest.app /Applications/Xcode.app; do
-            if [ -d "$candidate" ]; then
-              # 检查这个 Xcode 是否有 iOS 26 SDK
-              SDKS=$(xcodebuild -showsdks 2>/dev/null | grep -i "iphoneos26" || echo "")
-              # 临时切到 candidate 看 SDK
-              if sudo xcode-select -switch "$candidate" 2>/dev/null; then
-                ACTUAL_SDKS=$(xcodebuild -showsdks 2>/dev/null | grep -i "iphoneos" || echo "(none)")
-                echo "Candidate: $candidate"
-                echo "  SDKs: $ACTUAL_SDKS"
-                if echo "$ACTUAL_SDKS" | grep -qi "iphoneos26"; then
-                  echo "  ✅ has iOS 26 SDK — using this Xcode"
-                  XCODE_PATH="$candidate"
-                  break
-                fi
-              fi
+          CANDIDATES="/Applications/Xcode.app $(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -rV) /Applications/Xcode-beta.app /Applications/Xcode_latest.app"
+          for candidate in $CANDIDATES; do
+            [ -d "$candidate" ] || continue
+            sudo xcode-select -switch "$candidate" 2>/dev/null || continue
+            ACTUAL_SDKS=$(xcodebuild -showsdks 2>/dev/null | grep -i "iphoneos" || echo "(none)")
+            echo "Candidate: $candidate"
+            echo "  SDKs: $ACTUAL_SDKS"
+            if echo "$ACTUAL_SDKS" | grep -qi "iphoneos26"; then
+              echo "  ✅ has iOS 26 SDK — using this Xcode"
+              XCODE_PATH="$candidate"
+              break
             fi
           done
 
@@ -142,6 +146,10 @@ jobs:
             xcodebuild -showsdks | grep iphoneos
             exit 1
           fi
+
+          # platform 组件保险：已安装则秒过（no-op）；万一选中的 Xcode 没装
+          # iOS platform，这里现场下载，避免拖到 archive 阶段才炸
+          sudo xcodebuild -downloadPlatform iOS
 
           echo "=== Final Xcode selection ==="
           xcode-select -p
@@ -163,10 +171,14 @@ jobs:
           echo "Ruby bin path: $(which ruby)"
           echo "Fastlane path: $(which fastlane)"
 
-      # ── 4. 装 eas-cli 全局 ──────────────────────────────────────────
+      # ── 4. 装 eas-cli 全局（pin 固定版本，不用 @latest）──────────────
+      # eas-cli 每周多次发版，@latest = Expo 的回归零预警直进发布管道
+      # （下面的 #3248 workaround 就是这么来的伤疤）。pin 后升级时机自己定：
+      # 随 Expo SDK 升级（54→55）或需要已修复的 bug 时主动 bump。
+      # eas-cli-local-build-plugin 的版本由 eas-cli 自选，pin 这里即间接固定。
       - name: Install eas-cli
         run: |
-          npm install -g eas-cli@latest
+          npm install -g eas-cli@21.0.2
           eas --version
 
       # ── 5. 验证 EAS 认证 ────────────────────────────────────────────
