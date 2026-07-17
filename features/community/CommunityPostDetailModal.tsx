@@ -257,6 +257,11 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
   const displayHeaderCity = displayPostCity ?? displayAuthorCity;
   const detailKey = post ? `${post.id}:${post.feed_context?.feed_request_id ?? 'standalone'}` : null;
   const mediaItemCount = post?.media_items.length ?? 0;
+  // Without the token (stale cache from an older API) the link still opens the
+  // app / store landing — it just falls back to the generic chat preview (D-040).
+  const postShareUrl = post
+    ? `https://postervia.app/p/${post.id}${post.share_token ? `?s=${post.share_token}` : ''}`
+    : '';
   const hasMediaPager = mediaItemCount > 1;
   const canEditPost = Boolean(user?.id && post?.author.id === user.id);
   const blockUser = useBlockUser();
@@ -1166,8 +1171,8 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
           visible={shareSheetVisible}
           onClose={() => setShareSheetVisible(false)}
           capture={captureShareCard}
-          linkUrl={`https://postervia.app/p/${post.id}`}
-          message={[post.title, `https://postervia.app/p/${post.id}`].filter(Boolean).join('\n\n')}
+          linkUrl={postShareUrl}
+          message={[post.title, postShareUrl].filter(Boolean).join('\n\n')}
           onCopied={() =>
             setToast({ id: Date.now(), tone: 'success', text: t.common.copied_to_clipboard, durationMs: 2500 })
           }

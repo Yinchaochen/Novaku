@@ -169,6 +169,8 @@ export interface CommunityPost {
   action_candidates: CommunityActionCandidate[];
   feed_context?: CommunityRecommendationFeedContext | null;
   content_context?: CommunityRecommendationContentContext | null;
+  /** Capability token for the public share URL postervia.app/p/{id}?s=… (D-040). */
+  share_token?: string | null;
 }
 
 export interface PersonalOdyssey {
