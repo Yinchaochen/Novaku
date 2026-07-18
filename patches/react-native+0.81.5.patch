@@ -25,3 +25,17 @@ index 2a67797..fa343f6 100644
      } @finally {
        [retainedObjectsForInvocation removeAllObjects];
      }
+diff --git a/node_modules/react-native/third-party-podspecs/fmt.podspec b/node_modules/react-native/third-party-podspecs/fmt.podspec
+index 2f38990..359d2ec 100644
+--- a/node_modules/react-native/third-party-podspecs/fmt.podspec
++++ b/node_modules/react-native/third-party-podspecs/fmt.podspec
+@@ -26,4 +26,9 @@ Pod::Spec.new do |spec|
+   spec.public_header_files = "include/fmt/*.h"
+   spec.header_mappings_dir = "include"
+   spec.source_files = ["include/fmt/*.h", "src/format.cc"]
++
++  # Xcode 26.4+ rejects fmt 11.0.2's consteval format validation (react-native#55601).
++  spec.prepare_command = <<~SCRIPT
++    ruby -pi -e 'gsub(/^#  define FMT_USE_CONSTEVAL 1$/, "#  define FMT_USE_CONSTEVAL 0")' include/fmt/base.h
++  SCRIPT
+ end

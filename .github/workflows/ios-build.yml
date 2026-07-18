@@ -45,7 +45,7 @@ jobs:
     # GitHub 会迁移的别名，迁移窗口里（6/15–7/15 macos-15→26）同一 commit 两次
     # 构建落在不同镜像上，工具链漂移直接炸发布管道。pin 后大版本跳变由我们择时。
     # 注意：label 内镜像每周仍滚动更新（默认 Xcode 会变），那类漂移靠 step 3b
-    # 的健壮选择 + downloadPlatform 兜底，这里的 pin 只挡大版本跳变。
+    # 的健壮选择 + SDK 验证兜底，这里的 pin 只挡大版本跳变。
     # ⏰ 复查触发点（预计 2027 年春两件事同时到）：
     #   1) Apple 把上传要求提到 iOS 27 SDK（历年 4 月节奏）→ 升 macos-27 +
     #      同步改 step 3b 的 iphoneos26 grep
@@ -147,9 +147,7 @@ jobs:
             exit 1
           fi
 
-          # platform 组件保险：已安装则秒过（no-op）；万一选中的 Xcode 没装
-          # iOS platform，这里现场下载，避免拖到 archive 阶段才炸
-          sudo xcodebuild -downloadPlatform iOS
+          # macos-26 已预装 device SDK；downloadPlatform 会连接 CoreSimulator 并曾使 Build #61 exit 70。
 
           echo "=== Final Xcode selection ==="
           xcode-select -p
@@ -227,6 +225,9 @@ jobs:
           npm ci --prefer-offline --no-audit --no-fund
           echo "--- patches/ 内容 ---"
           ls -la patches/
+
+      - name: Verify iOS build compatibility guards
+        run: node scripts/verify-ios-build-workarounds.mjs
 
       # ── 6b. 把 Maps key 注入 eas.json env（修复地图空白 / iOS 回退 Apple Maps）──
       # `eas build --local` 不读 GitHub Actions 的 shell env（eas-cli #3248），
