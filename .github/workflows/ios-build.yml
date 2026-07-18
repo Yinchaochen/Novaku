@@ -1,4 +1,7 @@
 name: iOS Build & Submit (free local via macOS runner)
+run-name: >-
+  iOS ${{ inputs.profile }} · ${{ inputs.submit && 'Build + TestFlight' || 'Build only' }} ·
+  ${{ github.ref_name }}@${{ github.sha }}
 
 # 设计哲学：
 #  - 用 `eas build --platform ios --local` 在 GitHub macOS runner 上跑构建。
@@ -94,6 +97,27 @@ jobs:
       # ── 1. 检出仓库 ──────────────────────────────────────────────────
       - name: Checkout repo
         uses: actions/checkout@v4
+
+      # Release evidence is commit-specific: a green feature-branch run does not make an older
+      # default branch safe. Build #64 reproduced #61 because PR #3 had not reached master yet.
+      - name: Verify release source and workflow safety
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -e
+          echo "Workflow source: ${GITHUB_REF_NAME}@${GITHUB_SHA}"
+
+          if [ "${{ inputs.submit }}" = "true" ] && [ "$GITHUB_REF_NAME" != "$DEFAULT_BRANCH" ]; then
+            echo "::error::TestFlight submissions must run from $DEFAULT_BRANCH, not $GITHUB_REF_NAME."
+            echo "::error::Merge the verified change first, then trigger this workflow from $DEFAULT_BRANCH."
+            exit 1
+          fi
+
+          FORBIDDEN_COMMAND='xcodebuild -download''Platform iOS'
+          if grep -Fq "$FORBIDDEN_COMMAND" .github/workflows/ios-build.yml; then
+            echo "::error::Do not download the preinstalled iOS platform. Build #61 proved this can fail through CoreSimulator."
+            exit 1
+          fi
 
       # ── 2. 安装 Node 20 LTS ──────────────────────────────────────────
       - name: Setup Node 20
