@@ -2,15 +2,25 @@ import * as ImageManipulator from 'expo-image-manipulator';
 
 import { compressImageForUpload } from '../imageCompression';
 
+const mockFileSizes = new Map<string, number>();
+
 jest.mock('expo-image-manipulator', () => ({
   manipulateAsync: jest.fn(),
   SaveFormat: { JPEG: 'jpeg' },
+}));
+
+jest.mock('expo-file-system', () => ({
+  File: jest.fn().mockImplementation((uri: string) => ({
+    size: mockFileSizes.get(uri) ?? 0,
+  })),
 }));
 
 const manipulateAsync = ImageManipulator.manipulateAsync as jest.Mock;
 
 describe('compressImageForUpload', () => {
   beforeEach(() => {
+    mockFileSizes.clear();
+    mockFileSizes.set('file:///compressed.jpg', 420_000);
     manipulateAsync.mockReset();
     manipulateAsync.mockResolvedValue({ uri: 'file:///compressed.jpg', width: 1600, height: 1200 });
   });
@@ -55,26 +65,69 @@ describe('compressImageForUpload', () => {
       width: 100,
       height: 100,
       fileName: 'holiday photo.png',
+      fileSize: 3_200_000,
     });
-    expect(out).toEqual({
+    expect(out).toMatchObject({
       uri: 'file:///compressed.jpg',
       mimeType: 'image/jpeg',
       fileName: 'holiday photo.jpg',
+      byteSize: 420_000,
+      originalByteSize: 3_200_000,
     });
+    expect(out.compressionMs).toBeGreaterThanOrEqual(0);
   });
 
-  it('falls back to the original uri when manipulation throws', async () => {
+  it('rejects instead of silently uploading the original when manipulation throws', async () => {
     manipulateAsync.mockRejectedValue(new Error('native failure'));
+    await expect(
+      compressImageForUpload({
+        uri: 'file:///original.jpg',
+        width: 4000,
+        height: 3000,
+        fileName: 'orig.jpg',
+        fileSize: 5_000_000,
+      }),
+    ).rejects.toThrow('image_compression_failed');
+  });
+
+  it('recompresses an oversized first result before returning it', async () => {
+    mockFileSizes.set('file:///compressed.jpg', 1_400_000);
+    mockFileSizes.set('file:///compressed-small.jpg', 720_000);
+    manipulateAsync
+      .mockResolvedValueOnce({ uri: 'file:///compressed.jpg', width: 1600, height: 1200 })
+      .mockResolvedValueOnce({ uri: 'file:///compressed-small.jpg', width: 1280, height: 960 });
+
     const out = await compressImageForUpload({
-      uri: 'file:///original.jpg',
+      uri: 'file:///large.jpg',
       width: 4000,
       height: 3000,
-      fileName: 'orig.jpg',
+      fileName: 'large.jpg',
+      fileSize: 6_000_000,
     });
-    expect(out).toEqual({
-      uri: 'file:///original.jpg',
-      mimeType: 'image/jpeg',
-      fileName: 'orig.jpg',
-    });
+
+    expect(manipulateAsync).toHaveBeenNthCalledWith(
+      2,
+      'file:///compressed.jpg',
+      [{ resize: { width: 1280 } }],
+      { compress: 0.55, format: 'jpeg' },
+    );
+    expect(out.byteSize).toBe(720_000);
+  });
+
+  it('rejects when the retry still exceeds the upload byte budget', async () => {
+    mockFileSizes.set('file:///compressed.jpg', 1_400_000);
+    mockFileSizes.set('file:///compressed-small.jpg', 1_100_000);
+    manipulateAsync
+      .mockResolvedValueOnce({ uri: 'file:///compressed.jpg', width: 1600, height: 1200 })
+      .mockResolvedValueOnce({ uri: 'file:///compressed-small.jpg', width: 1280, height: 960 });
+
+    await expect(
+      compressImageForUpload({
+        uri: 'file:///large.jpg',
+        width: 4000,
+        height: 3000,
+        fileName: 'large.jpg',
+      }),
+    ).rejects.toThrow('image_too_large_after_compression');
   });
 });
