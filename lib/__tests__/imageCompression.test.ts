@@ -1,4 +1,5 @@
 import * as ImageManipulator from 'expo-image-manipulator';
+import { Platform } from 'react-native';
 
 import { compressImageForUpload } from '../imageCompression';
 
@@ -19,6 +20,7 @@ const manipulateAsync = ImageManipulator.manipulateAsync as jest.Mock;
 
 describe('compressImageForUpload', () => {
   beforeEach(() => {
+    (Platform as { OS: string }).OS = 'android';
     mockFileSizes.clear();
     mockFileSizes.set('file:///compressed.jpg', 420_000);
     manipulateAsync.mockReset();
@@ -129,5 +131,24 @@ describe('compressImageForUpload', () => {
         fileName: 'large.jpg',
       }),
     ).rejects.toThrow('image_too_large_after_compression');
+  });
+
+  it('measures the compressed Blob on web where expo-file-system is unavailable', async () => {
+    (Platform as { OS: string }).OS = 'web';
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      blob: async () => ({ size: 530_000 }),
+    } as Response);
+
+    const out = await compressImageForUpload({
+      uri: 'blob:original',
+      width: 1200,
+      height: 800,
+      fileName: 'web.png',
+      fileSize: 2_000_000,
+    });
+
+    expect(fetchSpy).toHaveBeenCalledWith('file:///compressed.jpg');
+    expect(out.byteSize).toBe(530_000);
+    fetchSpy.mockRestore();
   });
 });

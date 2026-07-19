@@ -1,5 +1,6 @@
 import { File } from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
+import { Platform } from 'react-native';
 
 const MAX_EDGE = 1600;
 const COMPRESS = 0.7;
@@ -25,9 +26,18 @@ function resizeAction(
   return [width >= height ? { resize: { width: maxEdge } } : { resize: { height: maxEdge } }];
 }
 
-function readableSize(uri: string): number | null {
-  const size = new File(uri).size;
-  return size > 0 ? size : null;
+async function readableSize(uri: string): Promise<number | null> {
+  try {
+    if (Platform.OS === 'web') {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      return blob.size > 0 ? blob.size : null;
+    }
+    const size = new File(uri).size;
+    return size > 0 ? size : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function compressImageForUpload(asset: {
@@ -42,7 +52,7 @@ export async function compressImageForUpload(asset: {
   const height = asset.height ?? 0;
   const originalByteSize = asset.fileSize && asset.fileSize > 0
     ? asset.fileSize
-    : readableSize(asset.uri);
+    : await readableSize(asset.uri);
 
   try {
     let result = await ImageManipulator.manipulateAsync(
@@ -53,7 +63,7 @@ export async function compressImageForUpload(asset: {
         format: ImageManipulator.SaveFormat.JPEG,
       },
     );
-    let byteSize = readableSize(result.uri);
+    let byteSize = await readableSize(result.uri);
     if (byteSize === null) throw new Error('image_size_unavailable');
 
     if (byteSize > MAX_UPLOAD_IMAGE_BYTES) {
@@ -65,7 +75,7 @@ export async function compressImageForUpload(asset: {
           format: ImageManipulator.SaveFormat.JPEG,
         },
       );
-      byteSize = readableSize(result.uri);
+      byteSize = await readableSize(result.uri);
       if (byteSize === null) throw new Error('image_size_unavailable');
     }
 
