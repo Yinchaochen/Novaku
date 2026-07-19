@@ -19,6 +19,10 @@ jest.mock('expo-file-system', () => ({
 const manipulateAsync = ImageManipulator.manipulateAsync as jest.Mock;
 
 describe('compressImageForUpload', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   beforeEach(() => {
     (Platform as { OS: string }).OS = 'android';
     mockFileSizes.clear();
@@ -109,7 +113,7 @@ describe('compressImageForUpload', () => {
 
     expect(manipulateAsync).toHaveBeenNthCalledWith(
       2,
-      'file:///compressed.jpg',
+      'file:///large.jpg',
       [{ resize: { width: 1280 } }],
       { compress: 0.55, format: 'jpeg' },
     );
@@ -149,6 +153,5 @@ describe('compressImageForUpload', () => {
 
     expect(fetchSpy).toHaveBeenCalledWith('file:///compressed.jpg');
     expect(out.byteSize).toBe(530_000);
-    fetchSpy.mockRestore();
   });
 });

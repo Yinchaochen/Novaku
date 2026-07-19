@@ -68,7 +68,7 @@ export async function compressImageForUpload(asset: {
 
     if (byteSize > MAX_UPLOAD_IMAGE_BYTES) {
       result = await ImageManipulator.manipulateAsync(
-        result.uri,
+        asset.uri,
         resizeAction(result.width, result.height, RETRY_MAX_EDGE),
         {
           compress: RETRY_COMPRESS,
