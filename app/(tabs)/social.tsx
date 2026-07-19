@@ -914,6 +914,7 @@ export default function SocialScreen() {
         width: asset.width,
         height: asset.height,
         fileName: asset.fileName,
+        fileSize: asset.fileSize,
       });
       const { url } = await uploadMedia.mutateAsync({
         uri: compressed.uri,

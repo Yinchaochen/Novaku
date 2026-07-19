@@ -38,6 +38,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { captureSentryMessage } from '../../lib/sentry';
 import { colors, shadows } from '../../theme/tokens';
 import { compressImageForUpload } from '../../lib/imageCompression';
+import { mapWithConcurrency } from '../../lib/mapWithConcurrency';
 import { resolveMediaUrl } from '../../lib/media';
 import { CommunityPostCard } from '../../features/community/CommunityPostCard';
 import { CommunityPostDetailModal } from '../../features/community/CommunityPostDetailModal';
@@ -64,6 +65,7 @@ type FormData = z.infer<typeof schema>;
 
 const POST_TYPES: FormData['post_type'][] = ['experience', 'question', 'guide', 'warning', 'recommendation'];
 const MAX_MEDIA_ITEMS = 9;
+const MEDIA_UPLOAD_CONCURRENCY = 2;
 const POST_BUTTON_WIDTH = 130;
 const POST_BUTTON_HEIGHT = 55;
 const POST_BUTTON_RADIUS = POST_BUTTON_HEIGHT / 2;
@@ -260,18 +262,20 @@ export default function PlazaScreen() {
         return;
       }
       // MS-16: compress each pick client-side (longest edge → 1600px, JPEG
-      // q0.7) then upload all in parallel. Sequential upload of raw multi-MB
-      // photos was the dominant cost of posting-with-images on weak networks.
-      const uploaded = await Promise.all(
-        result.assets.slice(0, remaining).map(async (asset) => {
+      // q0.7) then upload at most two at a time so weak uplinks are not flooded.
+      const uploaded = await mapWithConcurrency(
+        result.assets.slice(0, remaining),
+        MEDIA_UPLOAD_CONCURRENCY,
+        async (asset) => {
           const compressed = await compressImageForUpload({
             uri: asset.uri,
             width: asset.width,
             height: asset.height,
             fileName: asset.fileName,
+            fileSize: asset.fileSize,
           });
           return uploadMedia.mutateAsync(compressed);
-        }),
+        },
       );
       setMediaItems((current) => [...current, ...uploaded].slice(0, MAX_MEDIA_ITEMS));
     } catch {

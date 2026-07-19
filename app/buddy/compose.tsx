@@ -29,11 +29,13 @@ import {
   type BuddyPricingMode,
 } from '../../features/buddyPosts/pricing';
 import { compressImageForUpload } from '../../lib/imageCompression';
+import { mapWithConcurrency } from '../../lib/mapWithConcurrency';
 import { reportToSentry } from '../../lib/sentry';
 import { useAuthStore } from '../../store/authStore';
 import { colors, radius, spacing, typography } from '../../theme/tokens';
 
 const MAX_WISH_PHOTOS = 5;
+const MEDIA_UPLOAD_CONCURRENCY = 2;
 
 const CATEGORY_OPTIONS: { id: BuddyPostCategory; type: BuddyPostType[] }[] = [
   { id: 'anmeldung', type: ['companion'] },
@@ -161,16 +163,19 @@ export default function BuddyComposeScreen() {
       if (result.canceled) return;
 
       setIsUploading(true);
-      const uploaded = await Promise.all(
-        result.assets.slice(0, remaining).map(async (asset) => {
+      const uploaded = await mapWithConcurrency(
+        result.assets.slice(0, remaining),
+        MEDIA_UPLOAD_CONCURRENCY,
+        async (asset) => {
           const compressed = await compressImageForUpload({
             uri: asset.uri,
             width: asset.width,
             height: asset.height,
             fileName: asset.fileName,
+            fileSize: asset.fileSize,
           });
           return uploadMedia.mutateAsync(compressed);
-        }),
+        },
       );
       setMediaItems((current) => [...current, ...uploaded].slice(0, MAX_WISH_PHOTOS));
     } catch (error) {
