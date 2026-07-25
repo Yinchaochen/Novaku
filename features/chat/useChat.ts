@@ -196,12 +196,13 @@ export function useSendMessage(conversationId: string) {
 
   const send = (input: SendMessageInput) => mutation.mutate(buildVariables(input));
 
-  // Retry a failed outbox message: drop the failed placeholder, then re-send
-  // the same content as a fresh optimistic message (new clientId).
+  // Keep the client id stable so a lost response cannot create a duplicate.
   const retry = (failed: ChatMessage) => {
     useChatOutboxStore.getState().remove(conversationId, failed.id);
     if (failed.type === 'deleted') return;
-    send({
+    mutation.mutate({
+      conversationId,
+      clientId: failed.id,
       type: failed.type,
       body: failed.body ?? undefined,
       media_url: failed.media_url ?? undefined,

@@ -102,7 +102,7 @@ export interface CommunityAuthor {
   id: string;
   display_name: string;
   avatar_url?: string | null;
-  city: string;
+  city: string | null;
   identity: string;
   viewer_is_following?: boolean;
 }
@@ -149,6 +149,8 @@ export interface CommunityPost {
   extracted_summary_source_language?: string | null;
   source_url?: string | null;
   extracted_summary?: string | null;
+  ai_summary_enabled?: boolean;
+  ai_enrichment_status?: 'pending' | 'generated' | 'skipped_short' | 'disabled';
   translated_title?: string | null;
   translated_body?: string | null;
   translated_extracted_summary?: string | null;
@@ -216,6 +218,8 @@ export interface CommunityPostCreateInput {
   // UserPersonalOdyssey row per tagged place in the author's odyssey list.
   // Composer toggle: "Save these locations as Odyssey tasks".
   save_places_as_odysseys?: boolean;
+  // Composer toggle "AI summary" (D-045). Omitted → enabled on the server.
+  ai_summary_enabled?: boolean;
   media_items?: Array<Pick<CommunityPostMedia, 'media_url' | 'mime_type'>>;
   visibility?: 'public' | 'private';
 }
@@ -1065,7 +1069,7 @@ export interface UserProfile {
   display_id?: string | null;
   display_name: string;
   avatar_url: string | null;
-  city: string;
+  city: string | null;
   origin_city: string | null;
   identity: string;
   intent_tags: string[];

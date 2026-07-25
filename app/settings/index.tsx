@@ -6,10 +6,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { SettingsHeader, SettingsRow, SettingsSection } from '../../components/SettingsRow';
 import { useLanguage } from '../../context/LanguageContext';
 import { useCreateDSR } from '../../features/compliance/useCompliance';
+import { useProductGuide } from '../../features/guide/useProductGuide';
 import { useAuthStore } from '../../store/authStore';
 
 export default function SettingsHubScreen() {
   const { t } = useLanguage();
+  const { restart: restartGuide } = useProductGuide();
   const version = Constants.expoConfig?.version ?? '0.1.0';
   const isStaff = useAuthStore((s) => s.user?.is_staff ?? false);
   const createDsr = useCreateDSR();
@@ -45,6 +47,15 @@ export default function SettingsHubScreen() {
             icon="person-outline"
             label={t.settings.account_edit_profile}
             onPress={() => router.push('/edit-bio' as never)}
+          />
+          <SettingsRow
+            icon="flag-outline"
+            label={t.guide.settings_row_title}
+            hint={t.guide.settings_row_hint}
+            onPress={() => {
+              restartGuide();
+              router.push('/(tabs)/tasks' as never);
+            }}
           />
           {/* Hidden until Postervia+ launches publicly. Restore by removing the `false &&` guard. */}
           {false ? (

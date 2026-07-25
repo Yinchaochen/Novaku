@@ -1,5 +1,6 @@
+import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -64,16 +65,16 @@ export function OnboardingModal({
 
   const [step, setStep] = useState<Step>('city');
   const [cityQuery, setCityQuery] = useState('');
+  const [submittedCityQuery, setSubmittedCityQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState<SelectedCity | null>(null);
   const [selectedIntents, setSelectedIntents] = useState<OnboardingIntentTag[]>([]);
   const [selectedStage, setSelectedStage] = useState<OnboardingArrivalStage>('just_arrived');
   const [locationSource, setLocationSource] = useState<'device' | 'manual' | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
-  const deferredCityQuery = useDeferredValue(cityQuery);
   const citySuggestions = useCitySuggestions(
-    deferredCityQuery,
-    visible && step === 'city' && deferredCityQuery.trim().length >= 2
+    submittedCityQuery,
+    visible && step === 'city' && submittedCityQuery.length >= 2
   );
 
   useEffect(() => {
@@ -81,8 +82,9 @@ export function OnboardingModal({
       return;
     }
 
-    setStep(mode === 'edit' && user.onboarding_completed ? 'persona' : 'city');
+    setStep('city');
     setCityQuery(user.city ?? '');
+    setSubmittedCityQuery('');
     setSelectedCity(
       user.city
         ? {
@@ -136,6 +138,7 @@ export function OnboardingModal({
         longitude: city.longitude,
       });
       setCityQuery(city.name);
+      setSubmittedCityQuery('');
       setLocationSource('device');
       setStep('persona');
     } catch {
@@ -147,7 +150,15 @@ export function OnboardingModal({
   const handleSelectCity = (city: SelectedCity) => {
     setSelectedCity(city);
     setCityQuery(city.name);
+    setSubmittedCityQuery('');
     setFeedback(null);
+  };
+
+  const handleCitySearch = () => {
+    const query = cityQuery.trim();
+    if (query.length >= 2) {
+      setSubmittedCityQuery(query);
+    }
   };
 
   const toggleIntent = (intent: OnboardingIntentTag) => {
@@ -206,7 +217,11 @@ export function OnboardingModal({
               </Text>
             </View>
             {canDismiss ? (
-              <Pressable onPress={onCancel ?? onDone} className="rounded-full bg-gray-100 px-3 py-2">
+              <Pressable
+                onPress={onCancel ?? onDone}
+                className="items-center justify-center rounded-full bg-gray-100 px-3 py-2"
+                style={{ minWidth: 44, minHeight: 44 }}
+              >
                 <Text className="text-sm font-semibold text-gray-500">{t.common.cancel}</Text>
               </Pressable>
             ) : null}
@@ -231,24 +246,43 @@ export function OnboardingModal({
                   {t.onboarding.city_hint}
                 </Text>
 
-                <TextInput
-                  testID="onboarding.city.input"
-                  value={cityQuery}
-                  onChangeText={(value) => {
-                    setCityQuery(value);
-                    if (selectedCity && value.trim() !== selectedCity.name) {
-                      setSelectedCity(null);
-                    }
-                  }}
-                  placeholder={t.onboarding.city_search_placeholder}
-                  className="rounded-3xl border border-gray-200 bg-gray-50 px-4 py-3 text-base text-gray-900"
-                />
+                <View className="flex-row gap-2">
+                  <TextInput
+                    testID="onboarding.city.input"
+                    accessibilityLabel={t.onboarding.city_search_placeholder}
+                    value={cityQuery}
+                    onChangeText={(value) => {
+                      setCityQuery(value);
+                      setSubmittedCityQuery('');
+                      if (selectedCity && value.trim() !== selectedCity.name) {
+                        setSelectedCity(null);
+                      }
+                    }}
+                    onSubmitEditing={handleCitySearch}
+                    returnKeyType="search"
+                    placeholder={t.onboarding.city_search_placeholder}
+                    className="flex-1 rounded-3xl border border-gray-200 bg-gray-50 px-4 py-3 text-base text-gray-900"
+                  />
+                  <Pressable
+                    testID="onboarding.city.search"
+                    accessibilityRole="button"
+                    accessibilityLabel={t.onboarding.city_search_placeholder}
+                    onPress={handleCitySearch}
+                    disabled={cityQuery.trim().length < 2}
+                    className="h-[50px] w-[50px] items-center justify-center rounded-full bg-primary"
+                    style={{ opacity: cityQuery.trim().length < 2 ? 0.45 : 1 }}
+                  >
+                    <Ionicons name="search" size={20} color="#FFFFFF" />
+                  </Pressable>
+                </View>
 
                 <Pressable
                   onPress={handleUseLocation}
                   disabled={isBusy}
                   className="mt-3 flex-row items-center justify-center rounded-3xl bg-primary/10 px-5 py-3.5"
+                  accessibilityRole="button"
                   accessibilityLabel={t.onboarding.location_allow}
+                  accessibilityState={{ disabled: isBusy, busy: resolveCity.isPending }}
                 >
                   {resolveCity.isPending ? (
                     <ActivityIndicator color="#FF9F6E" />
@@ -273,6 +307,8 @@ export function OnboardingModal({
                           testID="onboarding.city.suggestion"
                           key={`${city.name}-${city.latitude}-${city.longitude}`}
                           onPress={() => handleSelectCity(city)}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: active }}
                           className={`rounded-3xl border px-4 py-3 ${
                             active ? 'border-primary bg-primary/10' : 'border-gray-200 bg-white'
                           }`}
@@ -284,7 +320,7 @@ export function OnboardingModal({
                         </Pressable>
                       );
                     })
-                  ) : cityQuery.trim().length >= 2 ? (
+                  ) : submittedCityQuery.length >= 2 ? (
                     <Text className="py-4 text-center text-sm text-gray-500">
                       {t.onboarding.city_empty}
                     </Text>
@@ -296,6 +332,8 @@ export function OnboardingModal({
                     testID="onboarding.city.continue"
                     onPress={() => setStep('persona')}
                     disabled={!canContinueFromCity}
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: !canContinueFromCity }}
                     className={`rounded-3xl px-4 py-3 ${canContinueFromCity ? 'bg-primary' : 'bg-gray-200'}`}
                   >
                     <Text
@@ -317,7 +355,11 @@ export function OnboardingModal({
                   <Text className="mt-1 text-base font-semibold text-gray-900">
                     {selectedCityLabel ?? user?.city ?? ''}
                   </Text>
-                  <Pressable onPress={() => setStep('city')} className="mt-3 self-start rounded-full bg-white px-3 py-1.5">
+                  <Pressable
+                    onPress={() => setStep('city')}
+                    className="mt-3 self-start items-center justify-center rounded-full bg-white px-3 py-1.5"
+                    style={{ minHeight: 44, minWidth: 44 }}
+                  >
                     <Text className="text-xs font-semibold text-primary">{t.onboarding.change_city}</Text>
                   </Pressable>
                 </View>

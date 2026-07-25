@@ -21,6 +21,7 @@ export type Translations = {
     dont_have_account: string;
     or_sign_up_with: string;
     or_sign_in_with: string;
+    or_continue_with: string;
     remember_me: string;
     login_with_biometric: string;
     login_welcome_title: string;
@@ -50,6 +51,14 @@ export type Translations = {
     or: string;
     continue_with_google: string;
     continue_with_apple: string;
+    oauth_complete_title: string;
+    oauth_complete_hint: string;
+    oauth_profile_verified: string;
+    oauth_finish_account: string;
+    oauth_cancel: string;
+    oauth_session_missing_title: string;
+    oauth_session_missing_body: string;
+    oauth_session_missing_action: string;
     birth_year_label: string;
     birth_year_hint: string;
     birth_year_placeholder: string;
@@ -72,8 +81,29 @@ export type Translations = {
       password_mismatch: string;
       underage: string;
       consent_required: string;
+      oauth_failed: string;
+      oauth_unconfigured: string;
+      oauth_missing_id_token: string;
+      google_play_services_unavailable: string;
+      apple_sign_in_unavailable: string;
+      oauth_account_conflict: string;
+      oauth_email_link_required: string;
+      oauth_no_email: string;
+      oauth_ticket_invalid: string;
+      oauth_rate_limited: string;
+      account_deleted: string;
       unknown: string;
     };
+  };
+  guide: {
+    odyssey_hint_title: string;
+    odyssey_hint_body: string;
+    plaza_hint_title: string;
+    plaza_hint_body: string;
+    skip_all: string;
+    dismiss: string;
+    settings_row_title: string;
+    settings_row_hint: string;
   };
   laneCreator: {
     title: string;
@@ -233,6 +263,9 @@ export type Translations = {
     composer_widgets_row: string;
     composer_widgets_value: string;
     composer_advanced_row: string;
+    ai_summary_toggle: string;
+    ai_summary_toggle_desc: string;
+    ai_summary_too_short_hint: string;
     composer_content_statement: string;
     composer_save_draft: string;
     photos: string;

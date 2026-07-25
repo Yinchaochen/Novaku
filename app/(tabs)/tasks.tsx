@@ -6,6 +6,7 @@ import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GlassCard } from '../../components/GlassCard';
+import { GuideHintCard } from '../../components/GuideHintCard';
 import { LangPill } from '../../components/PageHeader';
 import { Pill } from '../../components/Pill';
 import {
@@ -18,6 +19,7 @@ import { Screen } from '../../components/Screen';
 import { StackedButton } from '../../components/StackedButton';
 import { useLanguage } from '../../context/LanguageContext';
 import { useMe } from '../../features/auth/useAuth';
+import { useProductGuide } from '../../features/guide/useProductGuide';
 import * as secureStore from '../../lib/secureStore';
 import { useAuthStore } from '../../store/authStore';
 import { PersonalOdysseyCard } from '../../features/community/PersonalTaskCard';
@@ -73,6 +75,7 @@ export default function TasksScreen() {
   const [detailTarget, setDetailTarget] = useState<{ node: OdysseyNode; state: OdysseyState | undefined } | null>(null);
   const user = useAuthStore((s) => s.user);
   const me = useMe();
+  const { step: guideStep, completeOdysseyStep, skipAll: skipGuide } = useProductGuide();
   const laneQuota = useLaneQuota();
   const taskLanes = useTaskLanes('active');
   const renameTaskLane = useRenameTaskLane();
@@ -342,6 +345,18 @@ export default function TasksScreen() {
             />
           }
         >
+          {guideStep === 'odyssey' ? (
+            <GuideHintCard
+              icon="flag-outline"
+              title={t.guide.odyssey_hint_title}
+              body={t.guide.odyssey_hint_body}
+              dismissLabel={t.guide.dismiss}
+              onDismiss={() => completeOdysseyStep('dismiss')}
+              skipLabel={t.guide.skip_all}
+              onSkipAll={skipGuide}
+              testID="guide.hint.odyssey"
+            />
+          ) : null}
           {!selectedLine ? (
             <>
               <View style={styles.ctaCardShell}>
@@ -431,7 +446,10 @@ export default function TasksScreen() {
               onBack={() => setSelectedLineId(null)}
               onOpenMenu={() => openRenameSheet(selectedLine)}
               onRefresh={refreshAll}
-              onPressTask={(node, state) => setDetailTarget({ node, state })}
+              onPressTask={(node, state) => {
+                completeOdysseyStep('action');
+                setDetailTarget({ node, state });
+              }}
               onTaskComplete={(task) => {
                 setCelebration({ visible: true, title: task.title, type: task.type });
               }}

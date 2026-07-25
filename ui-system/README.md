@@ -56,6 +56,9 @@ static `View` and keep `Pressable` as the hit layer.
 
 Current extracted recipe:
 
+- `features/auth/OAuthRegistrationForm.tsx`: Google/Apple fallback confirmation for
+  unavailable or declined platform age ranges; the 16+ fast path and fallback are
+  both rendered by `/dev/auth-oauth`.
 - `components/recipes/OdysseyTaskLineCard.tsx`: task-line card used by
   `app/(tabs)/tasks.tsx`; shell is static, hit layer is pressable.
 - `features/community/CommunityPostImageViewer.tsx`: full-screen Plaza image
@@ -66,6 +69,7 @@ Current extracted recipe:
 
 The dev gallery is the verification surface:
 
+- `/dev/auth-oauth`
 - `/dev/screen-preview`
 - `/dev/ui-system`
 - `/dev/components`

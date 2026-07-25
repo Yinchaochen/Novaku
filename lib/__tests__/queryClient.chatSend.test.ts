@@ -6,11 +6,19 @@
  */
 import { api } from '../api';
 import NetInfo from '@react-native-community/netinfo';
+import { createElement, type ReactNode } from 'react';
+import { QueryClientProvider, onlineManager } from '@tanstack/react-query';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
+
 import { CHAT_SEND_MUTATION_KEY } from '../queryPersister';
 import { queryClient } from '../queryClient';
 import { useChatOutboxStore } from '../../store/chatOutboxStore';
 import { useAuthStore } from '../../store/authStore';
-import type { ChatMessage, SendMessageVariables } from '../../features/chat/useChat';
+import {
+  useSendMessage,
+  type ChatMessage,
+  type SendMessageVariables,
+} from '../../features/chat/useChat';
 
 let mockAuthUser: { id: string; display_name: string; avatar_url: string | null } | null = null;
 
@@ -52,6 +60,10 @@ const mutationContext = {
   mutationKey: [CHAT_SEND_MUTATION_KEY],
 } as never;
 
+function QueryWrapper({ children }: { children: ReactNode }) {
+  return createElement(QueryClientProvider, { client: queryClient }, children);
+}
+
 function serverMessage(id: string): ChatMessage {
   return {
     id,
@@ -66,6 +78,7 @@ function serverMessage(id: string): ChatMessage {
 
 describe('chat send mutation defaults', () => {
   beforeEach(() => {
+    onlineManager.setOnline(true);
     queryClient.clear();
     useChatOutboxStore.setState({ byConversation: {} });
     useAuthStore.setState({
@@ -74,12 +87,46 @@ describe('chat send mutation defaults', () => {
     (api.post as jest.Mock).mockReset();
   });
 
+  afterEach(() => {
+    onlineManager.setOnline(true);
+  });
+
   it('registers mutationFn + optimistic handlers on the client', () => {
     expect(defaults.mutationFn).toBeDefined();
     expect(defaults.onMutate).toBeDefined();
     expect(defaults.onError).toBeDefined();
     expect(defaults.onSuccess).toBeDefined();
-    expect(defaults.networkMode).toBe('offlineFirst');
+    expect(defaults.networkMode).toBe('online');
+  });
+
+  it('keeps an offline send paused and submits it once after reconnecting', async () => {
+    onlineManager.setOnline(false);
+    (api.post as jest.Mock).mockResolvedValue({ data: { data: serverMessage('m1') } });
+
+    const mutation = queryClient.getMutationCache().build(queryClient, {
+      mutationKey: [CHAT_SEND_MUTATION_KEY],
+    });
+    const execution = mutation.execute(variables);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const offlineState = {
+      status: mutation.state.status,
+      isPaused: mutation.state.isPaused,
+      postCalls: (api.post as jest.Mock).mock.calls.length,
+      outboxPending:
+        useChatOutboxStore.getState().byConversation['conv1']?.['temp-abc']?._pending,
+    };
+
+    onlineManager.setOnline(true);
+    await queryClient.resumePausedMutations();
+    await execution;
+
+    expect(offlineState.status).toBe('pending');
+    expect(offlineState.isPaused).toBe(true);
+    expect(offlineState.postCalls).toBe(0);
+    expect(offlineState.outboxPending).toBe(true);
+
+    expect(api.post).toHaveBeenCalledTimes(1);
   });
 
   it('uses the configured Postervia API health endpoint for NetInfo reachability', () => {
@@ -91,7 +138,7 @@ describe('chat send mutation defaults', () => {
     );
   });
 
-  it('mutationFn posts to the conversation messages endpoint without client-only fields', async () => {
+  it('mutationFn sends the stable client id as the idempotency key', async () => {
     (api.post as jest.Mock).mockResolvedValue({ data: { data: serverMessage('m1') } });
     await defaults.mutationFn!(variables, mutationContext);
     expect(api.post).toHaveBeenCalledWith('/chat/conversations/conv1/messages', {
@@ -99,6 +146,7 @@ describe('chat send mutation defaults', () => {
       body: 'hello from the subway',
       media_url: undefined,
       meta: undefined,
+      client_id: 'temp-abc',
     });
   });
 
@@ -145,5 +193,22 @@ describe('chat send mutation defaults', () => {
 
     const other = queryClient.getQueryData<{ items: ChatMessage[] }>(['chat', 'messages', 'other']);
     expect(other!.items).toHaveLength(1);
+  });
+
+  it('reuses the original client id when retrying an ambiguous failed send', async () => {
+    const failed = { ...serverMessage('temp-abc'), _failed: true };
+    useChatOutboxStore.getState().add('conv1', failed);
+    (api.post as jest.Mock).mockResolvedValue({ data: { data: serverMessage('m1') } });
+    const { result } = await renderHook(() => useSendMessage('conv1'), {
+      wrapper: QueryWrapper,
+    });
+
+    await act(() => result.current.retry(failed));
+
+    await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
+    expect(api.post).toHaveBeenCalledWith(
+      '/chat/conversations/conv1/messages',
+      expect.objectContaining({ client_id: 'temp-abc' }),
+    );
   });
 });

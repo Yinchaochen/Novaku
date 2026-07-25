@@ -3,48 +3,39 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
   ActivityIndicator,
   Alert,
   Platform,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   TextStyle,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod/v4';
 
 import { DatePicker } from '../../components/datetime/DatePicker';
 import { useLanguage } from '../../context/LanguageContext';
 import { getApiErrorCode, useRegister } from '../../features/auth/useAuth';
-import {
-  OAuthRegistrationInput,
-  useAppleLogin,
-  useGoogleLogin,
-} from '../../features/auth/useOAuth';
+import { useAppleLogin, useGoogleLogin } from '../../features/auth/useOAuth';
+import { oauthErrorMessage } from '../../features/auth/oauthErrorMessage';
 import { tap } from '../../lib/haptics';
 import { colors } from '../../theme/tokens';
-import { FeedbackPressable } from '../../components/FeedbackPressable';
 import { GoogleSignInButton } from '../../components/GoogleSignInButton';
+import { Screen } from '../../components/Screen';
+import { AuthHeader } from '../../components/auth/AuthHeader';
+import { OAuthLegalDisclosure } from '../../components/auth/OAuthLegalDisclosure';
 
 const CONSENT_DOCUMENT_VERSION = '2026-05-05.v1';
 const CURRENT_YEAR = new Date().getFullYear();
-// GDPR Art. 8 default: data subjects must be at least 16 to consent on their
-// own behalf. Some EU member states have lowered this to 13, but 16 is the
-// safe default and what the Privacy Policy / Terms of Use declare.
+// Postervia's current Privacy Policy and Terms require users to be at least 16.
 const MIN_AGE = 16;
 const MIN_BIRTH_DATE = new Date(1900, 0, 1);
 const INITIAL_BIRTH_DATE = new Date(CURRENT_YEAR - 18, 0, 1);
 
-// Yellow hero band — matches YumQuick reference (warm butter yellow). The
-// register page hero is intentionally lighter than the welcome's coral so
-// the two screens read as related but distinct moments.
-const HERO_YELLOW = '#FFD17E';
 const INPUT_FILL = '#FFE9A8';        // soft butter for input fields
 const INPUT_FILL_FOCUSED = '#FFE2A0'; // not used yet but reserved for focus state
 
@@ -65,12 +56,18 @@ function calculateAge(date: Date): number {
   return Math.max(years, 0);
 }
 
+function localDateValue(value: Date): string {
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${value.getFullYear()}-${month}-${day}`;
+}
+
 export default function RegisterScreen() {
   const { t, langCode } = useLanguage();
-  const insets = useSafeAreaInsets();
   const register = useRegister();
   const google = useGoogleLogin();
   const apple = useAppleLogin();
+  const oauthErrorCode = google.errorCode ?? apple.errorCode;
   const registerErrorCode = getApiErrorCode(register.error);
 
   const [birthDate, setBirthDate] = useState<Date | null>(null);
@@ -81,7 +78,6 @@ export default function RegisterScreen() {
   const [acceptMarketing, setAcceptMarketing] = useState(false);
   const [consentError, setConsentError] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const pendingOAuthRef = useRef<((registration: OAuthRegistrationInput) => unknown) | null>(null);
 
   const age = useMemo(() => (birthDate ? calculateAge(birthDate) : null), [birthDate]);
   const isMinor = age !== null && age < MIN_AGE;
@@ -94,44 +90,6 @@ export default function RegisterScreen() {
       document_version: CONSENT_DOCUMENT_VERSION,
     },
   ];
-
-  // OAuth users still register a fresh account if their email is new — so we
-  // require the same legal consent (ToS + Privacy + age) before letting them
-  // hit Google / Apple. GDPR Art. 6(1)(b) needs an active acceptance.
-  const runOAuthRegistration = (
-    run: (registration: OAuthRegistrationInput) => unknown,
-    selectedBirthDate: Date,
-  ) => {
-    if (calculateAge(selectedBirthDate) < MIN_AGE) {
-      setBirthDateError(true);
-      setConsentError(false);
-      Alert.alert(t.auth.underage_title, t.auth.underage_body);
-      return;
-    }
-    if (!acceptTos || !acceptPrivacy) {
-      setConsentError(true);
-      setBirthDateError(false);
-      Alert.alert(t.auth.create_account, t.auth.consent_required_hint);
-      return;
-    }
-    setBirthDateError(false);
-    setConsentError(false);
-    void run({
-      birth_year: selectedBirthDate.getFullYear(),
-      consents: buildConsents(),
-    });
-  };
-
-  const handleOAuth = (run: (registration: OAuthRegistrationInput) => unknown) => {
-    if (birthDate === null) {
-      pendingOAuthRef.current = run;
-      setBirthDateError(true);
-      setConsentError(false);
-      setBirthDatePickerOpen(true);
-      return;
-    }
-    runOAuthRegistration(run, birthDate);
-  };
 
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -146,11 +104,7 @@ export default function RegisterScreen() {
     setBirthDateError(false);
     if (!date) return;
 
-    const pendingOAuth = pendingOAuthRef.current;
-    pendingOAuthRef.current = null;
-    if (pendingOAuth) {
-      setTimeout(() => runOAuthRegistration(pendingOAuth, date), 350);
-    } else if (calculateAge(date) < MIN_AGE) {
+    if (calculateAge(date) < MIN_AGE) {
       setBirthDateError(true);
       Alert.alert(t.auth.underage_title, t.auth.underage_body);
     }
@@ -158,9 +112,6 @@ export default function RegisterScreen() {
 
   const handleBirthDatePickerOpenChange = (open: boolean) => {
     setBirthDatePickerOpen(open);
-    if (!open && birthDate === null) {
-      pendingOAuthRef.current = null;
-    }
   };
 
   const onSubmit = (data: FormData) => {
@@ -188,10 +139,9 @@ export default function RegisterScreen() {
       {
         ...data,
         locale: langCode,
-        birth_year: birthDate.getFullYear(),
+        birth_date: localDateValue(birthDate),
         consents: buildConsents(),
       },
-      { onSuccess: () => router.replace('/plaza') },
     );
   };
 
@@ -214,66 +164,59 @@ export default function RegisterScreen() {
   } as const;
 
   return (
-    <View testID="auth.register.screen" style={{ flex: 1, backgroundColor: '#FFFAF2' }}>
-      {/* Status bar text light over the saturated yellow hero. */}
+    <Screen
+      testID="auth.register.screen"
+      background="auth"
+      scroll
+      keyboard
+      bottomGap={32}
+      header={(
+        <AuthHeader
+          title={t.auth.create_account}
+          backLabel={t.common.back}
+          onBack={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/login');
+            }
+          }}
+        />
+      )}
+      contentStyle={{ paddingHorizontal: 22, paddingTop: 28, backgroundColor: '#FFFAF2' }}
+    >
       <StatusBar style="light" />
 
-      {/* Yellow hero band — back arrow + title */}
-      <View
-        style={{
-          backgroundColor: HERO_YELLOW,
-          paddingTop: Math.max(insets.top + 14, 36),
-          paddingBottom: 36,
-          paddingHorizontal: 22,
-          borderBottomLeftRadius: 32,
-          borderBottomRightRadius: 32,
-        }}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <FeedbackPressable
-            onPress={() => {
-              tap('light');
-              if (router.canGoBack()) {
-                router.back();
-              } else {
-                router.replace('/login');
-              }
-            }}
-            hitSlop={12}
-            style={{ padding: 4 }}
-            pressedStyle={{ opacity: 0.7 }}
-            accessibilityRole="button"
-            accessibilityLabel={t.common.back}
-          >
-            <Ionicons name="chevron-back" size={28} color={colors.brandCoral} />
-          </FeedbackPressable>
-          <View style={{ flex: 1, alignItems: 'center', marginRight: 32 /* offset back-button width */ }}>
-            <Text
-              style={{
-                fontSize: 22,
-                fontWeight: '700',
-                color: '#FFFFFF',
-                letterSpacing: 0.2,
-                fontFamily: 'PlusJakartaSans_700Bold',
-              }}
-            >
-              {t.auth.create_account}
+        <View>
+          {Platform.OS === 'ios' ? (
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+              cornerRadius={28}
+              style={{ width: '100%', height: 52, marginBottom: 12 }}
+              onPress={() => void apple.signIn()}
+            />
+          ) : null}
+          <GoogleSignInButton
+            label={t.auth.continue_with_google}
+            onPress={() => void google.signIn()}
+            disabled={!google.request || google.isPending}
+            loading={google.isPending}
+          />
+          <OAuthLegalDisclosure />
+          {google.isError || apple.isError ? (
+            <Text style={{ marginTop: 10, fontSize: 12, color: colors.danger, textAlign: 'center' }}>
+              {oauthErrorMessage(oauthErrorCode, t.auth.errors)}
             </Text>
-          </View>
+          ) : null}
         </View>
-      </View>
 
-      {/* Form area — cream bg, scrolls when keyboard opens */}
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{
-          paddingHorizontal: 22,
-          paddingTop: 28,
-          paddingBottom: Math.max(insets.bottom + 32, 48),
-        }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 24 }}>
+          <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(98,57,40,0.14)' }} />
+          <Text style={{ fontSize: 13, color: colors.textMuted }}>{t.auth.or}</Text>
+          <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(98,57,40,0.14)' }} />
+        </View>
+
         {/* Full name (display_name) */}
         <Text style={labelStyle}>{t.auth.display_name}</Text>
         <Controller
@@ -287,6 +230,7 @@ export default function RegisterScreen() {
               placeholderTextColor="#A89A92"
               value={value ?? ''}
               onChangeText={onChange}
+              accessibilityLabel={t.auth.display_name}
             />
           )}
         />
@@ -310,20 +254,26 @@ export default function RegisterScreen() {
                 onChangeText={onChange}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
+                autoComplete="new-password"
+                textContentType="newPassword"
+                importantForAutofill="yes"
+                accessibilityLabel={t.auth.password}
               />
             )}
           />
           <Pressable
             onPress={() => setShowPassword((v) => !v)}
-            hitSlop={8}
             style={{
               position: 'absolute',
-              right: 14,
+              width: 44,
+              right: 4,
               top: 0,
               bottom: 0,
+              alignItems: 'center',
               justifyContent: 'center',
             }}
             accessibilityRole="button"
+            accessibilityLabel={t.auth.password}
           >
             <Ionicons
               name={showPassword ? 'eye-off-outline' : 'eye-outline'}
@@ -351,6 +301,10 @@ export default function RegisterScreen() {
               onChangeText={onChange}
               autoCapitalize="none"
               keyboardType="email-address"
+              autoComplete="email"
+              textContentType="emailAddress"
+              importantForAutofill="yes"
+              accessibilityLabel={t.auth.email}
             />
           )}
         />
@@ -358,7 +312,7 @@ export default function RegisterScreen() {
           <Text style={{ marginTop: 4, fontSize: 12, color: colors.danger }}>{errors.email.message}</Text>
         ) : null}
 
-        {/* The full date is selected locally; only the birth year is sent to the API. */}
+        {/* The API validates the exact birthday and stores only the birth year. */}
         <Text style={[labelStyle, { marginTop: 18 }]}>{t.auth.birth_year_label}</Text>
         <DatePicker
           testID="auth.register.birthDate"
@@ -385,6 +339,7 @@ export default function RegisterScreen() {
             testID="auth.register.consent.tos"
             checked={acceptTos}
             onToggle={() => setAcceptTos((v) => !v)}
+            label={t.auth.consent_tos_label.replace('{tos}', t.auth.consent_link_tos)}
             required
           >
             {renderConsentLabel(t.auth.consent_tos_label, t.auth.consent_link_tos, () =>
@@ -395,13 +350,21 @@ export default function RegisterScreen() {
             testID="auth.register.consent.privacy"
             checked={acceptPrivacy}
             onToggle={() => setAcceptPrivacy((v) => !v)}
+            label={t.auth.consent_privacy_label.replace(
+              '{privacy}',
+              t.auth.consent_link_privacy,
+            )}
             required
           >
             {renderConsentLabel(t.auth.consent_privacy_label, t.auth.consent_link_privacy, () =>
               router.push('/legal/datenschutz' as never),
             )}
           </ConsentRow>
-          <ConsentRow checked={acceptMarketing} onToggle={() => setAcceptMarketing((v) => !v)}>
+          <ConsentRow
+            checked={acceptMarketing}
+            onToggle={() => setAcceptMarketing((v) => !v)}
+            label={t.auth.consent_marketing_label}
+          >
             <Text style={{ flex: 1, fontSize: 12.5, lineHeight: 18, color: colors.textMuted }}>
               {t.auth.consent_marketing_label}
             </Text>
@@ -411,12 +374,6 @@ export default function RegisterScreen() {
         {consentError ? (
           <Text style={{ marginTop: 10, fontSize: 12, color: colors.danger, textAlign: 'center' }}>
             {t.auth.consent_required_hint}
-          </Text>
-        ) : null}
-
-        {(google.isError || apple.isError) ? (
-          <Text style={{ marginTop: 10, fontSize: 12, color: colors.danger, textAlign: 'center' }}>
-            {t.common.error}
           </Text>
         ) : null}
 
@@ -445,6 +402,9 @@ export default function RegisterScreen() {
               handleSubmit(onSubmit)();
             }}
             disabled={!canSubmit}
+            accessibilityRole="button"
+            accessibilityLabel={t.auth.register}
+            accessibilityState={{ disabled: !canSubmit, busy: register.isPending }}
             style={{
               position: 'absolute',
               top: 0,
@@ -485,28 +445,6 @@ export default function RegisterScreen() {
           </Text>
         ) : null}
 
-        {/* OAuth — official Sign in with Apple button (Guideline 4) + full-width Google */}
-        <View style={{ marginTop: 24 }}>
-          <Text style={{ fontSize: 13, color: colors.textMuted, marginBottom: 14, textAlign: 'center' }}>
-            {t.auth.or_sign_up_with}
-          </Text>
-          {Platform.OS === 'ios' ? (
-            <AppleAuthentication.AppleAuthenticationButton
-              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP}
-              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-              cornerRadius={28}
-              style={{ width: '100%', height: 52, marginBottom: 12 }}
-              onPress={() => handleOAuth((registration) => apple.signIn(registration))}
-            />
-          ) : null}
-          <GoogleSignInButton
-            label={t.auth.continue_with_google}
-            onPress={() => handleOAuth((registration) => google.signIn(registration))}
-            disabled={!google.request || google.isPending}
-            loading={google.isPending}
-          />
-        </View>
-
         {/* Already have account → back to login */}
         <View
           style={{
@@ -522,7 +460,9 @@ export default function RegisterScreen() {
           </Text>
           <Pressable
             onPress={() => router.replace('/login')}
-            hitSlop={6}
+            style={{ minWidth: 44, minHeight: 44, paddingHorizontal: 4, justifyContent: 'center' }}
+            accessibilityRole="button"
+            accessibilityLabel={t.auth.login}
           >
             <Text
               style={{
@@ -536,8 +476,7 @@ export default function RegisterScreen() {
             </Text>
           </Pressable>
         </View>
-      </ScrollView>
-    </View>
+    </Screen>
   );
 }
 
@@ -548,16 +487,26 @@ export default function RegisterScreen() {
 function renderConsentLabel(template: string, linkLabel: string, onPress: () => void) {
   const parts = template.split(/\{(?:tos|privacy)\}/);
   return (
-    <Text style={{ flex: 1, fontSize: 12.5, lineHeight: 18, color: colors.textMuted }}>
-      {parts[0]}
-      <Text
-        style={{ fontWeight: '700', color: colors.brandCoral, textDecorationLine: 'underline' }}
-        onPress={onPress}
-      >
-        {linkLabel}
+    <>
+      <Text style={{ flexShrink: 1, fontSize: 12.5, lineHeight: 18, color: colors.textMuted }}>
+        {parts[0]}
       </Text>
-      {parts[1] ?? ''}
-    </Text>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="link"
+        accessibilityLabel={linkLabel}
+        style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
+      >
+        <Text
+          style={{ fontSize: 12.5, fontWeight: '700', color: colors.brandCoral, textDecorationLine: 'underline' }}
+        >
+          {linkLabel}
+        </Text>
+      </Pressable>
+      <Text style={{ flexShrink: 1, fontSize: 12.5, lineHeight: 18, color: colors.textMuted }}>
+        {parts[1] ?? ''}
+      </Text>
+    </>
   );
 }
 
@@ -565,41 +514,47 @@ function ConsentRow({
   testID,
   checked,
   onToggle,
+  label,
   required,
   children,
 }: {
   testID?: string;
   checked: boolean;
   onToggle: () => void;
+  label: string;
   required?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <Pressable
-      testID={testID}
-      onPress={onToggle}
-      style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}
-    >
-      <View
-        style={{
-          width: 20,
-          height: 20,
-          borderRadius: 6,
-          borderWidth: 1.5,
-          borderColor: checked ? colors.brandCoral : 'rgba(98,57,40,0.20)',
-          backgroundColor: checked ? colors.brandCoral : '#FFFFFF',
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginTop: 1,
-        }}
+    <View style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+      <Pressable
+        testID={testID}
+        onPress={onToggle}
+        accessibilityRole="checkbox"
+        accessibilityLabel={label}
+        accessibilityState={{ checked }}
+        style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
       >
-        {checked ? <Ionicons name="checkmark" size={13} color="#FFFFFF" /> : null}
-      </View>
-      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-start', gap: 4 }}>
+        <View
+          style={{
+            width: 20,
+            height: 20,
+            borderRadius: 6,
+            borderWidth: 1.5,
+            borderColor: checked ? colors.brandCoral : 'rgba(98,57,40,0.20)',
+            backgroundColor: checked ? colors.brandCoral : '#FFFFFF',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {checked ? <Ionicons name="checkmark" size={13} color="#FFFFFF" /> : null}
+        </View>
+      </Pressable>
+      <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 4 }}>
         {children}
         {required ? <Text style={{ color: colors.brandCoral, fontWeight: '700' }}>*</Text> : null}
       </View>
-    </Pressable>
+    </View>
   );
 }
 

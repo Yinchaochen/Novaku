@@ -96,6 +96,12 @@
   ],
   "current_recipes": [
     {
+      "name": "OAuth registration confirmation",
+      "path": "features/auth/OAuthRegistrationForm.tsx",
+      "status": "shared Google/Apple legal-confirmation recipe, rendered by /dev/auth-oauth",
+      "invariant": "Provider profile data stays read-only; a shared platform range with lower bound 16+ auto-completes registration after the disclosed provider action, while missing, declined, ambiguous, or unsupported signals fall back to exact birth date and explicit legal consent."
+    },
+    {
       "name": "Buddy wish creation",
       "path": "components/buddy/BuddyCreateMenu.tsx",
       "status": "expandable entry plus image-first wish recipe, rendered by /dev/buddy-wish",
@@ -171,6 +177,18 @@
   "verification_surfaces": {
     "dev_gallery_hub": "app/dev/index.tsx",
     "routes": [
+      {
+        "path": "/dev/product-guide",
+        "covers": ["GuideHintCard", "odyssey hint", "plaza hint", "long German", "empty", "loading", "settings re-entry"]
+      },
+      {
+        "path": "/dev/city-location",
+        "covers": ["city selection", "location pending", "long German", "empty", "loading", "own", "other"]
+      },
+      {
+        "path": "/dev/auth-oauth",
+        "covers": ["OAuthRegistrationForm", "normal", "long German", "empty", "loading", "own", "other", "provider conflict"]
+      },
       {
         "path": "/dev/buddy-wish",
         "covers": ["BuddyCreateMenu", "BuddyPhotoPicker", "BuddyPostCard", "normal", "long German", "empty", "loading", "own", "other"]

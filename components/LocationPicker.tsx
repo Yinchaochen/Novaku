@@ -64,11 +64,10 @@ const SCREEN_HEIGHT = Dimensions.get('window').height;
 const MAP_PROVIDER = PROVIDER_GOOGLE;
 
 const DEFAULT_REGION: Region = {
-  // Brandenburg Gate — a sensible fallback when we have no user city yet.
-  latitude: 52.5163,
-  longitude: 13.3777,
-  latitudeDelta: 0.06,
-  longitudeDelta: 0.06,
+  latitude: 20,
+  longitude: 0,
+  latitudeDelta: 100,
+  longitudeDelta: 160,
 };
 
 const ZOOMED_DELTA = 0.01;
@@ -80,9 +79,7 @@ const ZOOMED_DELTA = 0.01;
 // places.googleapis.com (Places API New) directly instead.
 const PLACES_AUTOCOMPLETE_URL = 'https://places.googleapis.com/v1/places:autocomplete';
 const PLACES_DETAILS_URL = 'https://places.googleapis.com/v1/places';
-// Bias suggestions to a 50km circle around the map centre — covers the Berlin
-// metro, our launch city, so a query like "Mr. Noodle Chen" surfaces the local
-// shop instead of a same-named place across the world.
+// Bias search only after we know the user's area or they move the map.
 const PLACES_BIAS_RADIUS_M = 50000;
 
 interface Prediction {
@@ -138,7 +135,7 @@ export function LocationPicker({
     platform: Platform.OS,
   });
 
-  const { t } = useLanguage();
+  const { t, langCode } = useLanguage();
   const mapRef = useRef<MapView | null>(null);
   const [selected, setSelected] = useState<SelectedDraft | null>(null);
   const [locatingMe, setLocatingMe] = useState(false);
@@ -173,6 +170,7 @@ export function LocationPicker({
   // Tracks the map's live centre so autocomplete biases to wherever the user
   // is looking; seeded from initialRegion, updated on every pan/zoom settle.
   const regionRef = useRef<Region>(initialRegion);
+  const hasLocationBiasRef = useRef(initialLatitude != null && initialLongitude != null);
 
   // Cancel any pending debounced search on unmount.
   useEffect(() => {
@@ -209,17 +207,21 @@ export function LocationPicker({
         },
         body: JSON.stringify({
           input,
-          languageCode: 'en',
+          languageCode: langCode,
           sessionToken: sessionTokenRef.current,
-          locationBias: {
-            circle: {
-              center: {
-                latitude: regionRef.current.latitude,
-                longitude: regionRef.current.longitude,
-              },
-              radius: PLACES_BIAS_RADIUS_M,
-            },
-          },
+          ...(hasLocationBiasRef.current
+            ? {
+                locationBias: {
+                  circle: {
+                    center: {
+                      latitude: regionRef.current.latitude,
+                      longitude: regionRef.current.longitude,
+                    },
+                    radius: PLACES_BIAS_RADIUS_M,
+                  },
+                },
+              }
+            : {}),
         }),
       });
       const json = await res.json();
@@ -257,7 +259,7 @@ export function LocationPicker({
     setQuery(prediction.mainText);
     try {
       const res = await fetch(
-        `${PLACES_DETAILS_URL}/${prediction.placeId}?languageCode=en&sessionToken=${sessionTokenRef.current}`,
+        `${PLACES_DETAILS_URL}/${prediction.placeId}?languageCode=${encodeURIComponent(langCode)}&sessionToken=${sessionTokenRef.current}`,
         {
           headers: {
             'X-Goog-Api-Key': GOOGLE_MAPS_API_KEY,
@@ -296,6 +298,7 @@ export function LocationPicker({
       const pos = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
+      hasLocationBiasRef.current = true;
       // Reverse-geocode to get a human-readable address.
       const [first] = await Location.reverseGeocodeAsync({
         latitude: pos.coords.latitude,
@@ -368,13 +371,16 @@ export function LocationPicker({
       return;
     }
     try {
-      const res = await fetch(`${PLACES_DETAILS_URL}/${placeId}?languageCode=en`, {
+      const res = await fetch(
+        `${PLACES_DETAILS_URL}/${placeId}?languageCode=${encodeURIComponent(langCode)}`,
+        {
         headers: {
           'X-Goog-Api-Key': GOOGLE_MAPS_API_KEY,
           'X-Goog-FieldMask':
             'id,location,displayName,formattedAddress,rating,userRatingCount,currentOpeningHours.openNow',
         },
-      });
+        },
+      );
       const json = await res.json();
       const loc = json.location as { latitude: number; longitude: number } | undefined;
       const draft: SelectedDraft = {
@@ -414,6 +420,9 @@ export function LocationPicker({
         initialRegion={initialRegion}
         onPress={handleMapPress}
         onPoiClick={handlePoiClick}
+        onPanDrag={() => {
+          hasLocationBiasRef.current = true;
+        }}
         onRegionChangeComplete={(r) => {
           regionRef.current = r;
         }}

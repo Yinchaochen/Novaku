@@ -81,6 +81,9 @@ export function GradientButton({
     >
       <Pressable
         disabled={inactive}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{ disabled: inactive, busy: loading }}
         onPress={() => {
           tap(variant === 'primary' ? 'medium' : 'light');
           onPress?.();

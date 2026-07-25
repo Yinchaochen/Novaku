@@ -15,6 +15,9 @@ import { Screen } from '../../components/Screen';
 const devRoute = (p: string) => p as unknown as Href;
 
 const PAGES: { href: string; title: string; blurb: string }[] = [
+  { href: '/dev/product-guide', title: 'First-value guide', blurb: 'Guide hint cards and settings re-entry in all 6 states' },
+  { href: '/dev/city-location', title: 'City and location', blurb: 'Real city selection, privacy, and all 6 UI states' },
+  { href: '/dev/auth-oauth', title: 'OAuth onboarding', blurb: 'Google and Apple registration in all 6 UI states' },
   { href: '/dev/buddy-wish', title: 'Buddy wish', blurb: 'Expandable entry and image-first wish in all 6 states' },
   { href: '/dev/screen-preview', title: 'Screen preview', blurb: '<Screen> primitive in all 6 states' },
   { href: '/dev/ui-system', title: 'UI system', blurb: 'Agent-operable primitives and Odyssey recipes' },

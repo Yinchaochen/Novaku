@@ -9,22 +9,16 @@ import {
   ActivityIndicator,
   Platform,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   TextStyle,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod/v4';
 
 import { useLanguage } from '../../context/LanguageContext';
 import { getApiErrorCode, useLogin } from '../../features/auth/useAuth';
 import { useAppleLogin, useGoogleLogin } from '../../features/auth/useOAuth';
-import {
-  isBiometricAvailable,
-  promptBiometric,
-} from '../../lib/biometric';
 import { tap } from '../../lib/haptics';
 import {
   getRememberedEmail,
@@ -32,10 +26,12 @@ import {
   clearRememberedEmail,
 } from '../../lib/rememberedEmail';
 import { colors } from '../../theme/tokens';
-import { FeedbackPressable } from '../../components/FeedbackPressable';
 import { GoogleSignInButton } from '../../components/GoogleSignInButton';
+import { Screen } from '../../components/Screen';
+import { AuthHeader } from '../../components/auth/AuthHeader';
+import { OAuthLegalDisclosure } from '../../components/auth/OAuthLegalDisclosure';
+import { oauthErrorMessage } from '../../features/auth/oauthErrorMessage';
 
-const HERO_YELLOW = '#FFD17E';
 const INPUT_FILL = '#FFE9A8';
 
 const schema = z.object({
@@ -46,20 +42,14 @@ type FormData = z.infer<typeof schema>;
 
 export default function LoginScreen() {
   const { t } = useLanguage();
-  const insets = useSafeAreaInsets();
   const login = useLogin();
   const google = useGoogleLogin();
   const apple = useAppleLogin();
   const loginErrorCode = getApiErrorCode(login.error);
-  const googleErrorCode = getApiErrorCode(google.error);
-  const appleErrorCode = getApiErrorCode(apple.error);
-  const oauthAccountNotFound =
-    googleErrorCode === 'auth.oauth_account_not_found' ||
-    appleErrorCode === 'auth.oauth_account_not_found';
+  const oauthErrorCode = google.errorCode ?? apple.errorCode;
 
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
-  const [biometricVisible, setBiometricVisible] = useState(false);
 
   const { control, handleSubmit, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -79,10 +69,6 @@ export default function LoginScreen() {
       if (!cancelled && remembered) {
         setValue('email', remembered);
       }
-      const hw = await isBiometricAvailable();
-      if (!cancelled) {
-        setBiometricVisible(hw && Boolean(remembered));
-      }
     })();
     return () => {
       cancelled = true;
@@ -98,21 +84,8 @@ export default function LoginScreen() {
         } else {
           await clearRememberedEmail();
         }
-        router.replace('/plaza');
       },
     });
-  };
-
-  const handleBiometric = async () => {
-    tap('light');
-    const result = await promptBiometric(t.auth.biometric_unlock_prompt);
-    if (!result.success) return;
-    // On success, surface the remembered email so the user only needs to type
-    // their password (or use a saved password from the OS keychain).
-    const remembered = await getRememberedEmail();
-    if (remembered) {
-      setValue('email', remembered);
-    }
   };
 
   const labelStyle: TextStyle = {
@@ -134,60 +107,28 @@ export default function LoginScreen() {
   } as const;
 
   return (
-    <View testID="auth.login.screen" style={{ flex: 1, backgroundColor: '#FFFAF2' }}>
-      <StatusBar style="light" />
-
-      {/* Yellow hero band */}
-      <View
-        style={{
-          backgroundColor: HERO_YELLOW,
-          paddingTop: Math.max(insets.top + 14, 36),
-          paddingBottom: 36,
-          paddingHorizontal: 22,
-          borderBottomLeftRadius: 32,
-          borderBottomRightRadius: 32,
-        }}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <FeedbackPressable
-            onPress={() => {
-              tap('light');
+    <Screen
+      testID="auth.login.screen"
+      background="auth"
+      scroll
+      keyboard
+      bottomGap={32}
+      header={(
+        <AuthHeader
+          title={t.auth.login}
+          backLabel={t.common.back}
+          onBack={() => {
+            if (router.canGoBack()) {
               router.back();
-            }}
-            hitSlop={12}
-            style={{ padding: 4 }}
-            pressedStyle={{ opacity: 0.7 }}
-            accessibilityRole="button"
-            accessibilityLabel={t.common.back}
-          >
-            <Ionicons name="chevron-back" size={28} color={colors.brandCoral} />
-          </FeedbackPressable>
-          <View style={{ flex: 1, alignItems: 'center', marginRight: 32 }}>
-            <Text
-              style={{
-                fontSize: 22,
-                fontWeight: '700',
-                color: '#FFFFFF',
-                letterSpacing: 0.3,
-                fontFamily: 'PlusJakartaSans_700Bold',
-              }}
-            >
-              {t.auth.login}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{
-          paddingHorizontal: 22,
-          paddingTop: 28,
-          paddingBottom: Math.max(insets.bottom + 32, 48),
-        }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+            } else {
+              router.replace('/welcome');
+            }
+          }}
+        />
+      )}
+      contentStyle={{ paddingHorizontal: 22, paddingTop: 28, backgroundColor: '#FFFAF2' }}
+    >
+      <StatusBar style="light" />
         {/* Welcome heading */}
         <Text
           style={{
@@ -212,6 +153,39 @@ export default function LoginScreen() {
           {t.auth.login_welcome_hint}
         </Text>
 
+        <View>
+          {Platform.OS === 'ios' ? (
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+              cornerRadius={28}
+              style={{ width: '100%', height: 52, marginBottom: 12 }}
+              onPress={() => {
+                tap('light');
+                void apple.signIn();
+              }}
+            />
+          ) : null}
+          <GoogleSignInButton
+            label={t.auth.continue_with_google}
+            onPress={() => void google.signIn()}
+            disabled={!google.request || google.isPending}
+            loading={google.isPending}
+          />
+          <OAuthLegalDisclosure />
+          {google.isError || apple.isError ? (
+            <Text style={{ marginTop: 10, fontSize: 12, color: colors.danger, textAlign: 'center' }}>
+              {oauthErrorMessage(oauthErrorCode, t.auth.errors)}
+            </Text>
+          ) : null}
+        </View>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 24 }}>
+          <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(98,57,40,0.14)' }} />
+          <Text style={{ fontSize: 13, color: colors.textMuted }}>{t.auth.or}</Text>
+          <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(98,57,40,0.14)' }} />
+        </View>
+
         {/* Email */}
         <Text style={labelStyle}>{t.auth.email}</Text>
         <Controller
@@ -227,6 +201,10 @@ export default function LoginScreen() {
               onChangeText={onChange}
               autoCapitalize="none"
               keyboardType="email-address"
+              autoComplete="email"
+              textContentType="username"
+              importantForAutofill="yes"
+              accessibilityLabel={t.auth.email}
             />
           )}
         />
@@ -250,14 +228,26 @@ export default function LoginScreen() {
                 onChangeText={onChange}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
+                autoComplete="current-password"
+                textContentType="password"
+                importantForAutofill="yes"
+                accessibilityLabel={t.auth.password}
               />
             )}
           />
           <Pressable
             onPress={() => setShowPassword((v) => !v)}
-            hitSlop={8}
-            style={{ position: 'absolute', right: 14, top: 0, bottom: 0, justifyContent: 'center' }}
+            style={{
+              position: 'absolute',
+              width: 44,
+              right: 4,
+              top: 0,
+              bottom: 0,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
             accessibilityRole="button"
+            accessibilityLabel={t.auth.password}
           >
             <Ionicons
               name={showPassword ? 'eye-off-outline' : 'eye-outline'}
@@ -284,8 +274,9 @@ export default function LoginScreen() {
               tap('selection');
               setRememberMe((v) => !v);
             }}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+            style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8 }}
             accessibilityRole="checkbox"
+            accessibilityLabel={t.auth.remember_me}
             accessibilityState={{ checked: rememberMe }}
           >
             <View
@@ -304,7 +295,12 @@ export default function LoginScreen() {
             </View>
             <Text style={{ fontSize: 13, color: colors.textMuted }}>{t.auth.remember_me}</Text>
           </Pressable>
-          <Pressable onPress={() => router.push('/forgot-password')} hitSlop={6}>
+          <Pressable
+            onPress={() => router.push('/forgot-password')}
+            style={{ minWidth: 44, minHeight: 44, paddingHorizontal: 4, justifyContent: 'center' }}
+            accessibilityRole="button"
+            accessibilityLabel={t.auth.forgot_password}
+          >
             <Text style={{ fontSize: 13, fontWeight: '700', color: colors.brandCoral }}>
               {t.auth.forgot_password}
             </Text>
@@ -336,6 +332,9 @@ export default function LoginScreen() {
               handleSubmit(onSubmit)();
             }}
             disabled={login.isPending}
+            accessibilityRole="button"
+            accessibilityLabel={t.auth.login}
+            accessibilityState={{ disabled: login.isPending, busy: login.isPending }}
             style={{
               position: 'absolute',
               top: 0,
@@ -376,71 +375,6 @@ export default function LoginScreen() {
           </Text>
         ) : null}
 
-        {/* Biometric button — only if device supports + user opted in earlier */}
-        {biometricVisible ? (
-          <FeedbackPressable
-            onPress={handleBiometric}
-            style={{
-              marginTop: 14,
-              paddingVertical: 14,
-              borderRadius: 999,
-              alignItems: 'center',
-              flexDirection: 'row',
-              justifyContent: 'center',
-              gap: 8,
-              borderWidth: 1.5,
-              borderColor: 'rgba(246, 118, 115, 0.45)',
-              backgroundColor: 'rgba(255, 232, 218, 0.85)',
-            }}
-            pressedStyle={{ transform: [{ scale: 0.98 }] }}
-            accessibilityRole="button"
-            accessibilityLabel={t.auth.login_with_biometric}
-          >
-            <Ionicons name="finger-print" size={20} color={colors.brandCoral} />
-            <Text
-              style={{
-                fontFamily: 'PlusJakartaSans_700Bold',
-                fontSize: 14,
-                fontWeight: '700',
-                color: colors.brandCoral,
-                letterSpacing: 0.2,
-              }}
-            >
-              {t.auth.login_with_biometric}
-            </Text>
-          </FeedbackPressable>
-        ) : null}
-
-        {/* OAuth — official Sign in with Apple button (Guideline 4) + full-width Google */}
-        <View style={{ marginTop: 24 }}>
-          <Text style={{ fontSize: 13, color: colors.textMuted, marginBottom: 14, textAlign: 'center' }}>
-            {t.auth.or_sign_in_with}
-          </Text>
-          {Platform.OS === 'ios' ? (
-            <AppleAuthentication.AppleAuthenticationButton
-              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-              cornerRadius={28}
-              style={{ width: '100%', height: 52, marginBottom: 12 }}
-              onPress={() => {
-                tap('light');
-                void apple.signIn();
-              }}
-            />
-          ) : null}
-          <GoogleSignInButton
-            label={t.auth.continue_with_google}
-            onPress={() => google.signIn()}
-            disabled={!google.request || google.isPending}
-            loading={google.isPending}
-          />
-          {(google.isError || apple.isError) ? (
-            <Text style={{ marginTop: 10, fontSize: 12, color: colors.danger, textAlign: 'center' }}>
-              {oauthAccountNotFound ? t.auth.dont_have_account : t.common.error}
-            </Text>
-          ) : null}
-        </View>
-
         {/* Don't have an account? Sign up */}
         <View
           style={{
@@ -455,7 +389,9 @@ export default function LoginScreen() {
           <Pressable
             testID="auth.login.register"
             onPress={() => router.replace('/register')}
-            hitSlop={6}
+            style={{ minWidth: 44, minHeight: 44, paddingHorizontal: 4, justifyContent: 'center' }}
+            accessibilityRole="button"
+            accessibilityLabel={t.auth.register}
           >
             <Text style={{ fontSize: 13.5, color: colors.brandCoral, fontWeight: '700' }}>
               {' '}
@@ -463,8 +399,7 @@ export default function LoginScreen() {
             </Text>
           </Pressable>
         </View>
-      </ScrollView>
-    </View>
+    </Screen>
   );
 }
 

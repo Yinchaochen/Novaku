@@ -67,6 +67,7 @@ export function DatePicker({
         className="flex-row items-center rounded-2xl bg-white px-4"
         style={{ height, borderWidth: 1, borderColor: '#E5E7EB' }}
         accessibilityRole="button"
+        accessibilityLabel={label ?? placeholder}
       >
         <Ionicons name="calendar-outline" size={18} color="#9CA3AF" />
         <Text
@@ -105,6 +106,8 @@ export function DatePicker({
               <Pressable
                 onPress={() => setVisible(false)}
                 className="flex-1 items-center justify-center rounded-full bg-white py-3"
+                accessibilityRole="button"
+                accessibilityLabel={t.common.cancel}
               >
                 <Text className="text-[14px] font-semibold text-neutral-600">
                   {t.common.cancel}

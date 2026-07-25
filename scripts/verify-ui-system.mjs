@@ -97,9 +97,9 @@ if (exists('components/recipes/OdysseyTaskLineCard.tsx')) {
 
 // Ratchet: tab-bar clearance has a single source (theme/layout.ts
 // getTabBarHeight). A literal three-digit paddingBottom in a tab screen means
-// someone re-guessed the geometry. social.tsx stays allowlisted until
-// SOCIAL-UI-002 (codex) lands its redesign.
-const TAB_BAR_RATCHET_ALLOWLIST = new Set(['app/(tabs)/social.tsx']);
+// someone re-guessed the geometry. No screens are exempt: social.tsx moved to
+// <Screen tabBar> with AUTH-CITY-001, retiring its allowlist entry.
+const TAB_BAR_RATCHET_ALLOWLIST = new Set();
 const tabsDir = path.join(appRoot, 'app', '(tabs)');
 if (fs.existsSync(tabsDir)) {
   for (const file of fs.readdirSync(tabsDir).filter((name) => name.endsWith('.tsx'))) {

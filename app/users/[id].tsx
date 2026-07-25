@@ -39,6 +39,7 @@ import {
 } from '../../features/social/useSocial';
 import { ReportSheet } from '../../components/ReportSheet';
 import { numericDisplayId } from '../../lib/displayId';
+import { formatDisplayLocation } from '../../lib/displayLocation';
 import { resolveMediaUrl } from '../../lib/media';
 import { useAuthStore } from '../../store/authStore';
 
@@ -128,6 +129,9 @@ export default function UserProfileScreen() {
   const [reportSheetVisible, setReportSheetVisible] = useState(false);
 
   const profileData = profile.data;
+  const displayCity = formatDisplayLocation(profileData?.city) ?? profileData?.city ?? null;
+  const displayOriginCity =
+    formatDisplayLocation(profileData?.origin_city) ?? profileData?.origin_city ?? null;
 
   const visibleTabs = useMemo<{ key: UserProfileTab; label: string }[]>(() => {
     if (!profileData) return [];
@@ -354,10 +358,18 @@ export default function UserProfileScreen() {
                   <Ionicons name="qr-code-outline" size={14} color="#9CA3AF" />
                 </Pressable>
               </View>
-              {profileData.city ? (
+              {displayCity ? (
                 <View className="mt-1 flex-row items-center">
                   <Ionicons name="location-outline" size={12} color="#9CA3AF" />
-                  <Text className="ml-1 text-[12px] text-neutral-500">{profileData.city}</Text>
+                  <Text className="ml-1 text-[12px] text-neutral-500">{displayCity}</Text>
+                </View>
+              ) : null}
+              {displayOriginCity ? (
+                <View className="mt-1 flex-row items-center">
+                  <Ionicons name="home-outline" size={12} color="#9CA3AF" />
+                  <Text className="ml-1 text-[12px] text-neutral-500">
+                    {t.profile.from_label} {displayOriginCity}
+                  </Text>
                 </View>
               ) : null}
             </View>

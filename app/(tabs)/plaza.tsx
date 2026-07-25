@@ -21,6 +21,7 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -38,7 +39,11 @@ import { useLanguage } from '../../context/LanguageContext';
 import { captureSentryMessage } from '../../lib/sentry';
 import { colors, shadows } from '../../theme/tokens';
 import { compressImageForUpload } from '../../lib/imageCompression';
+import { mapWithConcurrency } from '../../lib/mapWithConcurrency';
 import { resolveMediaUrl } from '../../lib/media';
+import { useProductGuide } from '../../features/guide/useProductGuide';
+import { GuideHintCard } from '../../components/GuideHintCard';
+import { isTooShortForAiSummary } from '../../features/community/aiSummary';
 import { CommunityPostCard } from '../../features/community/CommunityPostCard';
 import { CommunityPostDetailModal } from '../../features/community/CommunityPostDetailModal';
 import {
@@ -64,6 +69,7 @@ type FormData = z.infer<typeof schema>;
 
 const POST_TYPES: FormData['post_type'][] = ['experience', 'question', 'guide', 'warning', 'recommendation'];
 const MAX_MEDIA_ITEMS = 9;
+const MEDIA_UPLOAD_CONCURRENCY = 2;
 const POST_BUTTON_WIDTH = 130;
 const POST_BUTTON_HEIGHT = 55;
 const POST_BUTTON_RADIUS = POST_BUTTON_HEIGHT / 2;
@@ -199,6 +205,8 @@ export default function PlazaScreen() {
   const [selectedPost, setSelectedPost] = useState<CommunityPost | null>(null);
   const [selectedPlaces, setSelectedPlaces] = useState<CommunitySelectedPlaceInput[]>([]);
   const [locationPickerVisible, setLocationPickerVisible] = useState(false);
+  const [aiSummaryEnabled, setAiSummaryEnabled] = useState(true);
+  const { step: guideStep, completePlazaStep, skipAll: skipGuide } = useProductGuide();
   const impressionKeysRef = useRef<Set<string>>(new Set());
 
   const {
@@ -214,10 +222,10 @@ export default function PlazaScreen() {
   });
 
   const selectedType = watch('post_type');
-  const composerHint =
-    user?.identity === 'local'
-      ? (t.plaza.composer_hint_local ?? t.plaza.composer_hint)
-      : t.plaza.composer_hint;
+  const watchedTitle = watch('title');
+  const watchedBody = watch('body');
+  const composerContentTooShort = isTooShortForAiSummary(watchedTitle ?? '', watchedBody ?? '');
+  const composerHint = t.plaza.composer_hint;
   // Place search now happens inside <LocationPicker> via Google Places
   // Autocomplete; the legacy Nominatim hook (usePlaceSuggestions) and the
   // text-only candidate list have been retired along with the old modal.
@@ -260,18 +268,20 @@ export default function PlazaScreen() {
         return;
       }
       // MS-16: compress each pick client-side (longest edge → 1600px, JPEG
-      // q0.7) then upload all in parallel. Sequential upload of raw multi-MB
-      // photos was the dominant cost of posting-with-images on weak networks.
-      const uploaded = await Promise.all(
-        result.assets.slice(0, remaining).map(async (asset) => {
+      // q0.7) then upload at most two at a time so weak uplinks are not flooded.
+      const uploaded = await mapWithConcurrency(
+        result.assets.slice(0, remaining),
+        MEDIA_UPLOAD_CONCURRENCY,
+        async (asset) => {
           const compressed = await compressImageForUpload({
             uri: asset.uri,
             width: asset.width,
             height: asset.height,
             fileName: asset.fileName,
+            fileSize: asset.fileSize,
           });
           return uploadMedia.mutateAsync(compressed);
-        }),
+        },
       );
       setMediaItems((current) => [...current, ...uploaded].slice(0, MAX_MEDIA_ITEMS));
     } catch {
@@ -292,6 +302,7 @@ export default function PlazaScreen() {
     setLocationPickerVisible(false);
     setEditingPost(null);
     setComposerMessage(null);
+    setAiSummaryEnabled(true);
   };
 
   const closeComposer = () => {
@@ -318,12 +329,18 @@ export default function PlazaScreen() {
     setSelectedPlaces(deriveTaggedPlacesFromPost(post));
     setLocationPickerVisible(false);
     setComposerMessage(null);
+    setAiSummaryEnabled(post.ai_summary_enabled ?? true);
     reset({
       post_type: post.post_type,
       title: post.title,
       body: post.body,
     });
     setComposerVisible(true);
+  };
+
+  const openPostFromFeed = (post: CommunityPost) => {
+    completePlazaStep('action');
+    setSelectedPost(post);
   };
 
   const openLocationPicker = () => {
@@ -385,6 +402,7 @@ export default function PlazaScreen() {
       source_url: selectedPlaces[0]?.source_url || undefined,
       selected_places: selectedPlaces,
       save_places_as_odysseys: false,
+      ai_summary_enabled: aiSummaryEnabled,
       city: editingPost?.city ?? user?.city,
       identity_scope: editingPost?.identity_scope ?? user?.identity ?? 'all',
       media_items: mediaItems.map((item) => ({
@@ -555,6 +573,20 @@ export default function PlazaScreen() {
         }}
         scrollEventThrottle={250}
       >
+        {guideStep === 'plaza' ? (
+          <View style={{ paddingHorizontal: 6 }}>
+            <GuideHintCard
+              icon="chatbubbles-outline"
+              title={t.guide.plaza_hint_title}
+              body={t.guide.plaza_hint_body}
+              dismissLabel={t.guide.dismiss}
+              onDismiss={() => completePlazaStep('dismiss')}
+              skipLabel={t.guide.skip_all}
+              onSkipAll={skipGuide}
+              testID="guide.hint.plaza"
+            />
+          </View>
+        ) : null}
         {isLoading && filteredPosts.length === 0 ? (
           <View className="items-center py-12">
             <ActivityIndicator size="large" color={colors.brandCoral} />
@@ -571,12 +603,12 @@ export default function PlazaScreen() {
           <View className="flex-row gap-3">
             <View className="flex-1">
               {columns.left.map((post) => (
-                <CommunityPostCard key={post.id} post={post} onPress={setSelectedPost} />
+                <CommunityPostCard key={post.id} post={post} onPress={openPostFromFeed} />
               ))}
             </View>
             <View className="flex-1">
               {columns.right.map((post) => (
-                <CommunityPostCard key={post.id} post={post} onPress={setSelectedPost} />
+                <CommunityPostCard key={post.id} post={post} onPress={openPostFromFeed} />
               ))}
             </View>
           </View>
@@ -942,7 +974,26 @@ export default function PlazaScreen() {
                   <Ionicons name="settings-outline" size={20} color="#242424" />
                   <Text className="ml-3 text-[16px] text-[#242424]">{t.plaza.composer_advanced_row}</Text>
                 </View>
-                <Text className="text-sm leading-6 text-neutral-500">{composerHint}</Text>
+                <View className="min-h-[44px] flex-row items-center justify-between">
+                  <View className="flex-1 pr-3">
+                    <Text className="text-[15px] text-[#242424]">{t.plaza.ai_summary_toggle}</Text>
+                    <Text className="mt-0.5 text-[13px] leading-5 text-neutral-500">
+                      {composerContentTooShort
+                        ? t.plaza.ai_summary_too_short_hint
+                        : t.plaza.ai_summary_toggle_desc}
+                    </Text>
+                  </View>
+                  <Switch
+                    value={aiSummaryEnabled}
+                    onValueChange={setAiSummaryEnabled}
+                    accessibilityRole="switch"
+                    accessibilityLabel={t.plaza.ai_summary_toggle}
+                    accessibilityState={{ checked: aiSummaryEnabled }}
+                    trackColor={{ false: '#E5E7EB', true: '#FFC9B3' }}
+                    thumbColor={aiSummaryEnabled ? colors.brandCoral : '#FFFFFF'}
+                  />
+                </View>
+                <Text className="mt-2 text-sm leading-6 text-neutral-500">{composerHint}</Text>
               </View>
 
               <View className="border-t border-neutral-100 py-4">

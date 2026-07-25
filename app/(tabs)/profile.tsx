@@ -23,7 +23,6 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import ViewShot from 'react-native-view-shot';
 
-import { AppBackground } from '../../components/AppBackground';
 import { AvatarCropper } from '../../components/AvatarCropper';
 import { ChalkIcon } from '../../components/ChalkIcon';
 import { FeedbackPressable } from '../../components/FeedbackPressable';
@@ -32,12 +31,12 @@ import { LanguagePicker } from '../../components/LanguagePicker';
 import { OnboardingModal } from '../../components/OnboardingModal';
 import { PrivacyModal } from '../../components/PrivacyModal';
 import { ProfileShareCard } from '../../components/ProfileShareCard';
+import { Screen } from '../../components/Screen';
 import { ShareSheet } from '../../components/ShareSheet';
 import { UserQRCodeModal } from '../../components/UserQRCodeModal';
 import { useLanguage } from '../../context/LanguageContext';
-import { getTabBarHeight } from '../../theme/layout';
 import { colors, gradients, shadows } from '../../theme/tokens';
-import { useUpdateProfile, useUploadAvatar } from '../../features/auth/useAuth';
+import { useCitySuggestions, useUpdateProfile, useUploadAvatar } from '../../features/auth/useAuth';
 import { CommunityPostDetailModal } from '../../features/community/CommunityPostDetailModal';
 import {
   CommunityPost,
@@ -493,6 +492,7 @@ export default function ProfileScreen() {
   const [selectedPost, setSelectedPost] = useState<CommunityPost | null>(null);
   const [draftName, setDraftName] = useState(user?.display_name ?? '');
   const [draftOriginCity, setDraftOriginCity] = useState(user?.origin_city ?? '');
+  const [submittedOriginCity, setSubmittedOriginCity] = useState('');
   const [draftGender, setDraftGender] = useState<
     'male' | 'female' | 'non_binary' | 'prefer_not_to_say' | null
   >(user?.gender ?? null);
@@ -520,6 +520,10 @@ export default function ProfileScreen() {
 
   const updateProfile = useUpdateProfile();
   const uploadAvatar = useUploadAvatar();
+  const originCitySuggestions = useCitySuggestions(
+    submittedOriginCity,
+    showEditModal && submittedOriginCity.length >= 2,
+  );
   const myPostsQuery = useMyCommunityPosts(24);
   const myCommentedQuery = useMyCommentedPosts(activeTab === 'comments');
   const mySavedQuery = useMySavedPosts(activeTab === 'saves');
@@ -541,7 +545,8 @@ export default function ProfileScreen() {
     null;
   const savedAvatarUri = resolveMediaUrl(user?.avatar_url) ?? null;
   const viewerAvatarUri = avatarPreview?.uri ?? savedAvatarUri;
-  const displayBaseCity = formatDisplayLocation(user?.city) ?? user?.city ?? 'Berlin';
+  const displayBaseCity = formatDisplayLocation(user?.city) ?? user?.city ?? null;
+  const displayBaseCityOrPrompt = displayBaseCity ?? t.onboarding.city_prompt;
   const displayOriginCity = formatDisplayLocation(user?.origin_city) ?? user?.origin_city ?? null;
   const identityLabel = user ? t.auth[`identity_${user.identity}`] : '';
   const arrivalStageLabel = user?.arrival_stage ? t.onboarding[`stage_${user.arrival_stage}`] : null;
@@ -567,6 +572,7 @@ export default function ProfileScreen() {
   useEffect(() => {
     setDraftName(user?.display_name ?? '');
     setDraftOriginCity(user?.origin_city ?? '');
+    setSubmittedOriginCity('');
     setDraftGender(user?.gender ?? null);
   }, [user?.display_name, user?.origin_city, user?.gender]);
 
@@ -700,7 +706,7 @@ export default function ProfileScreen() {
   const profileShareUrl = user ? `https://postervia.app/u/${user.id}` : '';
   const profileShareMessage = [
     user?.display_name,
-    user ? `${t.profile.base_in_label} ${displayBaseCity}` : null,
+    displayBaseCity ? `${t.profile.base_in_label} ${displayBaseCity}` : null,
     displayOriginCity ? `${t.profile.from_label} ${displayOriginCity}` : null,
     profileShareUrl || null,
   ]
@@ -743,8 +749,7 @@ export default function ProfileScreen() {
   ];
 
   return (
-    <AppBackground>
-    <SafeAreaView className="flex-1" edges={['top']}>
+    <Screen topInset tabBar>
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
 
         {/* ── HERO ── */}
@@ -903,8 +908,13 @@ export default function ProfileScreen() {
                   </Pressable>
                 </View>
                 <Text style={{ marginTop: 2, fontSize: 11.5, color: 'rgba(255,255,255,0.7)' }}>
-                  {t.profile.ip_label}：{displayBaseCity}
+                  {t.profile.ip_label}：{displayBaseCityOrPrompt}
                 </Text>
+                {displayOriginCity ? (
+                  <Text style={{ marginTop: 2, fontSize: 11.5, color: 'rgba(255,255,255,0.7)' }}>
+                    {t.profile.from_label} {displayOriginCity}
+                  </Text>
+                ) : null}
               </View>
             </View>
 
@@ -1039,7 +1049,7 @@ export default function ProfileScreen() {
                     {t.profile.odyssey_shortcut}
                   </Text>
                   <Text style={{ marginTop: 2, fontSize: 11, color: 'rgba(255,255,255,0.7)' }} numberOfLines={1}>
-                    {displayBaseCity}
+                    {displayBaseCityOrPrompt}
                   </Text>
                 </View>
               </FeedbackPressable>
@@ -1130,7 +1140,7 @@ export default function ProfileScreen() {
         ) : null}
 
         {/* ── CONTENT ── */}
-        <View style={{ paddingHorizontal: 20, paddingBottom: getTabBarHeight(insets.bottom) + 32 }}>
+        <View style={{ paddingHorizontal: 20, paddingBottom: 32 }}>
           {feedback ? (
             <GlassCard tone="white" radiusKey="lg" padding={14} style={{ marginTop: 14 }}>
               <Text
@@ -1399,10 +1409,20 @@ export default function ProfileScreen() {
       <Modal visible={showEditModal} transparent animationType="slide" onRequestClose={() => setShowEditModal(false)}>
         <View className="flex-1 justify-end bg-black/36">
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-            <View className="rounded-t-[32px] bg-white px-5 pb-7 pt-5">
+            <ScrollView
+              className="max-h-[92%] rounded-t-[32px] bg-white"
+              contentContainerClassName="px-5 pt-5"
+              contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 28) }}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
               <View className="mb-5 flex-row items-center justify-between">
                 <Text className="text-2xl font-extrabold text-neutral-900">{t.profile.edit_profile_action}</Text>
-                <Pressable onPress={() => setShowEditModal(false)} className="rounded-full bg-neutral-100 p-2">
+                <Pressable
+                  onPress={() => setShowEditModal(false)}
+                  className="items-center justify-center rounded-full bg-neutral-100 p-2"
+                  style={{ width: 44, height: 44 }}
+                >
                   <Ionicons name="close" size={22} color="#3A3A3A" />
                 </Pressable>
               </View>
@@ -1417,13 +1437,74 @@ export default function ProfileScreen() {
               />
 
               <Text className="mb-2 mt-5 text-sm font-semibold text-neutral-700">{t.profile.from_city_label}</Text>
-              <TextInput
-                value={draftOriginCity}
-                onChangeText={setDraftOriginCity}
-                placeholder={t.profile.from_placeholder}
-                maxLength={100}
-                className="rounded-[22px] border border-neutral-200 bg-neutral-50 px-4 py-3.5 text-base text-neutral-900"
-              />
+              <View className="flex-row gap-2">
+                <TextInput
+                  value={draftOriginCity}
+                  onChangeText={(value) => {
+                    setDraftOriginCity(value);
+                    setSubmittedOriginCity('');
+                  }}
+                  onSubmitEditing={() => {
+                    const query = draftOriginCity.trim();
+                    if (query.length >= 2) setSubmittedOriginCity(query);
+                  }}
+                  returnKeyType="search"
+                  placeholder={t.profile.from_placeholder}
+                  maxLength={100}
+                  className="flex-1 rounded-[22px] border border-neutral-200 bg-neutral-50 px-4 py-3.5 text-base text-neutral-900"
+                />
+                <FeedbackPressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t.onboarding.city_search_placeholder}
+                  onPress={() => {
+                    const query = draftOriginCity.trim();
+                    if (query.length >= 2) setSubmittedOriginCity(query);
+                  }}
+                  style={{
+                    width: 50,
+                    height: 50,
+                    borderRadius: 25,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: colors.brandCoral,
+                    opacity: draftOriginCity.trim().length < 2 ? 0.45 : 1,
+                  }}
+                  pressedStyle={{ opacity: 0.8 }}
+                >
+                  <Ionicons name="search" size={20} color="#FFFFFF" />
+                </FeedbackPressable>
+              </View>
+              {originCitySuggestions.isFetching ? (
+                <View className="items-center py-3">
+                  <ActivityIndicator color={colors.brandCoral} />
+                  <Text className="mt-1 text-xs text-neutral-500">
+                    {t.onboarding.city_searching}
+                  </Text>
+                </View>
+              ) : (originCitySuggestions.data ?? []).length > 0 &&
+                submittedOriginCity !== user?.origin_city ? (
+                <View className="mt-2 overflow-hidden rounded-[22px] border border-neutral-200 bg-white">
+                  {(originCitySuggestions.data ?? []).slice(0, 5).map((city) => (
+                    <FeedbackPressable
+                      key={`${city.name}-${city.latitude}-${city.longitude}`}
+                      onPress={() => {
+                        setDraftOriginCity(city.name);
+                        setSubmittedOriginCity('');
+                      }}
+                      style={{
+                        paddingHorizontal: 16,
+                        paddingVertical: 12,
+                        borderBottomWidth: 1,
+                        borderBottomColor: colors.lineSofter,
+                      }}
+                      pressedStyle={{ backgroundColor: colors.bgWarm }}
+                    >
+                      <Text className="text-sm font-bold text-neutral-900">{city.name}</Text>
+                      <Text className="mt-0.5 text-xs text-neutral-500">{city.subtitle}</Text>
+                    </FeedbackPressable>
+                  ))}
+                </View>
+              ) : null}
 
               <Text className="mb-2 mt-5 text-sm font-semibold text-neutral-700">{t.profile.gender_label}</Text>
               <View className="flex-row flex-wrap" style={{ gap: 8 }}>
@@ -1461,12 +1542,15 @@ export default function ProfileScreen() {
                   {t.profile.base_card_title}
                 </Text>
                 <Text className="mt-2 text-base font-semibold text-neutral-900">
-                  {t.profile.base_in_label} {displayBaseCity}
+                  {t.profile.base_in_label} {displayBaseCityOrPrompt}
                 </Text>
                 <Pressable onPress={() => {
                   setShowEditModal(false);
                   setShowOnboardingModal(true);
-                }} className="mt-3 self-start rounded-full bg-white px-3 py-1.5">
+                }}
+                  className="mt-3 self-start items-center justify-center rounded-full bg-white px-3 py-1.5"
+                  style={{ minHeight: 44, minWidth: 44 }}
+                >
                   <Text className="text-xs font-semibold text-primary">{t.profile.edit_setup_action}</Text>
                 </Pressable>
               </View>
@@ -1554,7 +1638,7 @@ export default function ProfileScreen() {
                   </Pressable>
                 </View>
               </View>
-            </View>
+            </ScrollView>
           </KeyboardAvoidingView>
         </View>
       </Modal>
@@ -1714,7 +1798,6 @@ export default function ProfileScreen() {
           />
         </>
       ) : null}
-    </SafeAreaView>
-    </AppBackground>
+    </Screen>
   );
 }

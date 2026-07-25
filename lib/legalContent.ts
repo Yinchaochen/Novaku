@@ -6,7 +6,7 @@
 //   `- ` at line start   → bullet item
 //
 // Anchor for "last updated" — bump when any body string materially changes.
-export const LEGAL_LAST_UPDATED = 'May 11, 2026';
+export const LEGAL_LAST_UPDATED = 'July 25, 2026';
 
 // Operator identity. Until Persterna GmbH is registered, the individual
 // developer (Yinchao Chen) is the responsible party for GDPR, App Store
@@ -122,6 +122,13 @@ We do not sell your personal data. We share it only in the narrow ways described
 - Posts and buddy posts you publish are visible to all users of the app, subject to your privacy preferences.
 - Comments and reactions you leave are attached to your profile.
 - If you chat one-on-one or in a group, the other participants see your messages.
+
+**On the public web, when a post is shared (share links)**
+
+- When you or another member shares a public post, the share link contains a signed, non-guessable token. Anyone who holds the complete link — even without a Postervia account — can open a read-only web page of that post outside the app.
+- That page can show: the author's display name and profile photo; the post's title, full text, and publication date; up to the first three images (a fourth image appears only as a darkened "open the app" preview); public counts; and up to three approved top-level comments, each with the commenter's display name, profile photo, text, date, and public counts. If you comment on a public post, your comment may therefore appear in that post's share preview.
+- Messaging and social platforms a link is shared into may fetch and cache a small preview card (title, short excerpt, author name, first image).
+- Only public, approved, not-deleted posts are served, and the page asks search engines not to index it. Deleting the post or making it private disables the web page and preview for everyone; copies already cached by third-party platforms are outside our control and may persist until those platforms refresh. Images rendered on the web page carry a visible Postervia watermark; your original files are unchanged.
 
 **With service providers (processors acting under our instructions)**
 
@@ -329,6 +336,13 @@ Wir verkaufen deine personenbezogenen Daten nicht. Wir geben sie nur in den folg
 - Von dir veröffentlichte Beiträge und Buddy-Posts sind für alle Nutzer der App sichtbar, vorbehaltlich deiner Sichtbarkeitseinstellungen.
 - Deine Kommentare und Reaktionen sind deinem Profil zugeordnet.
 - In Einzel- oder Gruppenchats sehen die Teilnehmer deine Nachrichten.
+
+**Im offenen Web, wenn ein Beitrag geteilt wird (Teilen-Links)**
+
+- Wenn du oder ein anderes Mitglied einen öffentlichen Beitrag teilt, enthält der Teilen-Link ein signiertes, nicht erratbares Token. Jede Person mit dem vollständigen Link — auch ohne Postervia-Konto — kann eine schreibgeschützte Webansicht dieses Beitrags außerhalb der App öffnen.
+- Diese Seite kann zeigen: Anzeigename und Profilbild der Autorin oder des Autors; Titel, vollständigen Text und Veröffentlichungsdatum des Beitrags; bis zu die ersten drei Bilder (ein viertes Bild dient nur als abgedunkelte „In der App öffnen“-Vorschau); öffentliche Zähler; sowie bis zu drei freigegebene Kommentare der obersten Ebene, jeweils mit Anzeigename, Profilbild, Text, Datum und öffentlichen Zählern. Wenn du einen öffentlichen Beitrag kommentierst, kann dein Kommentar daher in der Teilen-Vorschau dieses Beitrags erscheinen.
+- Messenger- und Social-Plattformen, in die ein Link geteilt wird, können eine kleine Vorschaukarte (Titel, kurzer Auszug, Autorname, erstes Bild) abrufen und zwischenspeichern.
+- Ausgeliefert werden nur öffentliche, freigegebene und nicht gelöschte Beiträge; die Seite bittet Suchmaschinen, sie nicht zu indexieren. Wird der Beitrag gelöscht oder privat gestellt, funktionieren Webseite und Vorschau für niemanden mehr; bereits von Drittplattformen zwischengespeicherte Kopien liegen außerhalb unserer Kontrolle und können bestehen bleiben, bis diese Plattformen aktualisieren. Auf der Webseite dargestellte Bilder tragen ein sichtbares Postervia-Wasserzeichen; deine Originaldateien bleiben unverändert.
 
 **An Auftragsverarbeiter (handeln nach unseren Weisungen)**
 
