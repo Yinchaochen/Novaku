@@ -9,6 +9,7 @@ import { ChalkIcon, ChalkIconName } from '../../components/ChalkIcon';
 import { OnboardingModal } from '../../components/OnboardingModal';
 import { useLanguage } from '../../context/LanguageContext';
 import { useMe } from '../../features/auth/useAuth';
+import { useProductGuideController } from '../../features/guide/useProductGuide';
 import { tap } from '../../lib/haptics';
 import { useAuthStore } from '../../store/authStore';
 import { getTabBarHeight, TAB_BAR_MIN_BOTTOM } from '../../theme/layout';
@@ -59,6 +60,8 @@ export default function TabsLayout() {
   // every authenticated mount, so server-side changes reflect without a full
   // re-login. The Settings admin gate reads user.is_staff from this store.
   useMe();
+  // Arms the D-046 first-value guide once onboarding is complete.
+  useProductGuideController();
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
 
   useEffect(() => {

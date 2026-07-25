@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
   },
   action: {
     marginTop: spacing.lg,
-    minHeight: 42,
+    minHeight: 44,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.xl,
     alignItems: 'center',

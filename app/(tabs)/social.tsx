@@ -20,15 +20,15 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppBackground } from '../../components/AppBackground';
 import { LinkPreviewCard } from '../../components/LinkPreviewCard';
 import { LinkText } from '../../components/LinkText';
 import { ChalkIcon } from '../../components/ChalkIcon';
 import { FeedbackPressable } from '../../components/FeedbackPressable';
 import { DateTimeRangePicker } from '../../components/datetime/DateTimeRangePicker';
 import { PlacePicker, type PickedPlace } from '../../components/places/PlacePicker';
+import { Screen } from '../../components/Screen';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuthStore } from '../../store/authStore';
 import { colors, shadows } from '../../theme/tokens';
@@ -659,7 +659,9 @@ export default function SocialScreen() {
     return friends.map((friendship) => {
       const bc = backendConvMap[`direct:${friendship.user.id}`];
       const cityLabel = formatDisplayLocation(friendship.user.city) ?? friendship.user.city;
-      const preview = bc?.last_message ? lastMessagePreview(bc.last_message) : cityLabel;
+      const preview = bc?.last_message
+        ? lastMessagePreview(bc.last_message)
+        : (cityLabel ?? '');
       return {
         id: `friend-${friendship.user.id}`,
         kind: 'direct',
@@ -1067,6 +1069,10 @@ export default function SocialScreen() {
 
   const handleCreateGroup = async () => {
     if (!groupName.trim() || selectedFriendIds.length === 0) return;
+    if (!user.city) {
+      showToast(t.onboarding.city_prompt);
+      return;
+    }
     const group = await createGroup.mutateAsync({
       name: groupName.trim(),
       city: user.city,
@@ -1101,13 +1107,18 @@ export default function SocialScreen() {
     ) {
       return;
     }
+    const eventCity = selectedConversation?.group?.city ?? user.city;
+    if (!eventCity) {
+      showToast(t.onboarding.city_prompt);
+      return;
+    }
     await createGroupEvent.mutateAsync({
       title: eventTitle.trim(),
       place_name: eventPlace.name,
       location_hint: eventPlace.address || undefined,
       starts_at: eventTimeRange.start.toISOString(),
       ends_at: eventTimeRange.end.toISOString(),
-      city: selectedConversation?.group?.city ?? user.city,
+      city: eventCity,
     });
     setEventTitle('');
     setEventPlace(null);
@@ -1161,8 +1172,7 @@ export default function SocialScreen() {
   );
 
   return (
-    <AppBackground>
-    <SafeAreaView className="flex-1" edges={[]}>
+    <Screen tabBar>
       <View className="flex-1">
         {/* Yellow band hero — wraps the existing buttons + search bar so the
             top of Social matches the YumQuick treatment used on Tasks/Plaza/
@@ -1240,7 +1250,7 @@ export default function SocialScreen() {
         <ScrollView
           className="mt-3 flex-1"
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ paddingBottom: 130 }}
+          contentContainerStyle={{ paddingBottom: 24 }}
           refreshControl={
             <RefreshControl
               refreshing={
@@ -2402,8 +2412,7 @@ export default function SocialScreen() {
           </KeyboardAvoidingView>
         </View>
       </Modal>
-    </SafeAreaView>
-    </AppBackground>
+    </Screen>
   );
 }
 

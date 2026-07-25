@@ -31,7 +31,7 @@ export interface PlacePickerProps {
   outerInsets?: { top: number; bottom: number };
 }
 
-const BERLIN: { lat: number; lon: number } = { lat: 52.52, lon: 13.405 };
+const WORLD_CENTER: { lat: number; lon: number } = { lat: 20, lon: 0 };
 
 /**
  * Inline HTML for the Leaflet map. Loads Leaflet from unpkg + tiles from
@@ -106,15 +106,23 @@ export function PlacePicker({ value, onChange, placeholder, outerInsets }: Place
     if (user?.latitude != null && user?.longitude != null) {
       return { lat: user.latitude, lon: user.longitude };
     }
-    return BERLIN;
+    return null;
   }, [user?.latitude, user?.longitude]);
 
   const searchQuery = usePlaceSearch(query, near, open);
   const reverse = useReverseGeocode();
 
-  const initialCenter = value ?? { latitude: near.lat, longitude: near.lon };
+  const initialCenter = value ?? {
+    latitude: near?.lat ?? WORLD_CENTER.lat,
+    longitude: near?.lon ?? WORLD_CENTER.lon,
+  };
   const html = useMemo(
-    () => buildLeafletHtml(initialCenter.latitude, initialCenter.longitude, value ? 16 : 12),
+    () =>
+      buildLeafletHtml(
+        initialCenter.latitude,
+        initialCenter.longitude,
+        value ? 16 : near ? 12 : 2,
+      ),
     // Only generate once per modal open; don't rebuild on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [open],

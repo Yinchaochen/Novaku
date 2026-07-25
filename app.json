@@ -2,7 +2,7 @@
   "expo": {
     "name": "Postervia",
     "slug": "novaku-app",
-    "version": "1.1.4",
+    "version": "1.1.5",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -15,8 +15,12 @@
     },
     "ios": {
       "supportsTablet": false,
+      "usesAppleSignIn": true,
       "bundleIdentifier": "app.novaku.mobile",
       "associatedDomains": ["applinks:postervia.app"],
+      "entitlements": {
+        "com.apple.developer.declared-age-range": true
+      },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "LSApplicationQueriesSchemes": ["instagram-stories", "instagram"],

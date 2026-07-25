@@ -5,6 +5,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { api } from '../../lib/api';
 import { addSentryBreadcrumb, reportToSentry } from '../../lib/sentry';
 import { useAuthStore } from '../../store/authStore';
+import { approximateCityLookupCoordinates } from './cityLocation';
 
 // P1.7 (audit FE-CRIT-3): every auth-flow mutation logs a breadcrumb with the
 // mutation tag so any downstream Sentry event carries auth context. The axios
@@ -44,7 +45,7 @@ export interface AuthUser {
   avatar_url: string | null;
   locale: string;
   identity: UserIdentity;
-  city: string;
+  city: string | null;
   origin_city: string | null;
   arrival_stage: OnboardingArrivalStage | null;
   intent_tags: OnboardingIntentTag[];
@@ -64,6 +65,9 @@ export interface AuthUser {
   feed_mode: 'personalized' | 'chronological' | 'following';
   gender: 'male' | 'female' | 'non_binary' | 'prefer_not_to_say' | null;
   buddy_publish_banned_at: string | null;
+  // D-046 first-value guide: 0 = current guide not completed/skipped yet.
+  // Optional so older cached sessions without the field keep parsing.
+  product_guide_version?: number;
 }
 
 export interface CitySuggestion {
@@ -115,7 +119,7 @@ export function useRegister() {
       password: string;
       display_name: string;
       locale?: string;
-      birth_year: number;
+      birth_date: string;
       gender?: 'male' | 'female' | 'non_binary' | 'prefer_not_to_say';
       consents: { consent_type: string; granted: boolean; document_version?: string }[];
     }) => {
@@ -247,6 +251,38 @@ export function useUpdateProfile() {
   });
 }
 
+// D-046 first-value guide. Bump when the guide is redesigned; keep in sync
+// with CURRENT_PRODUCT_GUIDE_VERSION in novaku-backend/app/auth/service.py.
+export const CURRENT_PRODUCT_GUIDE_VERSION = 1;
+
+export function useUpdateProductGuide() {
+  const { setUser } = useAuthStore();
+
+  return useMutation({
+    mutationFn: async (data: { product_guide_version: number }) => {
+      addSentryBreadcrumb('auth.product_guide.update');
+      const res = await api.patch('/auth/me/product-guide', data);
+      return res.data.data as AuthUser;
+    },
+    onSuccess: (user) => {
+      setUser(user);
+    },
+  });
+}
+
+export function useRecordProductGuideEvent() {
+  return useMutation({
+    mutationFn: async (data: {
+      event: 'started' | 'odyssey_step_done' | 'plaza_step_done' | 'skipped';
+      detail?: 'action' | 'dismiss';
+    }) => {
+      await api.post('/auth/me/product-guide/events', data);
+    },
+    // Funnel telemetry must never disturb the UX — drop failures silently.
+    onError: () => undefined,
+  });
+}
+
 export function useUploadAvatar() {
   const { setUser } = useAuthStore();
   const queryClient = useQueryClient();
@@ -306,7 +342,7 @@ export function useResolveCityFromCoordinates() {
   return useMutation({
     mutationFn: async (data: { latitude: number; longitude: number }) => {
       const res = await api.get('/auth/city-from-coordinates', {
-        params: data,
+        params: approximateCityLookupCoordinates(data),
       });
       return res.data.data as CitySuggestion;
     },

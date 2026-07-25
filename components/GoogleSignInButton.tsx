@@ -30,9 +30,7 @@ function GoogleGLogo({ size = 18 }: { size?: number }) {
 }
 
 /**
- * Brand-compliant "Sign in with Google" button (light theme): white fill,
- * neutral border, official 4-color G logo. Keeps the existing
- * expo-auth-session flow — `onPress` should call `google.promptAsync()`.
+ * Google light-theme button: white fill, neutral border, official 4-color G.
  */
 export function GoogleSignInButton({
   label,
@@ -70,6 +68,7 @@ export function GoogleSignInButton({
       ]}
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={{ disabled: Boolean(disabled), busy: Boolean(loading) }}
     >
       {loading ? (
         <ActivityIndicator size="small" color="#3c4043" />
@@ -88,9 +87,9 @@ export function GoogleSignInButton({
             numberOfLines={1}
             style={{
               color: '#1f1f1f',
-              fontSize: 15,
-              fontWeight: '600',
-              fontFamily: 'PlusJakartaSans_700Bold',
+              fontSize: 14,
+              lineHeight: 20,
+              fontWeight: '500',
             }}
           >
             {label}

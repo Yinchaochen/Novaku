@@ -72,12 +72,8 @@ export const queryClient = new QueryClient({
     },
     mutations: {
       retry: 0,
-      // P3.9: 'offlineFirst' means the mutation runs once and only retries
-      // if the device is offline (then it queues until connection returns).
-      // Better UX than 'online' which would refuse to even start the
-      // mutation while offline — many of our mutations have optimistic
-      // updates that should fire immediately and reconcile when the network
-      // comes back.
+      // Ordinary writes execute once and surface failures to their caller.
+      // Durable chat sends override this below so they can resume safely.
       networkMode: 'offlineFirst',
     },
   },
@@ -96,7 +92,7 @@ function chatMessagesPredicate(conversationId: string) {
 }
 
 queryClient.setMutationDefaults([CHAT_SEND_MUTATION_KEY], {
-  networkMode: 'offlineFirst',
+  networkMode: 'online',
   mutationFn: async (variables) => {
     const v = variables as unknown as SendMessageVariables;
     const res = await api.post(`/chat/conversations/${v.conversationId}/messages`, {
@@ -104,6 +100,7 @@ queryClient.setMutationDefaults([CHAT_SEND_MUTATION_KEY], {
       body: v.body,
       media_url: v.media_url,
       meta: v.meta,
+      client_id: v.clientId,
     });
     return res.data.data as ChatMessage;
   },

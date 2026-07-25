@@ -61,6 +61,7 @@ import {
   startBootWatchdog,
 } from '../lib/bootWatchdog';
 import { addSentryBreadcrumb, reportToSentry } from '../lib/sentry';
+import { consumeAuthReturnPath, rememberAuthReturnPath } from '../lib/authReturnPath';
 import { queryClient } from '../lib/queryClient';
 import { usePushNotifications } from '../lib/push';
 import { useAuthStore } from '../store/authStore';
@@ -229,12 +230,14 @@ function AppBody() {
     if (!isAuthenticated && !isRootRoute && !inAuthGroup && !isPublicRoute) {
       if (lastRedirect.current !== 'login') {
         lastRedirect.current = 'login';
+        rememberAuthReturnPath(pathname);
         router.replace('/login');
       }
     } else if (isAuthenticated && inAuthGroup && !isWelcome) {
-      if (lastRedirect.current !== 'plaza') {
-        lastRedirect.current = 'plaza';
-        router.replace('/plaza');
+      if (!lastRedirect.current?.startsWith('auth:')) {
+        const destination = consumeAuthReturnPath() ?? '/plaza';
+        lastRedirect.current = `auth:${destination}`;
+        router.replace(destination as never);
       }
     } else {
       lastRedirect.current = null;

@@ -9,7 +9,7 @@ export interface SocialUserSummary {
   display_id?: string | null;
   display_name: string;
   avatar_url?: string | null;
-  city: string;
+  city: string | null;
   identity: string;
 }
 
