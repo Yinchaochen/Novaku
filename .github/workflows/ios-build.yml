@@ -181,9 +181,14 @@ jobs:
       # supported by EAS"）——已实证 21.0.2 与 21.3.0 都没有
       # com.apple.developer.declared-age-range 的映射，所以升级 eas-cli 救不了
       # "Provisioning Profile does not support the X capability" 这类错。
-      # 正解：去 developer.apple.com → Identifiers → app.novaku.mobile 手动勾上
-      # 对应 capability；保存后旧 profile 被 Apple 置 INVALID，下一次 build 会用
-      # EAS 存的 ASC API key 走 SetUpProvisioningProfile 非交互路径自动重签。
+      # 正解（两步都要做——Build #68 实证不能依赖 Apple 自动作废旧 profile）：
+      # ① developer.apple.com → Identifiers → app.novaku.mobile 勾上对应
+      #    capability，点 Save 并确认 "Modify App Capabilities" 对话框；
+      # ② Profiles 页删掉旧的 "*[expo] app.novaku.mobile AppStore ..."——下一次
+      #    build 发现 profile 在 Apple 侧不存在，会用 EAS 存的 ASC API key 走
+      #    SetUpProvisioningProfile 非交互路径自动重建，新 profile 自带 App ID
+      #    当前全部 capability。只做 ① 不做 ②：旧 profile 可能仍是 ACTIVE 而被
+      #    原样复用（#68 就是这样二次失败的），同错复现。
       # 同步的 disable 方向也只碰它认识的 capability，手动开的不会被反向关掉。
       - name: Install eas-cli
         run: |
