@@ -8,7 +8,7 @@ import com.google.android.play.agesignals.model.AgeSignalsStatus
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
-import expo.modules.kotlin.types.Queues
+import expo.modules.kotlin.functions.Queues
 
 class PosterviaAgeAssuranceModule : Module() {
   override fun definition() = ModuleDefinition {
