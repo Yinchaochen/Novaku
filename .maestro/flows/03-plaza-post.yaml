@@ -12,13 +12,30 @@ tags:
     visible:
       id: plaza.composer.title
     timeout: 10000
+# D-052: composer fields are keyboard-safe proxies — tapping one opens the
+# floating input sheet; type there and confirm to commit the text back.
 - tapOn:
     id: plaza.composer.title
+- extendedWaitUntil:
+    visible:
+      id: plaza.composer.title.sheet.input
+    timeout: 5000
+- tapOn:
+    id: plaza.composer.title.sheet.input
 - inputText: Maestro smoke ${RUN_SUFFIX}
 - tapOn:
+    id: plaza.composer.title.sheet.confirm
+- tapOn:
     id: plaza.composer.body
+- extendedWaitUntil:
+    visible:
+      id: plaza.composer.body.sheet.input
+    timeout: 5000
+- tapOn:
+    id: plaza.composer.body.sheet.input
 - inputText: Automated staging post for the critical Plaza publishing journey.
-- hideKeyboard
+- tapOn:
+    id: plaza.composer.body.sheet.confirm
 - tapOn:
     id: plaza.composer.publish
 - extendedWaitUntil:

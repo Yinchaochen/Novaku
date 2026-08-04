@@ -45,6 +45,23 @@ export function useAdminFlaggedPosts() {
   });
 }
 
+// D-033: video posts held in 'review' by frame moderation (uncertain frames,
+// API failure, or soft flags) — the human decides approve/reject.
+export function useAdminVideoReviewPosts() {
+  return useQuery<CommunityPost[]>({
+    queryKey: ['admin', 'moderation', 'video-review'],
+    queryFn: async () => {
+      const res = await api.get('/admin/community/posts', {
+        params: { moderation_status: 'review' },
+      });
+      const items = res.data.data.items as CommunityPost[];
+      return items.filter((post) =>
+        post.media_items.some((item) => (item.mime_type ?? '').startsWith('video/')),
+      );
+    },
+  });
+}
+
 export function useResolveContentReport() {
   const queryClient = useQueryClient();
 

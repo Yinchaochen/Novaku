@@ -8,7 +8,6 @@ import {
   Platform,
   Pressable,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppBackground } from '../components/AppBackground';
 import { FeedbackPressable } from '../components/FeedbackPressable';
 import { GlassCard } from '../components/GlassCard';
+import { KeyboardSafeTextInput } from '../components/KeyboardSafeTextInput';
 import { useLanguage } from '../context/LanguageContext';
 import { useUpdateProfile } from '../features/auth/useAuth';
 import { useAuthStore } from '../store/authStore';
@@ -110,7 +110,7 @@ export default function EditBioScreen() {
 
           <View style={{ flex: 1, paddingHorizontal: 18, paddingTop: 12 }}>
             <GlassCard tone="white" radiusKey="3xl" padding={20}>
-              <TextInput
+              <KeyboardSafeTextInput
                 value={text}
                 onChangeText={(value) => setText(value.slice(0, MAX_LENGTH))}
                 placeholder={t.profile.edit_bio_placeholder}
@@ -124,7 +124,7 @@ export default function EditBioScreen() {
                   color: colors.textMain,
                   textAlignVertical: 'top',
                 }}
-                autoFocus
+                autoOpen
               />
               <View style={{ marginTop: 8, flexDirection: 'row', justifyContent: 'flex-end' }}>
                 <Text style={{ fontSize: 12, color: colors.textSubtle }}>

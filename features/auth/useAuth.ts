@@ -273,7 +273,7 @@ export function useUpdateProductGuide() {
 export function useRecordProductGuideEvent() {
   return useMutation({
     mutationFn: async (data: {
-      event: 'started' | 'odyssey_step_done' | 'plaza_step_done' | 'skipped';
+      event: 'started' | 'plaza_step_done' | 'skipped';
       detail?: 'action' | 'dismiss';
     }) => {
       await api.post('/auth/me/product-guide/events', data);

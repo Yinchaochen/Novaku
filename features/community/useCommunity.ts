@@ -1,4 +1,4 @@
-import {
+﻿import {
   InfiniteData,
   QueryClient,
   QueryKey,
@@ -27,8 +27,16 @@ function _bc(mutation: string) {
 export interface CommunityPostMedia {
   id?: string | null;
   media_url: string;
+  /** 600px WebP for feed cards; null on pre-thumbnail uploads → fall back to media_url. */
+  thumb_url?: string | null;
   mime_type?: string | null;
   sort_order: number;
+  /** Video items only (D-033); null/undefined for images. */
+  duration_seconds?: number | null;
+}
+
+export function isVideoMedia(item: Pick<CommunityPostMedia, 'mime_type'>): boolean {
+  return (item.mime_type ?? '').startsWith('video/');
 }
 
 export interface CommunityActionCandidate {
@@ -118,7 +126,7 @@ export interface CommunityComment {
   source_language: string;
   translated_body?: string | null;
   is_translated: boolean;
-  moderation_status: 'approved' | 'review' | 'rejected';
+  moderation_status: 'approved' | 'pending' | 'review' | 'rejected';
   created_at: string;
   updated_at: string;
   author: CommunityAuthor;
@@ -155,7 +163,7 @@ export interface CommunityPost {
   translated_body?: string | null;
   translated_extracted_summary?: string | null;
   is_translated: boolean;
-  moderation_status: 'approved' | 'review' | 'rejected';
+  moderation_status: 'approved' | 'pending' | 'review' | 'rejected';
   visibility: 'public' | 'private';
   helpful_count: number;
   save_count: number;
@@ -220,7 +228,12 @@ export interface CommunityPostCreateInput {
   save_places_as_odysseys?: boolean;
   // Composer toggle "AI summary" (D-045). Omitted → enabled on the server.
   ai_summary_enabled?: boolean;
-  media_items?: Array<Pick<CommunityPostMedia, 'media_url' | 'mime_type'>>;
+  media_items?: Array<
+    Pick<CommunityPostMedia, 'media_url' | 'mime_type'> &
+      Partial<Pick<CommunityPostMedia, 'thumb_url' | 'duration_seconds'>>
+  >;
+  // D-033 video posts: client-extracted sample frames for async moderation.
+  moderation_frame_urls?: string[];
   visibility?: 'public' | 'private';
 }
 
@@ -276,6 +289,30 @@ export interface CommunityFeedPage {
   next_cursor: string | null;
 }
 
+export interface CommunitySearchOfficialHit {
+  slug: string;
+  title: string;
+  node_type: string;
+  city_scope?: string | null;
+}
+
+export interface CommunitySearchPage {
+  items: CommunityPost[];
+  next_cursor: string | null;
+  total: number;
+  query_language: string;
+  used_translation: boolean;
+  official_hit: CommunitySearchOfficialHit | null;
+}
+
+export interface CommunitySearchParams {
+  q: string;
+  postType: CommunityPost['post_type'] | null;
+  cityScope: 'mine' | 'all';
+  timeRange: 'all' | 'week' | 'month' | 'half_year';
+  sort: 'relevance' | 'recent';
+}
+
 type CommunityFeedUser = {
   id?: string | null;
   city?: string | null;
@@ -322,6 +359,50 @@ export function useCommunityFeed() {
     retry: 1,
     refetchOnMount: 'always',
     refetchOnReconnect: true,
+  });
+}
+
+export function useSearchCommunityPosts(params: CommunitySearchParams | null) {
+  const { langCode } = useLanguage();
+  const user = useAuthStore((state) => state.user);
+  return useInfiniteQuery({
+    queryKey: [
+      'community',
+      'search',
+      user?.id,
+      langCode,
+      params?.q ?? '',
+      params?.postType ?? 'any',
+      params?.cityScope ?? 'mine',
+      params?.timeRange ?? 'all',
+      params?.sort ?? 'relevance',
+    ],
+    queryFn: async ({ pageParam }): Promise<CommunitySearchPage> => {
+      const res = await api.get('/community/posts/search', {
+        params: {
+          q: params?.q,
+          post_type: params?.postType ?? undefined,
+          city_scope: params?.cityScope ?? 'mine',
+          time_range: params?.timeRange ?? 'all',
+          sort: params?.sort ?? 'relevance',
+          cursor: pageParam ?? undefined,
+        },
+      });
+      const data = res.data.data;
+      return {
+        items: (data.items ?? []) as CommunityPost[],
+        next_cursor: (data.next_cursor ?? null) as string | null,
+        total: (data.total ?? 0) as number,
+        query_language: (data.query_language ?? 'und') as string,
+        used_translation: Boolean(data.used_translation),
+        official_hit: (data.official_hit ?? null) as CommunitySearchOfficialHit | null,
+      };
+    },
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
+    enabled: Boolean(user) && Boolean(params && params.q.trim().length >= 2),
+    retry: 1,
+    staleTime: 30_000,
   });
 }
 

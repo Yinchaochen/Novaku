@@ -528,6 +528,9 @@ EXPO_PUBLIC_FOO=actual_value_here
 - 无 header 的屏(表单 / auth):`<Screen topInset keyboard>`。
 - 全屏 Modal 正文也能用 `<Screen background="none">` —— 它读 root inset,比 Modal 内的 `<SafeAreaView>` 可靠(见坑 #1 / #2)。
 
+### 1.5 会被键盘遮挡的输入框,用 `<KeyboardSafeTextInput>`(D-052)
+滚动表单中下部的自由文本框——尤其在 RN `Modal` 里(Android 的 Modal 对 adjustResize 支持不可靠)——不要再逐屏调 KAV,直接换 [`components/KeyboardSafeTextInput.tsx`](../components/KeyboardSafeTextInput.tsx):原位渲染外观一致的只读代理(Pressable 包裹 + 输入框 `pointerEvents:"none"`——`editable=false` 的 TextInput 在 Android 上收不到 press),点击打开 [`components/FloatingInputSheet.tsx`](../components/FloatingInputSheet.tsx)(评论 sheet 同壳:透明 Modal + 压暗 + 输入框贴键盘 + 取消/确认),**确认才经 `onChangeText` 回写**,RHF Controller 零改动。`autoOpen` 替代 `autoFocus`、`disabled` 替代 `editable=false`、flex 行内子项传 `containerStyle`。**不适用**:钉在键盘上方的输入条(聊天/评论——套 sheet 纯加步数)、顶部搜索框、auth 密码框(破坏自动填充)。e2e 注意:Maestro 要点代理 → 等 `*.sheet.input` → 输入 → 点 `*.sheet.confirm`(见 03-plaza-post.yaml)。
+
 ### 2. 渲染 + 核对全状态
 ```bash
 cd novaku-app && npm run web      # 起 Expo Web

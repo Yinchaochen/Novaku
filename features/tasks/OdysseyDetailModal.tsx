@@ -9,7 +9,6 @@ import {
   Pressable,
   ScrollView,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppBackground } from '../../components/AppBackground';
 import { FeedbackPressable } from '../../components/FeedbackPressable';
 import { GlassCard } from '../../components/GlassCard';
+import { KeyboardSafeTextInput } from '../../components/KeyboardSafeTextInput';
 import { Pill } from '../../components/Pill';
 import { StackedButton } from '../../components/StackedButton';
 import { useLanguage } from '../../context/LanguageContext';
@@ -447,7 +447,7 @@ export function OdysseyDetailModal({ visible, node, state, onClose, onTaskComple
                     </Text>
                   ) : null}
                 </View>
-                <TextInput
+                <KeyboardSafeTextInput
                   value={noteDraft}
                   onChangeText={setNoteDraft}
                   placeholder={t.tasks.detail_notes_placeholder}

@@ -26,6 +26,7 @@ import { LinkPreviewCard } from '../../components/LinkPreviewCard';
 import { LinkText } from '../../components/LinkText';
 import { ChalkIcon } from '../../components/ChalkIcon';
 import { FeedbackPressable } from '../../components/FeedbackPressable';
+import { KeyboardSafeTextInput } from '../../components/KeyboardSafeTextInput';
 import { DateTimeRangePicker } from '../../components/datetime/DateTimeRangePicker';
 import { PlacePicker, type PickedPlace } from '../../components/places/PlacePicker';
 import { Screen } from '../../components/Screen';
@@ -1632,7 +1633,7 @@ export default function SocialScreen() {
             <ScrollView className="flex-1 px-5" keyboardShouldPersistTaps="handled">
               <View className="rounded-[24px] bg-white px-4 py-4" style={styles.panelCard}>
                 <Text className="text-[13px] font-bold uppercase tracking-[1px] text-slate-400">{t.social.group_name_label}</Text>
-                <TextInput
+                <KeyboardSafeTextInput
                   value={groupName}
                   onChangeText={setGroupName}
                   placeholder={t.social.group_name}
@@ -2358,7 +2359,7 @@ export default function SocialScreen() {
 
             <ScrollView className="flex-1 px-5" keyboardShouldPersistTaps="handled">
               <View className="rounded-[24px] bg-white px-4 py-4" style={styles.panelCard}>
-                <TextInput
+                <KeyboardSafeTextInput
                   value={eventTitle}
                   onChangeText={setEventTitle}
                   placeholder={t.social.event_title}
