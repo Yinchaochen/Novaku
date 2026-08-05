@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { BuddyPhotoPicker } from '../../components/buddy/BuddyPhotoPicker';
 import { BuddyPriceField } from '../../components/buddy/BuddyPriceField';
@@ -10,6 +10,7 @@ import { DateRangePicker } from '../../components/datetime/DateRangePicker';
 import { DateTimeRangePicker } from '../../components/datetime/DateTimeRangePicker';
 import { GradientButton } from '../../components/GradientButton';
 import { IconCircleButton } from '../../components/IconCircleButton';
+import { KeyboardSafeTextInput } from '../../components/KeyboardSafeTextInput';
 import { PageHeader } from '../../components/PageHeader';
 import { Pill } from '../../components/Pill';
 import { Screen } from '../../components/Screen';
@@ -74,7 +75,7 @@ function FormField({
   return (
     <View style={styles.fieldWrap}>
       <Text style={styles.fieldLabel}>{label}</Text>
-      <TextInput
+      <KeyboardSafeTextInput
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}

@@ -9,11 +9,11 @@ import {
   Pressable,
   ScrollView,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { KeyboardSafeTextInput } from './KeyboardSafeTextInput';
 import { useLanguage } from '../context/LanguageContext';
 import {
   ReportContentType,
@@ -161,7 +161,7 @@ export function ReportSheet({
             <Text className="mb-2 mt-5 px-1 text-[12px] font-semibold uppercase tracking-wider text-neutral-400">
               {t.report.description_label}
             </Text>
-            <TextInput
+            <KeyboardSafeTextInput
               value={description}
               onChangeText={setDescription}
               placeholder={t.report.description_placeholder}

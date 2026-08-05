@@ -203,7 +203,6 @@ export default function RegisterScreen() {
             disabled={!google.request || google.isPending}
             loading={google.isPending}
           />
-          <OAuthLegalDisclosure />
           {google.isError || apple.isError ? (
             <Text style={{ marginTop: 10, fontSize: 12, color: colors.danger, textAlign: 'center' }}>
               {oauthErrorMessage(oauthErrorCode, t.auth.errors)}
@@ -447,6 +446,7 @@ export default function RegisterScreen() {
 
         {/* Already have account → back to login */}
         <View
+          testID="auth.register.account-switch"
           style={{
             marginTop: 26,
             flexDirection: 'row',
@@ -476,6 +476,7 @@ export default function RegisterScreen() {
             </Text>
           </Pressable>
         </View>
+        <OAuthLegalDisclosure />
     </Screen>
   );
 }

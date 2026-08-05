@@ -11,24 +11,31 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Image } from 'expo-image';
+
 import { SettingsHeader } from '../../components/SettingsRow';
+import { VideoFullscreenModal } from '../../components/community/VideoFullscreenModal';
 import { useLanguage } from '../../context/LanguageContext';
+import { resolveMediaUrl } from '../../lib/media';
 import {
   useAdminContentReports,
   useAdminFlaggedPosts,
+  useAdminVideoReviewPosts,
   useResolveContentReport,
   useUpdatePostModeration,
 } from '../../features/admin/useAdminModeration';
 
-type ModerationTab = 'reports' | 'flagged';
+type ModerationTab = 'reports' | 'flagged' | 'videos';
 
 export default function AdminModerationScreen() {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<ModerationTab>('reports');
+  const [reviewPlayerUrl, setReviewPlayerUrl] = useState<string | null>(null);
 
   // Queries
   const { data: reports, isLoading: isReportsLoading } = useAdminContentReports('pending');
   const { data: flaggedPosts, isLoading: isFlaggedLoading } = useAdminFlaggedPosts();
+  const { data: videoReviewPosts, isLoading: isVideoLoading } = useAdminVideoReviewPosts();
 
   // Mutations
   const resolveReport = useResolveContentReport();
@@ -126,10 +133,116 @@ export default function AdminModerationScreen() {
             {t.admin.moderation_tab_flagged} ({flaggedPosts?.length ?? 0})
           </Text>
         </Pressable>
+        <Pressable
+          onPress={() => setActiveTab('videos')}
+          className="flex-1 items-center py-3 border-b-2"
+          style={{ borderBottomColor: activeTab === 'videos' ? '#FF9F6E' : 'transparent' }}
+          testID="admin.moderation.tab.videos"
+        >
+          <Text
+            className="text-[14px] font-bold"
+            style={{ color: activeTab === 'videos' ? '#FF9F6E' : '#6B7280' }}
+          >
+            {t.admin.moderation_tab_videos} ({videoReviewPosts?.length ?? 0})
+          </Text>
+        </Pressable>
       </View>
 
       <ScrollView className="flex-1" contentContainerClassName="pb-12 px-4 pt-4 gap-4">
-        {activeTab === 'reports' ? (
+        {activeTab === 'videos' ? (
+          isVideoLoading ? (
+            <ActivityIndicator color="#FF9F6E" className="mt-8" />
+          ) : !videoReviewPosts || videoReviewPosts.length === 0 ? (
+            <View className="items-center justify-center py-12">
+              <Ionicons name="checkmark-circle-outline" size={48} color="#FF9F6E" />
+              <Text className="text-center text-neutral-500 mt-4 text-[15px]">
+                {t.admin.moderation_empty_videos}
+              </Text>
+            </View>
+          ) : (
+            videoReviewPosts.map((post) => {
+              const video = post.media_items.find((item) => (item.mime_type ?? '').startsWith('video/'));
+              const directUrl = video ? resolveMediaUrl(video.media_url, { kind: 'video' }) : null;
+              return (
+                <View key={post.id} className="rounded-2xl bg-white p-4 border border-neutral-100 shadow-sm">
+                  <View className="flex-row items-center justify-between border-b border-neutral-100 pb-2 mb-3">
+                    <View className="flex-row items-center gap-1.5">
+                      <Ionicons name="videocam-outline" size={16} color="#FF9F6E" />
+                      <Text className="text-[12px] font-semibold text-neutral-500 uppercase tracking-wider">
+                        {t.admin.moderation_video_label}
+                      </Text>
+                    </View>
+                    <Text className="text-[11px] text-neutral-400">
+                      {new Date(post.created_at).toLocaleDateString()}
+                    </Text>
+                  </View>
+
+                  <Pressable
+                    disabled={!directUrl}
+                    onPress={() => directUrl && setReviewPlayerUrl(directUrl)}
+                    className="mb-3 overflow-hidden rounded-xl"
+                    testID={`admin.video.play.${post.id}`}
+                  >
+                    <Image
+                      source={resolveMediaUrl(video?.thumb_url) ?? video?.thumb_url ?? undefined}
+                      contentFit="cover"
+                      style={{ width: '100%', height: 170, backgroundColor: '#101010' }}
+                    />
+                    <View
+                      pointerEvents="none"
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        right: 0,
+                        top: 0,
+                        bottom: 0,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Ionicons name="play-circle" size={44} color="rgba(255,255,255,0.92)" />
+                    </View>
+                  </Pressable>
+
+                  <View className="border border-neutral-100 rounded-xl p-3 mb-4 bg-neutral-50">
+                    <Text className="text-[12px] font-semibold text-neutral-600 mb-1">
+                      @{post.author.display_name}
+                    </Text>
+                    <Text className="text-[14px] font-bold text-neutral-800 mb-1">{post.title}</Text>
+                    {post.body ? (
+                      <Text className="text-[13px] text-neutral-700 leading-5" numberOfLines={4}>
+                        {post.body}
+                      </Text>
+                    ) : null}
+                  </View>
+
+                  <View className="flex-row gap-2">
+                    <Pressable
+                      disabled={updatePost.isPending}
+                      onPress={() => handleUpdatePostStatus(post.id, 'approved')}
+                      className="flex-1 rounded-xl bg-emerald-600 py-2.5 items-center justify-center"
+                      style={{ opacity: updatePost.isPending ? 0.6 : 1 }}
+                    >
+                      <Text className="text-white text-[13px] font-bold">
+                        {t.admin.moderation_action_approve}
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      disabled={updatePost.isPending}
+                      onPress={() => handleUpdatePostStatus(post.id, 'rejected')}
+                      className="flex-1 rounded-xl bg-red-500 py-2.5 items-center justify-center"
+                      style={{ opacity: updatePost.isPending ? 0.6 : 1 }}
+                    >
+                      <Text className="text-white text-[13px] font-bold">
+                        {t.admin.moderation_action_reject}
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+              );
+            })
+          )
+        ) : activeTab === 'reports' ? (
           isReportsLoading ? (
             <ActivityIndicator color="#FF9F6E" className="mt-8" />
           ) : !reports || reports.length === 0 ? (
@@ -307,6 +420,12 @@ export default function AdminModerationScreen() {
           )
         )}
       </ScrollView>
+
+      <VideoFullscreenModal
+        visible={reviewPlayerUrl != null}
+        sourceUrl={reviewPlayerUrl}
+        onClose={() => setReviewPlayerUrl(null)}
+      />
     </SafeAreaView>
   );
 }

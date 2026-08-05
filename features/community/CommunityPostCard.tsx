@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+﻿import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -12,14 +12,22 @@ import { ActionSheet } from '../../components/ActionSheet';
 import { TranslatedText } from './TranslatedText';
 import {
   CommunityPost,
+  isVideoMedia,
   useHidePost,
   useMarkCommunityHelpful,
   useUnmarkCommunityHelpful,
 } from './useCommunity';
 
+function formatDuration(totalSeconds?: number | null): string {
+  const safe = Math.max(0, Math.floor(totalSeconds ?? 0));
+  return `${Math.floor(safe / 60)}:${String(safe % 60).padStart(2, '0')}`;
+}
+
 interface Props {
   post: CommunityPost;
   onPress?: (post: CommunityPost) => void;
+  /** Search results only: highlight this query inside the displayed title. */
+  titleHighlight?: string;
 }
 
 function getVisualHeight(post: CommunityPost) {
@@ -80,7 +88,34 @@ function Avatar({ name, avatarUrl }: { name: string; avatarUrl?: string | null }
   );
 }
 
-export function CommunityPostCard({ post, onPress }: Props) {
+const CARD_TITLE_STYLE = {
+  fontSize: 14.5,
+  fontWeight: '700',
+  lineHeight: 20,
+  color: colors.textMain,
+  marginBottom: 8,
+} as const;
+
+function HighlightedCardTitle({ text, query }: { text: string; query: string }) {
+  const trimmed = query.trim();
+  const index = trimmed ? text.toLowerCase().indexOf(trimmed.toLowerCase()) : -1;
+  if (index === -1) {
+    return (
+      <Text numberOfLines={2} style={CARD_TITLE_STYLE}>
+        {text}
+      </Text>
+    );
+  }
+  return (
+    <Text numberOfLines={2} style={CARD_TITLE_STYLE}>
+      {text.slice(0, index)}
+      <Text style={{ color: colors.brandCoral }}>{text.slice(index, index + trimmed.length)}</Text>
+      {text.slice(index + trimmed.length)}
+    </Text>
+  );
+}
+
+export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
   const { t } = useLanguage();
   const helpful = useMarkCommunityHelpful();
   const unhelpful = useUnmarkCommunityHelpful();
@@ -144,12 +179,82 @@ export function CommunityPostCard({ post, onPress }: Props) {
     >
       <Pressable onPress={openDetail}>
         {post.media_items[0] ? (
-          <Image
-            source={resolveMediaUrl(post.media_items[0].media_url) ?? post.media_items[0].media_url}
-            contentFit="cover"
-            transition={120}
-            style={{ width: '100%', height: imageHeight }}
-          />
+          <View>
+            <Image
+              source={
+                resolveMediaUrl(post.media_items[0].thumb_url ?? post.media_items[0].media_url) ??
+                post.media_items[0].media_url
+              }
+              contentFit="cover"
+              transition={120}
+              style={{ width: '100%', height: imageHeight, backgroundColor: '#1F1B18' }}
+            />
+            {isVideoMedia(post.media_items[0]) ? (
+              <>
+                {/* D-033 video affordance: centered play glyph + duration. */}
+                <View
+                  pointerEvents="none"
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    bottom: 0,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 22,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: 'rgba(0,0,0,0.38)',
+                    }}
+                  >
+                    <Ionicons name="play" size={22} color="rgba(255,255,255,0.95)" />
+                  </View>
+                </View>
+                <View
+                  pointerEvents="none"
+                  style={{
+                    position: 'absolute',
+                    right: 8,
+                    bottom: 8,
+                    borderRadius: 999,
+                    paddingHorizontal: 8,
+                    paddingVertical: 3,
+                    backgroundColor: 'rgba(0,0,0,0.55)',
+                  }}
+                >
+                  <Text style={{ color: '#FFFFFF', fontSize: 10.5, fontWeight: '700', fontVariant: ['tabular-nums'] }}>
+                    {formatDuration(post.media_items[0].duration_seconds)}
+                  </Text>
+                </View>
+              </>
+            ) : null}
+            {isOwnPost && post.moderation_status !== 'approved' ? (
+              <View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  left: 8,
+                  top: 8,
+                  borderRadius: 999,
+                  paddingHorizontal: 9,
+                  paddingVertical: 4,
+                  backgroundColor:
+                    post.moderation_status === 'rejected' ? 'rgba(184, 58, 58, 0.92)' : 'rgba(17, 17, 17, 0.68)',
+                }}
+              >
+                <Text style={{ color: '#FFFFFF', fontSize: 10.5, fontWeight: '700' }}>
+                  {post.moderation_status === 'rejected' ? t.video.status_rejected : t.video.status_in_review}
+                </Text>
+              </View>
+            ) : null}
+          </View>
         ) : (
           <View
             style={{
@@ -188,19 +293,26 @@ export function CommunityPostCard({ post, onPress }: Props) {
 
       <View style={{ paddingHorizontal: 14, paddingVertical: 12 }}>
         <Pressable onPress={openDetail}>
-          <TranslatedText
-            originalText={post.title}
-            translatedText={post.translated_title}
-            sourceLanguage={post.title_source_language ?? post.source_language}
-            numberOfLines={2}
-            textStyle={{
-              fontSize: 14.5,
-              fontWeight: '700',
-              lineHeight: 20,
-              color: colors.textMain,
-              marginBottom: 8,
-            }}
-          />
+          {titleHighlight ? (
+            <HighlightedCardTitle
+              text={post.translated_title ?? post.title}
+              query={titleHighlight}
+            />
+          ) : (
+            <TranslatedText
+              originalText={post.title}
+              translatedText={post.translated_title}
+              sourceLanguage={post.title_source_language ?? post.source_language}
+              numberOfLines={2}
+              textStyle={{
+                fontSize: 14.5,
+                fontWeight: '700',
+                lineHeight: 20,
+                color: colors.textMain,
+                marginBottom: 8,
+              }}
+            />
+          )}
 
           {hasEventCandidate ? (
             <View

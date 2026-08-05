@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
+import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
+import { router, type Href } from 'expo-router';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
@@ -23,7 +25,6 @@ import {
   StyleSheet,
   Switch,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -41,9 +42,17 @@ import { colors, shadows } from '../../theme/tokens';
 import { compressImageForUpload } from '../../lib/imageCompression';
 import { mapWithConcurrency } from '../../lib/mapWithConcurrency';
 import { resolveMediaUrl } from '../../lib/media';
-import { useProductGuide } from '../../features/guide/useProductGuide';
-import { GuideHintCard } from '../../components/GuideHintCard';
+import { useGuideAutoAdvance, useProductGuide } from '../../features/guide/useProductGuide';
+import { useGuideTarget } from '../../features/guide/guideTargets';
+import { GuideSpotlight } from '../../components/guide/GuideSpotlight';
+import { KeyboardSafeTextInput } from '../../components/KeyboardSafeTextInput';
 import { isTooShortForAiSummary } from '../../features/community/aiSummary';
+import {
+  PreparedVideo,
+  VideoPickPhase,
+  VideoValidationError,
+  processAndUploadVideo,
+} from '../../features/community/videoPicker';
 import { CommunityPostCard } from '../../features/community/CommunityPostCard';
 import { CommunityPostDetailModal } from '../../features/community/CommunityPostDetailModal';
 import {
@@ -58,6 +67,7 @@ import {
   useUploadCommunityMedia,
 } from '../../features/community/useCommunity';
 import { useAuthStore } from '../../store/authStore';
+import { usePlazaComposeIntentStore } from '../../store/plazaComposeIntentStore';
 
 const schema = z.object({
   post_type: z.enum(['experience', 'question', 'guide', 'warning', 'recommendation']),
@@ -80,32 +90,6 @@ const DEFAULT_FORM_VALUES: FormData = {
   title: '',
   body: '',
 };
-
-function estimatePostWeight(post: CommunityPost) {
-  const mediaWeight = post.media_items.length > 0 ? 3.4 : 2.1;
-  const textWeight = Math.min(post.title.length / 34, 1.7) + Math.min(post.body.length / 120, 1.1);
-  return mediaWeight + textWeight;
-}
-
-function splitIntoColumns(posts: CommunityPost[]) {
-  const left: CommunityPost[] = [];
-  const right: CommunityPost[] = [];
-  let leftWeight = 0;
-  let rightWeight = 0;
-
-  for (const post of posts) {
-    const weight = estimatePostWeight(post);
-    if (leftWeight <= rightWeight) {
-      left.push(post);
-      leftWeight += weight;
-    } else {
-      right.push(post);
-      rightWeight += weight;
-    }
-  }
-
-  return { left, right };
-}
 
 // A refetched feed can legitimately surface the same post in more than one
 // query page (ranking shifts between snapshots on pull-to-refresh), so flatten
@@ -198,6 +182,9 @@ export default function PlazaScreen() {
   const trackCommunityEvents = useTrackCommunityEvents()?.mutate ?? (() => undefined);
   const uploadMedia = useUploadCommunityMedia();
   const [mediaItems, setMediaItems] = useState<CommunityPostMedia[]>([]);
+  // D-033: a video post carries exactly one video and no images.
+  const [videoDraft, setVideoDraft] = useState<PreparedVideo | null>(null);
+  const [videoPhase, setVideoPhase] = useState<{ phase: VideoPickPhase; progress: number } | null>(null);
   const [composerMessage, setComposerMessage] = useState<string | null>(null);
   const [plazaBanner, setPlazaBanner] = useState<{ tone: 'success' | 'info'; message: string } | null>(null);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
@@ -206,7 +193,13 @@ export default function PlazaScreen() {
   const [selectedPlaces, setSelectedPlaces] = useState<CommunitySelectedPlaceInput[]>([]);
   const [locationPickerVisible, setLocationPickerVisible] = useState(false);
   const [aiSummaryEnabled, setAiSummaryEnabled] = useState(true);
-  const { step: guideStep, completePlazaStep, skipAll: skipGuide } = useProductGuide();
+  const guide = useProductGuide();
+  const composeEntryTargetRef = useGuideTarget('compose_entry');
+  const photoTargetRef = useGuideTarget('photo');
+  const titleTargetRef = useGuideTarget('title');
+  const bodyTargetRef = useGuideTarget('body');
+  const locationTargetRef = useGuideTarget('location');
+  const publishTargetRef = useGuideTarget('publish');
   const impressionKeysRef = useRef<Set<string>>(new Set());
 
   const {
@@ -224,6 +217,14 @@ export default function PlazaScreen() {
   const selectedType = watch('post_type');
   const watchedTitle = watch('title');
   const watchedBody = watch('body');
+  // D-050 walkthrough: advance on the user's real composer actions.
+  useGuideAutoAdvance({
+    composerVisible,
+    mediaCount: mediaItems.length + (videoDraft ? 1 : 0),
+    title: watchedTitle ?? '',
+    body: watchedBody ?? '',
+    placesCount: selectedPlaces.length,
+  });
   const composerContentTooShort = isTooShortForAiSummary(watchedTitle ?? '', watchedBody ?? '');
   const composerHint = t.plaza.composer_hint;
   // Place search now happens inside <LocationPicker> via Google Places
@@ -241,6 +242,41 @@ export default function PlazaScreen() {
     }
   }, [data, selectedPost]);
 
+  const videoErrorMessage = (error: unknown): string => {
+    if (error instanceof VideoValidationError) {
+      if (error.code === 'too_long') return t.video.too_long;
+      if (error.code === 'too_large') return t.video.too_large;
+      return t.video.unsupported;
+    }
+    const code = (error as { response?: { data?: { error?: { code?: string } } } })?.response?.data?.error?.code;
+    if (code === 'video.upload_disabled') return t.video.upload_disabled;
+    if (code === 'video.rate_limited') return t.video.rate_limited;
+    return t.video.upload_failed;
+  };
+
+  const onPickVideo = async (asset: ImagePicker.ImagePickerAsset) => {
+    if (!uploadMedia?.mutateAsync) {
+      setComposerMessage(t.common.error);
+      return;
+    }
+    setIsUploadingMedia(true);
+    setComposerMessage(mediaItems.length > 0 ? t.video.replaced_images_hint : null);
+    setMediaItems([]);
+    try {
+      const prepared = await processAndUploadVideo({
+        asset,
+        uploadImage: (input) => uploadMedia.mutateAsync(input),
+        onPhase: (phase, progress) => setVideoPhase({ phase, progress }),
+      });
+      setVideoDraft(prepared);
+    } catch (error) {
+      setComposerMessage(videoErrorMessage(error));
+    } finally {
+      setVideoPhase(null);
+      setIsUploadingMedia(false);
+    }
+  };
+
   const onPickImages = async () => {
     const remaining = MAX_MEDIA_ITEMS - mediaItems.length;
     if (remaining <= 0) {
@@ -250,7 +286,7 @@ export default function PlazaScreen() {
 
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ImagePicker.MediaTypeOptions.All,
         allowsEditing: false,
         allowsMultipleSelection: true,
         selectionLimit: remaining,
@@ -258,6 +294,12 @@ export default function PlazaScreen() {
       });
 
       if (result.canceled) {
+        return;
+      }
+
+      const videoAsset = result.assets.find((asset) => asset.type === 'video');
+      if (videoAsset) {
+        await onPickVideo(videoAsset);
         return;
       }
 
@@ -298,6 +340,8 @@ export default function PlazaScreen() {
   const resetComposerState = () => {
     reset(DEFAULT_FORM_VALUES);
     setMediaItems([]);
+    setVideoDraft(null);
+    setVideoPhase(null);
     setSelectedPlaces([]);
     setLocationPickerVisible(false);
     setEditingPost(null);
@@ -315,6 +359,23 @@ export default function PlazaScreen() {
     setComposerVisible(true);
   };
 
+  // Zero-result search CTA handoff (PLAZA-SEARCH-001): consume the one-shot
+  // intent, open the composer as a question, and prefill the searched title.
+  const pendingComposeIntent = usePlazaComposeIntentStore((state) => state.intent);
+  useEffect(() => {
+    if (!pendingComposeIntent) {
+      return;
+    }
+    const intent = usePlazaComposeIntentStore.getState().consume();
+    if (!intent) {
+      return;
+    }
+    openComposerForCreate();
+    setValue('post_type', intent.postType);
+    setValue('title', intent.title.slice(0, 160));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingComposeIntent]);
+
   const openComposerForEdit = (post: CommunityPost) => {
     setSelectedPost(null);
     setEditingPost(post);
@@ -322,6 +383,7 @@ export default function PlazaScreen() {
       post.media_items.map((item) => ({
         id: item.id,
         media_url: item.media_url,
+        thumb_url: item.thumb_url,
         mime_type: item.mime_type,
         sort_order: item.sort_order,
       }))
@@ -339,7 +401,6 @@ export default function PlazaScreen() {
   };
 
   const openPostFromFeed = (post: CommunityPost) => {
-    completePlazaStep('action');
     setSelectedPost(post);
   };
 
@@ -405,10 +466,22 @@ export default function PlazaScreen() {
       ai_summary_enabled: aiSummaryEnabled,
       city: editingPost?.city ?? user?.city,
       identity_scope: editingPost?.identity_scope ?? user?.identity ?? 'all',
-      media_items: mediaItems.map((item) => ({
-        media_url: item.media_url,
-        mime_type: item.mime_type ?? undefined,
-      })),
+      media_items: videoDraft
+        ? [
+            {
+              media_url: videoDraft.media.media_url,
+              thumb_url: videoDraft.media.thumb_url ?? undefined,
+              mime_type: videoDraft.media.mime_type ?? undefined,
+              duration_seconds: videoDraft.media.duration_seconds ?? undefined,
+            },
+          ]
+        : mediaItems.map((item) => ({
+            media_url: item.media_url,
+            thumb_url: item.thumb_url ?? undefined,
+            mime_type: item.mime_type ?? undefined,
+            duration_seconds: item.duration_seconds ?? undefined,
+          })),
+      moderation_frame_urls: videoDraft ? videoDraft.frameUrls : undefined,
     };
 
     if (editingPost) {
@@ -443,9 +516,16 @@ export default function PlazaScreen() {
     createPost.mutate(payload, {
       onSuccess: (post) => {
         resetComposerState();
+        // D-033 XHS model: a pending video post is live for its author right
+        // away and enters the public feed once frame review approves.
         setPlazaBanner({
-          tone: post.moderation_status === 'review' ? 'info' : 'success',
-          message: post.moderation_status === 'review' ? t.plaza.review_notice : t.plaza.publish_success,
+          tone: post.moderation_status === 'approved' ? 'success' : 'info',
+          message:
+            post.moderation_status === 'pending'
+              ? t.video.publish_pending_notice
+              : post.moderation_status === 'review'
+                ? t.plaza.review_notice
+                : t.plaza.publish_success,
         });
       },
       onError: (err) => {
@@ -456,6 +536,28 @@ export default function PlazaScreen() {
     });
   };
 
+  // Guided publish: the confirm sheet dispatches the real submit, and the
+  // walkthrough only completes once a valid form actually went out.
+  const submitFromGuideConfirm = handleSubmit((form) => {
+    onSubmit(form);
+    guide.completeWalkthrough('action');
+  });
+
+  // Final Continue on the publish step: the tour is over. With an untouched
+  // draft that means closing the composer and landing back on Plaza; a real
+  // draft stays open — ending a tutorial must never destroy typed content.
+  const finishGuideFromPublishStep = () => {
+    guide.completeWalkthrough('dismiss');
+    const pristine =
+      !(watchedTitle ?? '').trim() &&
+      !(watchedBody ?? '').trim() &&
+      mediaItems.length === 0 &&
+      selectedPlaces.length === 0;
+    if (pristine) {
+      closeComposer();
+    }
+  };
+
   useEffect(() => {
     if (!plazaBanner) return;
     const timeout = setTimeout(() => setPlazaBanner(null), 4000);
@@ -463,8 +565,6 @@ export default function PlazaScreen() {
   }, [plazaBanner]);
 
   const filteredPosts = data;
-
-  const columns = splitIntoColumns(filteredPosts);
 
   useEffect(() => {
     const impressionEvents = filteredPosts
@@ -532,7 +632,44 @@ export default function PlazaScreen() {
           >
             {t.plaza.title}
           </Text>
-          <LangPill />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            {/* Permanent walkthrough entry (D-050): re-runnable any time. */}
+            <FeedbackPressable
+              onPress={() => guide.startWalkthrough({ composerOpen: false })}
+              accessibilityLabel={t.guide.take_the_tour}
+              testID="plaza.guide-entry"
+              hitSlop={8}
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 17,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(255, 255, 255, 0.22)',
+              }}
+              pressedStyle={{ opacity: 0.7 }}
+            >
+              <Ionicons name="help" size={18} color="#FFFFFF" />
+            </FeedbackPressable>
+            <FeedbackPressable
+              onPress={() => router.push('/plaza/search' as unknown as Href)}
+              accessibilityLabel={t.plaza.search_entry_a11y}
+              testID="plaza.search-entry"
+              hitSlop={8}
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 17,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(255, 255, 255, 0.22)',
+              }}
+              pressedStyle={{ opacity: 0.7 }}
+            >
+              <Ionicons name="search" size={18} color="#FFFFFF" />
+            </FeedbackPressable>
+            <LangPill />
+          </View>
         </View>
       </View>
 
@@ -555,82 +692,63 @@ export default function PlazaScreen() {
           </Text>
         </GlassCard>
       ) : null}
-      <ScrollView
-        className="flex-1"
-        collapsable={false}
-        nestedScrollEnabled
-        contentContainerStyle={{ paddingHorizontal: 10, paddingTop: 14, paddingBottom: Math.max(insets.bottom + 180, 200) }}
+      {/* FlashList recycles cards as they leave the viewport. The previous
+          ScrollView + .map() kept every loaded page mounted, so by page 3 all
+          60 cards — and all 60 image requests — were live at once. */}
+      <FlashList
+        data={filteredPosts}
+        masonry
+        numColumns={2}
+        keyExtractor={(post) => post.id}
+        renderItem={({ item }) => (
+          <View style={{ paddingHorizontal: 6 }}>
+            <CommunityPostCard post={item} onPress={openPostFromFeed} />
+          </View>
+        )}
+        contentContainerStyle={{
+          paddingHorizontal: 4,
+          paddingTop: 14,
+          paddingBottom: Math.max(insets.bottom + 180, 200),
+        }}
         refreshControl={
           <RefreshControl refreshing={isFetching && !isLoading} onRefresh={refetch} tintColor={colors.brandCoral} />
         }
-        onScroll={(event) => {
-          const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-          const distanceFromBottom = contentSize.height - (contentOffset.y + layoutMeasurement.height);
-          if (distanceFromBottom >= 600) return;
+        onEndReached={() => {
           if (hasNextPage && !isFetchingNextPage) {
             void fetchNextPage();
           }
         }}
-        scrollEventThrottle={250}
-      >
-        {guideStep === 'plaza' ? (
-          <View style={{ paddingHorizontal: 6 }}>
-            <GuideHintCard
-              icon="chatbubbles-outline"
-              title={t.guide.plaza_hint_title}
-              body={t.guide.plaza_hint_body}
-              dismissLabel={t.guide.dismiss}
-              onDismiss={() => completePlazaStep('dismiss')}
-              skipLabel={t.guide.skip_all}
-              onSkipAll={skipGuide}
-              testID="guide.hint.plaza"
-            />
-          </View>
-        ) : null}
-        {isLoading && filteredPosts.length === 0 ? (
-          <View className="items-center py-12">
-            <ActivityIndicator size="large" color={colors.brandCoral} />
-          </View>
-        ) : null}
-
-        {isError ? (
-          <Text style={{ color: colors.danger, paddingHorizontal: 16, paddingVertical: 24, textAlign: 'center' }}>
-            {t.common.error}
-          </Text>
-        ) : null}
-
-        {filteredPosts.length > 0 ? (
-          <View className="flex-row gap-3">
-            <View className="flex-1">
-              {columns.left.map((post) => (
-                <CommunityPostCard key={post.id} post={post} onPress={openPostFromFeed} />
-              ))}
+        onEndReachedThreshold={0.6}
+        ListEmptyComponent={
+          isLoading ? (
+            <View className="items-center py-12">
+              <ActivityIndicator size="large" color={colors.brandCoral} />
             </View>
-            <View className="flex-1">
-              {columns.right.map((post) => (
-                <CommunityPostCard key={post.id} post={post} onPress={openPostFromFeed} />
-              ))}
-            </View>
-          </View>
-        ) : !isLoading && !isError ? (
-          <GlassCard tone="white" radiusKey="3xl" padding={32} style={{ alignItems: 'center', marginHorizontal: 12 }}>
-            <Text style={{ fontSize: 28, opacity: 0.5, marginBottom: 12 }}>✦</Text>
-            <Text style={{ fontSize: 17, fontWeight: '700', color: colors.textMain, textAlign: 'center' }}>
-              {t.plaza.empty}
+          ) : isError ? (
+            <Text style={{ color: colors.danger, paddingHorizontal: 16, paddingVertical: 24, textAlign: 'center' }}>
+              {t.common.error}
             </Text>
-          </GlassCard>
-        ) : null}
-
-        {isFetchingNextPage ? (
-          <View className="items-center py-6">
-            <ActivityIndicator size="small" color={colors.brandCoral} />
-          </View>
-        ) : isFeedCaughtUp ? (
-          <View className="items-center py-6">
-            <Text style={{ fontSize: 12, color: colors.textSubtle, letterSpacing: 0.4 }}>{t.plaza.feed_caught_up}</Text>
-          </View>
-        ) : null}
-      </ScrollView>
+          ) : (
+            <GlassCard tone="white" radiusKey="3xl" padding={32} style={{ alignItems: 'center', marginHorizontal: 12 }}>
+              <Text style={{ fontSize: 28, opacity: 0.5, marginBottom: 12 }}>✦</Text>
+              <Text style={{ fontSize: 17, fontWeight: '700', color: colors.textMain, textAlign: 'center' }}>
+                {t.plaza.empty}
+              </Text>
+            </GlassCard>
+          )
+        }
+        ListFooterComponent={
+          isFetchingNextPage ? (
+            <View className="items-center py-6">
+              <ActivityIndicator size="small" color={colors.brandCoral} />
+            </View>
+          ) : isFeedCaughtUp ? (
+            <View className="items-center py-6">
+              <Text style={{ fontSize: 12, color: colors.textSubtle, letterSpacing: 0.4 }}>{t.plaza.feed_caught_up}</Text>
+            </View>
+          ) : null
+        }
+      />
 
       {/* Floating Post button — bumped to a real "main CTA" silhouette
           (2026-05-10): explicit height 60, icon 26, fontSize 22 ExtraBold.
@@ -648,6 +766,8 @@ export default function PlazaScreen() {
         }}
       >
         <View
+          ref={composeEntryTargetRef}
+          collapsable={false}
           style={{
             width: POST_BUTTON_WIDTH,
             height: POST_BUTTON_HEIGHT,
@@ -691,6 +811,11 @@ export default function PlazaScreen() {
           />
         </View>
       </View>
+
+      {/* Spotlight for the compose-entry step; the scrim never eats touches.
+          Continue on this step performs the real forward action for the user:
+          it opens the composer. */}
+      <GuideSpotlight layer="plaza" onContinueFromEntry={openComposerForCreate} />
 
       <Modal
         visible={composerVisible}
@@ -789,15 +914,71 @@ export default function PlazaScreen() {
                   </View>
                 ))}
 
-                {mediaItems.length < MAX_MEDIA_ITEMS ? (
+                {videoDraft ? (
+                  <View className="relative">
+                    <Image
+                      source={resolveMediaUrl(videoDraft.media.thumb_url) ?? videoDraft.media.thumb_url}
+                      contentFit="cover"
+                      transition={120}
+                      style={{ width: 146, height: 146, borderRadius: 24, backgroundColor: '#101010' }}
+                    />
+                    <View
+                      pointerEvents="none"
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        right: 0,
+                        top: 0,
+                        bottom: 0,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Ionicons name="play-circle" size={40} color="rgba(255,255,255,0.92)" />
+                    </View>
+                    <View
+                      pointerEvents="none"
+                      className="absolute bottom-2 left-2 rounded-full px-2 py-0.5"
+                      style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}
+                    >
+                      <Text style={{ color: '#FFFFFF', fontSize: 10.5, fontWeight: '700' }}>
+                        {`${Math.floor((videoDraft.media.duration_seconds ?? 0) / 60)}:${String(
+                          (videoDraft.media.duration_seconds ?? 0) % 60,
+                        ).padStart(2, '0')}`}
+                      </Text>
+                    </View>
+                    <Pressable
+                      className="absolute right-2 top-2 rounded-full bg-black/50 p-1.5"
+                      onPress={() => setVideoDraft(null)}
+                      testID="plaza.composer.video.remove"
+                    >
+                      <Ionicons name="close" size={14} color="#FFFFFF" />
+                    </Pressable>
+                  </View>
+                ) : null}
+
+                {mediaItems.length < MAX_MEDIA_ITEMS && !videoDraft ? (
                   <Pressable
+                    ref={photoTargetRef}
                     onPress={onPickImages}
                     disabled={isUploadingMedia}
                     className="items-center justify-center rounded-[24px] border border-neutral-200 bg-[#FCFCFC]"
                     style={{ width: 146, height: 146 }}
                   >
                     {isUploadingMedia ? (
-                      <ActivityIndicator size="small" color="#F47C7C" />
+                      <View style={{ alignItems: 'center', gap: 6 }}>
+                        <ActivityIndicator size="small" color="#F47C7C" />
+                        {videoPhase ? (
+                          <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#B08B7E' }}>
+                            {videoPhase.phase === 'compressing'
+                              ? t.video.phase_compressing
+                              : videoPhase.phase === 'frames'
+                                ? t.video.phase_frames
+                                : t.video.phase_uploading}
+                            {` ${Math.round(videoPhase.progress * 100)}%`}
+                          </Text>
+                        ) : null}
+                      </View>
                     ) : (
                       <Ionicons name="add" size={34} color="#D0D0D0" />
                     )}
@@ -809,7 +990,8 @@ export default function PlazaScreen() {
                 control={control}
                 name="title"
                 render={({ field: { onChange, value } }) => (
-                  <TextInput
+                  <KeyboardSafeTextInput
+                    ref={titleTargetRef}
                     testID="plaza.composer.title"
                     placeholder={t.plaza.title_placeholder}
                     placeholderTextColor="#B9B9B9"
@@ -831,7 +1013,8 @@ export default function PlazaScreen() {
                 control={control}
                 name="body"
                 render={({ field: { onChange, value } }) => (
-                  <TextInput
+                  <KeyboardSafeTextInput
+                    ref={bodyTargetRef}
                     testID="plaza.composer.body"
                     placeholder={t.plaza.body_placeholder}
                     placeholderTextColor="#C4C4C4"
@@ -896,6 +1079,7 @@ export default function PlazaScreen() {
                     <Text className="ml-3 text-[16px] text-[#242424]">{t.plaza.composer_location_row}</Text>
                   </View>
                   <Pressable
+                    ref={locationTargetRef}
                     onPress={openLocationPicker}
                     style={{
                       paddingHorizontal: 16,
@@ -1037,6 +1221,8 @@ export default function PlazaScreen() {
                 </View>
 
                 <View
+                  ref={publishTargetRef}
+                  collapsable={false}
                   style={{
                     height: 54,
                     flex: 1.9,
@@ -1059,7 +1245,15 @@ export default function PlazaScreen() {
                   )}
                   <Pressable
                     testID="plaza.composer.publish"
-                    onPress={handleSubmit(onSubmit)}
+                    onPress={() => {
+                      // Final walkthrough step: the guide never publishes by
+                      // itself — it swaps in an explicit confirm sheet first.
+                      if (guide.shouldInterceptPublish) {
+                        guide.requestPublishConfirm();
+                        return;
+                      }
+                      handleSubmit(onSubmit)();
+                    }}
                     disabled={isSubmitting || isUploadingMedia}
                     accessibilityRole="button"
                     accessibilityLabel={editingPost ? t.common.save : t.plaza.publish_note}
@@ -1069,6 +1263,13 @@ export default function PlazaScreen() {
               </View>
             </View>
           </KeyboardAvoidingView>
+          {/* Composer-layer spotlight: RN Modal is its own native window, so
+              the walkthrough overlay must live inside it. */}
+          <GuideSpotlight
+            layer="composer"
+            onContinueFromPublish={finishGuideFromPublishStep}
+            onConfirmPublish={submitFromGuideConfirm}
+          />
         </View>
         )}
       </Modal>

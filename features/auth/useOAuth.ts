@@ -13,6 +13,7 @@ import { Platform } from 'react-native';
 import { useLanguage } from '../../context/LanguageContext';
 import { api } from '../../lib/api';
 import { env } from '../../lib/env';
+import PosterviaGoogleSignin from '../../modules/postervia-google-signin';
 import { useAuthStore } from '../../store/authStore';
 import { getApiErrorCode, type AuthUser } from './useAuth';
 import {
@@ -132,6 +133,10 @@ function ensureGoogleConfigured() {
 export async function resetOAuthProviderSelection(provider: 'google' | 'apple') {
   if (provider !== 'google') return;
   try {
+    if (Platform.OS === 'android') {
+      await PosterviaGoogleSignin?.signOutAsync();
+      return;
+    }
     ensureGoogleConfigured();
     await GoogleSignin.signOut();
   } catch {
@@ -175,11 +180,36 @@ export function useGoogleLogin() {
       setClientErrorCode('auth.oauth_unconfigured');
       return;
     }
+    if (Platform.OS === 'android') {
+      // Credential Manager bottom sheet (SiWG button flow); the GoogleSignin SDK
+      // path below stays iOS-only because its Android side is the deprecated chooser.
+      if (!PosterviaGoogleSignin) {
+        setClientErrorCode('auth.oauth_failed');
+        return;
+      }
+      try {
+        const result = await PosterviaGoogleSignin.signInAsync(GOOGLE_WEB_CLIENT_ID);
+        if (result.status === 'cancelled') return;
+        if (result.status === 'no_credential') {
+          setClientErrorCode('auth.google_play_services_unavailable');
+          return;
+        }
+        if (result.status !== 'success') {
+          setClientErrorCode('auth.oauth_failed');
+          return;
+        }
+        if (!result.idToken) {
+          setClientErrorCode('auth.oauth_missing_id_token');
+          return;
+        }
+        mutation.mutate(result.idToken);
+      } catch {
+        setClientErrorCode('auth.oauth_failed');
+      }
+      return;
+    }
     ensureGoogleConfigured();
     try {
-      if (Platform.OS === 'android') {
-        await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-      }
       const response = await GoogleSignin.signIn();
       if (response.type === 'cancelled') return;
       if (!response.data.idToken) {
@@ -192,13 +222,6 @@ export function useGoogleLogin() {
         isErrorWithCode(error) &&
         (error.code === statusCodes.SIGN_IN_CANCELLED || error.code === statusCodes.IN_PROGRESS)
       ) {
-        return;
-      }
-      if (
-        isErrorWithCode(error) &&
-        error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE
-      ) {
-        setClientErrorCode('auth.google_play_services_unavailable');
         return;
       }
       setClientErrorCode('auth.oauth_failed');

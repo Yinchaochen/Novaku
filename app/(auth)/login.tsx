@@ -172,7 +172,6 @@ export default function LoginScreen() {
             disabled={!google.request || google.isPending}
             loading={google.isPending}
           />
-          <OAuthLegalDisclosure />
           {google.isError || apple.isError ? (
             <Text style={{ marginTop: 10, fontSize: 12, color: colors.danger, textAlign: 'center' }}>
               {oauthErrorMessage(oauthErrorCode, t.auth.errors)}
@@ -377,6 +376,7 @@ export default function LoginScreen() {
 
         {/* Don't have an account? Sign up */}
         <View
+          testID="auth.login.account-switch"
           style={{
             marginTop: 26,
             flexDirection: 'row',
@@ -399,6 +399,7 @@ export default function LoginScreen() {
             </Text>
           </Pressable>
         </View>
+        <OAuthLegalDisclosure />
     </Screen>
   );
 }

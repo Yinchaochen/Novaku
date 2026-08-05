@@ -47,3 +47,6 @@ maestro-output/
 # generated native folders
 /ios
 /android
+
+.expo-web-viewer.*.log
+outputs/

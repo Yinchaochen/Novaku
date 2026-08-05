@@ -31,6 +31,7 @@ import { useBlockUser } from '../../features/social/useSocial';
 import { ActionSheet, type ActionSheetAction } from '../../components/ActionSheet';
 import { StoryShareCard } from '../../components/StoryShareCard';
 import { ShareSheet } from '../../components/ShareSheet';
+import { VideoFullscreenModal } from '../../components/community/VideoFullscreenModal';
 import { ReportSheet } from '../../components/ReportSheet';
 import { Toast, type ToastMessage } from '../../components/Toast';
 import { CommentComposerSheet, type CommentComposerInput } from './CommentComposerSheet';
@@ -42,6 +43,7 @@ import {
   CommunityFeedPage,
   CommunityPost,
   getCommunitySessionId,
+  isVideoMedia,
   useAddActionToOdysseys,
   useCommunityPost,
   useCreateCommunityComment,
@@ -234,6 +236,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
   const [reportSheetVisible, setReportSheetVisible] = useState(false);
   const [moreActionsVisible, setMoreActionsVisible] = useState(false);
   const [shareSheetVisible, setShareSheetVisible] = useState(false);
+  const [videoPlayerUrl, setVideoPlayerUrl] = useState<string | null>(null);
   const followUser = useFollowUser();
   const unfollowUser = useUnfollowUser();
   const editComment = useEditComment(seedPost?.id ?? '');
@@ -792,20 +795,65 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
                     scrollEventThrottle={16}
                     onMomentumScrollEnd={handleMediaMomentumEnd}
                   >
-                    {post.media_items.map((media, index) => (
-                      <Pressable
-                        key={media.id ?? `${media.media_url}-${index}`}
-                        onPress={() => setLightboxVisible(true)}
-                        style={{ width: viewportWidth, height: mediaHeight }}
-                      >
-                        <Image
-                          source={resolveMediaUrl(media.media_url) ?? media.media_url}
-                          contentFit="cover"
-                          transition={120}
+                    {post.media_items.map((media, index) => {
+                      const isVideo = isVideoMedia(media);
+                      return (
+                        <Pressable
+                          key={media.id ?? `${media.media_url}-${index}`}
+                          onPress={() => {
+                            if (isVideo) {
+                              // §6.5: video URLs never fall back to the proxy;
+                              // a broken public base means no playback.
+                              const direct = resolveMediaUrl(media.media_url, { kind: 'video' });
+                              if (direct) {
+                                setVideoPlayerUrl(direct);
+                              }
+                              return;
+                            }
+                            setLightboxVisible(true);
+                          }}
                           style={{ width: viewportWidth, height: mediaHeight }}
-                        />
-                      </Pressable>
-                    ))}
+                          testID={isVideo ? 'post.detail.video' : undefined}
+                        >
+                          <Image
+                            source={
+                              resolveMediaUrl(isVideo ? media.thumb_url ?? media.media_url : media.media_url) ??
+                              media.media_url
+                            }
+                            contentFit="cover"
+                            transition={120}
+                            style={{ width: viewportWidth, height: mediaHeight, backgroundColor: isVideo ? '#101010' : undefined }}
+                          />
+                          {isVideo ? (
+                            <View
+                              pointerEvents="none"
+                              style={{
+                                position: 'absolute',
+                                left: 0,
+                                right: 0,
+                                top: 0,
+                                bottom: 0,
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <View
+                                style={{
+                                  width: 64,
+                                  height: 64,
+                                  borderRadius: 32,
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  backgroundColor: 'rgba(0,0,0,0.38)',
+                                }}
+                              >
+                                <Ionicons name="play" size={32} color="rgba(255,255,255,0.95)" />
+                              </View>
+                            </View>
+                          ) : null}
+                        </Pressable>
+                      );
+                    })}
                   </Animated.ScrollView>
 
                   {hasMediaPager ? (
@@ -1167,6 +1215,43 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
       </View>
 
       {post ? (
+        <>
+        <VideoFullscreenModal
+          visible={videoPlayerUrl != null}
+          sourceUrl={videoPlayerUrl}
+          onClose={() => setVideoPlayerUrl(null)}
+          actions={{
+            helpfulCount: post.helpful_count,
+            viewerMarkedHelpful: post.viewer_marked_helpful,
+            onToggleHelpful: () => {
+              if (post.viewer_marked_helpful) {
+                unhelpful.mutate(post.id);
+              } else {
+                hadDownstreamSignalRef.current = true;
+                helpful.mutate(post.id);
+              }
+            },
+            commentCount: post.comment_count,
+            onOpenComments: () => {
+              // Comments live in the detail sheet below — close the player
+              // and land the reader right on them.
+              setVideoPlayerUrl(null);
+              scrollToComments();
+            },
+            viewerSaved: Boolean(post.viewer_saved),
+            onToggleSave: () => {
+              if (post.viewer_saved) {
+                unsavePost.mutate(post.id);
+              } else {
+                savePost.mutate(post.id);
+              }
+            },
+            onShare: () => {
+              setVideoPlayerUrl(null);
+              setShareSheetVisible(true);
+            },
+          }}
+        />
         <ShareSheet
           visible={shareSheetVisible}
           onClose={() => setShareSheetVisible(false)}
@@ -1180,6 +1265,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
             setToast({ id: Date.now(), tone: 'success', text: t.plaza.share_link_copied, durationMs: 3000 })
           }
         />
+        </>
       ) : null}
     </Modal>
   );

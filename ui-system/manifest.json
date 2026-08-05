@@ -179,7 +179,15 @@
     "routes": [
       {
         "path": "/dev/product-guide",
-        "covers": ["GuideHintCard", "odyssey hint", "plaza hint", "long German", "empty", "loading", "settings re-entry"]
+        "covers": ["GuideSpotlight", "spotlight scrim + ring", "step card", "publish confirm", "long German", "empty", "loading", "settings re-entry"]
+      },
+      {
+        "path": "/dev/floating-input",
+        "covers": ["KeyboardSafeTextInput", "FloatingInputSheet", "proxy value/empty", "long German", "disabled", "live sheet demo"]
+      },
+      {
+        "path": "/dev/video-post",
+        "covers": ["VideoFullscreenModal", "video card badges", "moderation status chips", "long German", "live player + action rail"]
       },
       {
         "path": "/dev/city-location",
