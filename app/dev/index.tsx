@@ -15,6 +15,8 @@ import { Screen } from '../../components/Screen';
 const devRoute = (p: string) => p as unknown as Href;
 
 const PAGES: { href: string; title: string; blurb: string }[] = [
+  { href: '/dev/social-guide', title: 'Social walkthrough', blurb: 'Chapter steps, confirm card, long German, no-target state' },
+  { href: '/dev/app-update', title: 'App update', blurb: "What's new, update available, forced update, long German" },
   { href: '/dev/plaza-search', title: 'Plaza search', blurb: 'Search entry, history, filters, results, zero/error states' },
   { href: '/dev/product-guide', title: 'First-value guide', blurb: 'Spotlight walkthrough, publish confirm, and re-entry in all 6 states' },
   { href: '/dev/floating-input', title: 'Keyboard-safe input', blurb: 'Floating input sheet proxy in all 6 states with a live demo' },
@@ -22,6 +24,7 @@ const PAGES: { href: string; title: string; blurb: string }[] = [
   { href: '/dev/city-location', title: 'City and location', blurb: 'Real city selection, privacy, and all 6 UI states' },
   { href: '/dev/auth-oauth', title: 'OAuth onboarding', blurb: 'Google and Apple registration in all 6 UI states' },
   { href: '/dev/buddy-wish', title: 'Buddy wish', blurb: 'Expandable entry and image-first wish in all 6 states' },
+  { href: '/dev/buddy-guide', title: 'Buddy walkthrough', blurb: 'Buddy tour steps and the simplified wish fields in all 6 states' },
   { href: '/dev/screen-preview', title: 'Screen preview', blurb: '<Screen> primitive in all 6 states' },
   { href: '/dev/ui-system', title: 'UI system', blurb: 'Agent-operable primitives and Odyssey recipes' },
   { href: '/dev/components', title: 'Components', blurb: 'Buttons, pills, cards, long-German stress' },

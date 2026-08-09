@@ -6,8 +6,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BuddyPostCard } from '../../components/buddy/BuddyPostCard';
 import { BuddyCreateMenu } from '../../components/buddy/BuddyCreateMenu';
+import { BuddyGuideAnchor } from '../../components/guide/BuddyGuideAnchor';
+import { BuddyGuideSpotlight } from '../../components/guide/BuddyGuideSpotlight';
 import { Screen } from '../../components/Screen';
 import { useLanguage } from '../../context/LanguageContext';
+import { useBuddyGuideTarget } from '../../features/guide/buddyGuide';
+import { useBuddyGuide } from '../../features/guide/useBuddyGuide';
 import {
   type BuddyPost,
   type BuddyPostCategory,
@@ -56,6 +60,8 @@ export default function BuddyTabScreen() {
   );
 
   const feed = useBuddyPostsFeed(filter);
+  const guide = useBuddyGuide('feed');
+  const createTargetRef = useBuddyGuideTarget('feed_create');
   const notificationsQuery = useNotifications(true, 'buddy');
   const buddyUnread = notificationsQuery.data?.unread_count ?? 0;
   const items: BuddyPost[] = feed.data?.pages.flatMap((p) => p.items) ?? [];
@@ -93,8 +99,11 @@ export default function BuddyTabScreen() {
         <View className="flex-row items-center justify-between">
           <Text className="text-[22px] font-extrabold text-[#3B2A22]">{t.buddy.tab_title}</Text>
           <View className="flex-row gap-2">
+            {/* Permanent walkthrough entry: re-runnable any time. */}
             <Pressable
-              onPress={() => router.push('/buddy/me' as never)}
+              onPress={guide.restart}
+              accessibilityLabel={t.buddy_guide.entry_label}
+              testID="buddy.guide-entry"
               hitSlop={6}
               style={{
                 width: 38,
@@ -106,8 +115,25 @@ export default function BuddyTabScreen() {
                 ...shadows.iconButton,
               }}
             >
-              <Ionicons name="bookmark-outline" size={18} color="#3B2A22" />
+              <Ionicons name="help" size={18} color="#3B2A22" />
             </Pressable>
+            <BuddyGuideAnchor step="feed_saved">
+              <Pressable
+                onPress={() => router.push('/buddy/me' as never)}
+                hitSlop={6}
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 19,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: '#FFFFFF',
+                  ...shadows.iconButton,
+                }}
+              >
+                <Ionicons name="bookmark-outline" size={18} color="#3B2A22" />
+              </Pressable>
+            </BuddyGuideAnchor>
             <Pressable
               onPress={() => router.push('/notifications?category=buddy' as never)}
               hitSlop={6}
@@ -147,7 +173,7 @@ export default function BuddyTabScreen() {
         </View>
       </View>
 
-      <View style={{ backgroundColor: HERO_CORAL, paddingVertical: 14 }}>
+      <BuddyGuideAnchor step="feed_categories" style={{ backgroundColor: HERO_CORAL, paddingVertical: 14 }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 14 }}>
           {CATEGORIES.map((cat) => {
             const isActive = category === cat.id;
@@ -192,7 +218,7 @@ export default function BuddyTabScreen() {
             );
           })}
         </ScrollView>
-      </View>
+      </BuddyGuideAnchor>
     </>
   );
 
@@ -260,10 +286,13 @@ export default function BuddyTabScreen() {
           onWishPress={() => {
             router.push({ pathname: '/buddy/compose', params: { type: 'errand_carry' } } as never);
           }}
+          toggleRef={createTargetRef}
           bottom={16}
           right={18}
         />
       </View>
+
+      <BuddyGuideSpotlight chapter="feed" />
     </Screen>
   );
 }

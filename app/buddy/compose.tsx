@@ -1,22 +1,26 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
+import { BuddyFormField } from '../../components/buddy/BuddyFormField';
 import { BuddyPhotoPicker } from '../../components/buddy/BuddyPhotoPicker';
 import { BuddyPriceField } from '../../components/buddy/BuddyPriceField';
 import { DateRangePicker } from '../../components/datetime/DateRangePicker';
 import { DateTimeRangePicker } from '../../components/datetime/DateTimeRangePicker';
 import { GradientButton } from '../../components/GradientButton';
+import { BuddyGuideAnchor } from '../../components/guide/BuddyGuideAnchor';
+import { BuddyGuideSpotlight } from '../../components/guide/BuddyGuideSpotlight';
 import { IconCircleButton } from '../../components/IconCircleButton';
-import { KeyboardSafeTextInput } from '../../components/KeyboardSafeTextInput';
 import { PageHeader } from '../../components/PageHeader';
 import { Pill } from '../../components/Pill';
 import { Screen } from '../../components/Screen';
 import { SectionLabel } from '../../components/SectionLabel';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { useLanguage } from '../../context/LanguageContext';
+import { measureBuddyTarget } from '../../features/guide/buddyGuide';
+import { useBuddyGuide } from '../../features/guide/useBuddyGuide';
 import {
   type BuddyPostCategory,
   type BuddyPostMedia,
@@ -53,42 +57,6 @@ function formatDateOnly(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-interface FieldProps {
-  label: string;
-  value: string;
-  onChangeText: (value: string) => void;
-  placeholder: string;
-  multiline?: boolean;
-  keyboardType?: 'default' | 'decimal-pad';
-  maxLength?: number;
-}
-
-function FormField({
-  label,
-  value,
-  onChangeText,
-  placeholder,
-  multiline = false,
-  keyboardType = 'default',
-  maxLength = 120,
-}: FieldProps) {
-  return (
-    <View style={styles.fieldWrap}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <KeyboardSafeTextInput
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={colors.textSubtle}
-        multiline={multiline}
-        keyboardType={keyboardType}
-        maxLength={maxLength}
-        style={[styles.input, multiline ? styles.bodyInput : null]}
-      />
-    </View>
-  );
-}
-
 export default function BuddyComposeScreen() {
   const { t } = useLanguage();
   const params = useLocalSearchParams<{ type?: string }>();
@@ -98,6 +66,12 @@ export default function BuddyComposeScreen() {
   const postType: BuddyPostType = params.type === 'errand_carry' ? 'errand_carry' : 'companion';
   const isWish = postType === 'errand_carry';
 
+  const chapter = isWish ? 'wish' : 'companion';
+  const guide = useBuddyGuide(chapter);
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollOffset = useRef(0);
+
+  // Wish posts have no category picker: they are always 'errand_carry'.
   const [category, setCategory] = useState<BuddyPostCategory>(isWish ? 'errand_carry' : 'meal');
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -113,8 +87,7 @@ export default function BuddyComposeScreen() {
     end: null,
   });
   const [serviceCity, setServiceCity] = useState(user?.city ?? '');
-  const [acceptedCountry, setAcceptedCountry] = useState('');
-  const [acceptedCity, setAcceptedCity] = useState('');
+  const [whereToBuy, setWhereToBuy] = useState('');
   const [destinationCity, setDestinationCity] = useState(user?.city ?? '');
   const [acceptsShipping, setAcceptsShipping] = useState(true);
   const [mediaItems, setMediaItems] = useState<BuddyPostMedia[]>([]);
@@ -127,18 +100,12 @@ export default function BuddyComposeScreen() {
   const priceDecided = isBuddyPricingComplete(priceMode, parsedPriceCents);
   const visibleCategories = CATEGORY_OPTIONS.filter((option) => option.type.includes(postType));
   const canSubmit = useMemo(() => {
-    if (!title.trim() || !body.trim() || !priceDecided || isUploading) return false;
-    if (!isWish) return Boolean(companionRange.start && companionRange.end && serviceCity.trim());
-    return Boolean(
-      carryRange.start
-      && carryRange.end
-      && acceptedCountry.trim()
-      && acceptedCity.trim()
-      && destinationCity.trim(),
-    );
+    if (!body.trim() || !priceDecided || isUploading) return false;
+    if (!isWish) {
+      return Boolean(title.trim() && companionRange.start && companionRange.end && serviceCity.trim());
+    }
+    return Boolean(carryRange.start && carryRange.end && whereToBuy.trim() && destinationCity.trim());
   }, [
-    acceptedCity,
-    acceptedCountry,
     body,
     carryRange,
     companionRange,
@@ -148,6 +115,7 @@ export default function BuddyComposeScreen() {
     priceDecided,
     serviceCity,
     title,
+    whereToBuy,
   ]);
 
   const pickPhotos = async () => {
@@ -193,7 +161,8 @@ export default function BuddyComposeScreen() {
       await createPost.mutateAsync({
         type: postType,
         category,
-        title: title.trim(),
+        // A wish is described by one text block — no separate headline.
+        title: isWish ? '' : title.trim(),
         body: body.trim(),
         price_cents: parsedPriceCents ?? 0,
         pricing_mode: priceMode,
@@ -202,10 +171,9 @@ export default function BuddyComposeScreen() {
         available_until: !isWish && companionRange.end ? companionRange.end.toISOString() : undefined,
         depart_date: isWish && carryRange.start ? formatDateOnly(carryRange.start) : undefined,
         return_date: isWish && carryRange.end ? formatDateOnly(carryRange.end) : undefined,
-        from_city: isWish ? acceptedCity.trim() : serviceCity.trim(),
+        from_city: isWish ? whereToBuy.trim() : serviceCity.trim(),
         to_city: isWish ? destinationCity.trim() : undefined,
-        accepted_country: isWish ? acceptedCountry.trim() : undefined,
-        accepted_city: isWish ? acceptedCity.trim() : undefined,
+        accepted_city: isWish ? whereToBuy.trim() : undefined,
         accepts_shipping: isWish ? acceptsShipping : false,
         media_items: isWish
           ? mediaItems.map((item) => ({ media_url: item.media_url, mime_type: item.mime_type }))
@@ -228,18 +196,63 @@ export default function BuddyComposeScreen() {
     }
   };
 
+  // The walkthrough points at the real Post button, so a guided tap opens a
+  // confirm card first — the tour never publishes on the user's behalf.
+  const guidedPublishStep = isWish ? 'wish_publish' : 'companion_publish';
+  const handlePostPress = () => {
+    if (guide.step === guidedPublishStep) {
+      guide.requestPublishConfirm();
+      return;
+    }
+    void submit();
+  };
+
+  // Keep the highlighted control on screen: the composer is longer than a
+  // viewport, so a step whose target scrolled away would spotlight nothing.
+  useEffect(() => {
+    const step = guide.step;
+    if (!step) return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const rect = await measureBuddyTarget(step);
+      if (cancelled || !rect) return;
+      const topBand = 150;
+      const bottomBand = 420;
+      if (rect.y >= topBand && rect.y <= bottomBand) return;
+      scrollRef.current?.scrollTo({
+        y: Math.max(0, scrollOffset.current + rect.y - topBand),
+        animated: true,
+      });
+    }, 120);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [guide.step]);
+
   const header = (
     <PageHeader
       title={isWish ? t.buddy.compose_wish_title : t.buddy.compose_companion_title}
       subtitle={isWish ? t.buddy.compose_wish_subtitle : t.buddy.compose_companion_subtitle}
       trailing={(
-        <IconCircleButton
-          accessibilityLabel={t.common.back}
-          onPress={() => router.back()}
-          size={42}
-        >
-          <Ionicons name="close" size={20} color={colors.textBrown} />
-        </IconCircleButton>
+        <View style={styles.headerActions}>
+          <View testID="buddy.compose.guide-entry">
+            <IconCircleButton
+              accessibilityLabel={t.buddy_guide.entry_label}
+              onPress={guide.restart}
+              size={42}
+            >
+              <Ionicons name="help" size={20} color={colors.textBrown} />
+            </IconCircleButton>
+          </View>
+          <IconCircleButton
+            accessibilityLabel={t.common.back}
+            onPress={() => router.back()}
+            size={42}
+          >
+            <Ionicons name="close" size={20} color={colors.textBrown} />
+          </IconCircleButton>
+        </View>
       )}
     />
   );
@@ -262,57 +275,86 @@ export default function BuddyComposeScreen() {
   return (
     <Screen header={header} keyboard background="default" testID="screen.buddy.compose">
       <ScrollView
+        ref={scrollRef}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
+        scrollEventThrottle={16}
+        onScroll={(event) => {
+          scrollOffset.current = event.nativeEvent.contentOffset.y;
+        }}
       >
         {isWish ? (
           <View style={styles.section}>
             <SectionLabel tone="coral">{t.buddy.section_photos}</SectionLabel>
-            <BuddyPhotoPicker
-              items={mediaItems}
-              maxItems={MAX_WISH_PHOTOS}
-              addLabel={t.buddy.photo_add}
-              emptyTitle={t.buddy.photo_empty_title}
-              emptyHint={t.buddy.photo_empty_hint}
-              removeLabel={t.buddy.photo_remove}
-              isUploading={isUploading}
-              onAdd={() => void pickPhotos()}
-              onRemove={(index) => setMediaItems((current) => current.filter((_, itemIndex) => itemIndex !== index))}
-            />
+            <BuddyGuideAnchor step="wish_photos">
+              <BuddyPhotoPicker
+                items={mediaItems}
+                maxItems={MAX_WISH_PHOTOS}
+                addLabel={t.buddy.photo_add}
+                emptyTitle={t.buddy.photo_empty_title}
+                emptyHint={t.buddy.photo_empty_hint}
+                removeLabel={t.buddy.photo_remove}
+                isUploading={isUploading}
+                onAdd={() => void pickPhotos()}
+                onRemove={(index) => setMediaItems((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+              />
+            </BuddyGuideAnchor>
           </View>
         ) : null}
 
         <View style={styles.section}>
           <SectionLabel>{t.buddy.section_request}</SectionLabel>
           <SurfaceCard style={styles.formCard}>
-            <Text style={styles.fieldLabel}>{t.buddy.compose_category_label}</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-              {visibleCategories.map((option) => (
-                <Pressable key={option.id} onPress={() => setCategory(option.id)}>
-                  <Pill
-                    label={t.buddy[`cat_${option.id}` as const]}
-                    tone={category === option.id ? 'coral' : 'cream'}
-                    size="md"
+            {isWish ? (
+              <BuddyGuideAnchor step="wish_description">
+                <BuddyFormField
+                  label={t.buddy.field_description}
+                  hint={t.buddy.field_description_hint}
+                  value={body}
+                  onChangeText={setBody}
+                  placeholder={t.buddy.compose_description_placeholder}
+                  multiline
+                  maxLength={2500}
+                />
+              </BuddyGuideAnchor>
+            ) : (
+              <>
+                <BuddyGuideAnchor step="companion_category">
+                  <Text style={styles.fieldLabel}>{t.buddy.compose_category_label}</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+                    {visibleCategories.map((option) => (
+                      <Pressable key={option.id} onPress={() => setCategory(option.id)}>
+                        <Pill
+                          label={t.buddy[`cat_${option.id}` as const]}
+                          tone={category === option.id ? 'coral' : 'cream'}
+                          size="md"
+                        />
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </BuddyGuideAnchor>
+                <BuddyGuideAnchor step="companion_title">
+                  <BuddyFormField
+                    label={t.buddy.field_title}
+                    value={title}
+                    onChangeText={setTitle}
+                    placeholder={t.buddy.compose_title_placeholder}
+                    maxLength={160}
                   />
-                </Pressable>
-              ))}
-            </ScrollView>
-            <FormField
-              label={t.buddy.field_title}
-              value={title}
-              onChangeText={setTitle}
-              placeholder={t.buddy.compose_title_placeholder}
-              maxLength={160}
-            />
-            <FormField
-              label={t.buddy.field_body}
-              value={body}
-              onChangeText={setBody}
-              placeholder={t.buddy.compose_body_placeholder}
-              multiline
-              maxLength={2500}
-            />
+                </BuddyGuideAnchor>
+                <BuddyGuideAnchor step="companion_body">
+                  <BuddyFormField
+                    label={t.buddy.field_body}
+                    value={body}
+                    onChangeText={setBody}
+                    placeholder={t.buddy.compose_body_placeholder}
+                    multiline
+                    maxLength={2500}
+                  />
+                </BuddyGuideAnchor>
+              </>
+            )}
             <Text style={styles.counter}>{body.length} / 2500</Text>
           </SurfaceCard>
         </View>
@@ -320,102 +362,115 @@ export default function BuddyComposeScreen() {
         <View style={styles.section}>
           <SectionLabel tone="lavender">{isWish ? t.buddy.section_fulfilment : t.buddy.section_route}</SectionLabel>
           <SurfaceCard style={styles.formCard}>
-            <Text style={styles.fieldLabel}>{t.buddy.field_when}</Text>
-            {isWish ? (
-              <DateRangePicker
-                value={carryRange}
-                onChange={setCarryRange}
-                placeholder={t.buddy.compose_pick_dates}
-                minDate={new Date()}
-              />
-            ) : (
-              <DateTimeRangePicker
-                value={companionRange}
-                onChange={setCompanionRange}
-                placeholder={t.buddy.compose_pick_time}
-                minDate={new Date()}
-              />
-            )}
+            <BuddyGuideAnchor step={isWish ? 'wish_dates' : 'companion_when'}>
+              <Text style={styles.fieldLabel}>{t.buddy.field_when}</Text>
+              {isWish ? (
+                <DateRangePicker
+                  value={carryRange}
+                  onChange={setCarryRange}
+                  placeholder={t.buddy.compose_pick_dates}
+                  minDate={new Date()}
+                />
+              ) : (
+                <DateTimeRangePicker
+                  value={companionRange}
+                  onChange={setCompanionRange}
+                  placeholder={t.buddy.compose_pick_time}
+                  minDate={new Date()}
+                />
+              )}
+            </BuddyGuideAnchor>
 
             {isWish ? (
               <>
-                <View style={styles.twoColumn}>
-                  <View style={styles.column}>
-                    <FormField
-                      label={t.buddy.field_accepted_country}
-                      value={acceptedCountry}
-                      onChangeText={setAcceptedCountry}
-                      placeholder={t.buddy.compose_country_placeholder}
-                    />
-                  </View>
-                  <View style={styles.column}>
-                    <FormField
-                      label={t.buddy.field_accepted_city}
-                      value={acceptedCity}
-                      onChangeText={setAcceptedCity}
-                      placeholder={t.buddy.compose_city_placeholder}
-                    />
-                  </View>
-                </View>
-                <FormField
-                  label={t.buddy.field_destination_city}
-                  value={destinationCity}
-                  onChangeText={setDestinationCity}
-                  placeholder={t.buddy.compose_destination_city_placeholder}
-                />
-                <View style={styles.switchRow}>
-                  <View style={styles.switchCopy}>
-                    <Ionicons name="cube-outline" size={20} color={colors.brandCoral} />
-                    <Text style={styles.switchLabel}>{t.buddy.field_accepts_shipping}</Text>
-                  </View>
-                  <Switch
-                    value={acceptsShipping}
-                    onValueChange={setAcceptsShipping}
-                    trackColor={{ true: colors.brandCoral, false: colors.lineWarm }}
-                    thumbColor="#FFFFFF"
+                <BuddyGuideAnchor step="wish_where_to_buy">
+                  <BuddyFormField
+                    label={t.buddy.field_where_to_buy}
+                    hint={t.buddy.field_where_to_buy_hint}
+                    value={whereToBuy}
+                    onChangeText={setWhereToBuy}
+                    placeholder={t.buddy.compose_where_to_buy_placeholder}
+                    maxLength={100}
                   />
-                </View>
+                </BuddyGuideAnchor>
+                <BuddyGuideAnchor step="wish_deliver_to">
+                  <BuddyFormField
+                    label={t.buddy.field_destination_city}
+                    hint={t.buddy.field_destination_city_hint}
+                    value={destinationCity}
+                    onChangeText={setDestinationCity}
+                    placeholder={t.buddy.compose_destination_city_placeholder}
+                  />
+                </BuddyGuideAnchor>
+                <BuddyGuideAnchor step="wish_shipping">
+                  <View style={styles.switchRow}>
+                    <View style={styles.switchCopy}>
+                      <Ionicons name="cube-outline" size={20} color={colors.brandCoral} />
+                      <Text style={styles.switchLabel}>{t.buddy.field_accepts_shipping}</Text>
+                    </View>
+                    <Switch
+                      value={acceptsShipping}
+                      onValueChange={setAcceptsShipping}
+                      trackColor={{ true: colors.brandCoral, false: colors.lineWarm }}
+                      thumbColor="#FFFFFF"
+                    />
+                  </View>
+                </BuddyGuideAnchor>
               </>
             ) : (
-              <FormField
-                label={t.buddy.field_where_from}
-                value={serviceCity}
-                onChangeText={setServiceCity}
-                placeholder={t.buddy.compose_city_placeholder}
-              />
+              <BuddyGuideAnchor step="companion_city">
+                <BuddyFormField
+                  label={t.buddy.field_where_from}
+                  value={serviceCity}
+                  onChangeText={setServiceCity}
+                  placeholder={t.buddy.compose_city_placeholder}
+                />
+              </BuddyGuideAnchor>
             )}
           </SurfaceCard>
         </View>
 
         <View style={styles.section}>
           <SectionLabel tone="coral">{t.buddy.field_price}</SectionLabel>
-          <BuddyPriceField
-            priceText={priceText}
-            currency={currency}
-            mode={priceMode}
-            isComplete={priceDecided}
-            amountPlaceholder={t.buddy.compose_price_placeholder}
-            fixedLabel={t.buddy.field_price}
-            freeLabel={t.buddy.compose_price_free_label}
-            negotiableLabel={t.buddy.compose_price_negotiable_label}
-            onPriceTextChange={setPriceText}
-            onCurrencyChange={setCurrency}
-            onModeChange={setPriceMode}
-          />
+          <BuddyGuideAnchor step={isWish ? 'wish_price' : 'companion_price'}>
+            <BuddyPriceField
+              priceText={priceText}
+              currency={currency}
+              mode={priceMode}
+              isComplete={priceDecided}
+              amountPlaceholder={t.buddy.compose_price_placeholder}
+              fixedLabel={t.buddy.field_price}
+              freeLabel={t.buddy.compose_price_free_label}
+              negotiableLabel={t.buddy.compose_price_negotiable_label}
+              onPriceTextChange={setPriceText}
+              onCurrencyChange={setCurrency}
+              onModeChange={setPriceMode}
+            />
+          </BuddyGuideAnchor>
         </View>
       </ScrollView>
 
       <View style={styles.footer}>
-        <GradientButton
-          label={t.buddy.compose_button}
-          loading={createPost.isPending}
-          disabled={!canSubmit}
-          fullWidth
-          size="lg"
-          leadingIcon={<Ionicons name={isWish ? 'sparkles' : 'people'} size={19} color="#FFFFFF" />}
-          onPress={() => void submit()}
-        />
+        <BuddyGuideAnchor step={guidedPublishStep}>
+          <GradientButton
+            label={t.buddy.compose_button}
+            loading={createPost.isPending}
+            disabled={!canSubmit}
+            fullWidth
+            size="lg"
+            leadingIcon={<Ionicons name={isWish ? 'sparkles' : 'people'} size={19} color="#FFFFFF" />}
+            onPress={handlePostPress}
+          />
+        </BuddyGuideAnchor>
       </View>
+
+      <BuddyGuideSpotlight
+        chapter={chapter}
+        onConfirmPublish={() => {
+          guide.end();
+          void submit();
+        }}
+      />
     </Screen>
   );
 }
@@ -433,28 +488,14 @@ const styles = StyleSheet.create({
   formCard: {
     gap: spacing.md,
   },
-  fieldWrap: {
-    gap: spacing.sm,
-  },
   fieldLabel: {
     ...typography.caption,
     color: colors.textMuted,
     fontWeight: '700',
   },
-  input: {
-    minHeight: 50,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.lineWarm,
-    backgroundColor: '#FFFBF7',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    color: colors.textMain,
-    fontSize: 15,
-  },
-  bodyInput: {
-    minHeight: 124,
-    textAlignVertical: 'top',
+  headerActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
   counter: {
     ...typography.caption,
@@ -465,13 +506,6 @@ const styles = StyleSheet.create({
   chipRow: {
     gap: spacing.sm,
     paddingRight: spacing.sm,
-  },
-  twoColumn: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  column: {
-    flex: 1,
   },
   switchRow: {
     minHeight: 54,

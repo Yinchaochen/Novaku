@@ -96,6 +96,18 @@
   ],
   "current_recipes": [
     {
+      "name": "Chaptered walkthrough",
+      "path": "features/guide/chapteredGuide.ts",
+      "status": "shared state machine behind the Buddy and Social tours, rendered by /dev/buddy-guide and /dev/social-guide",
+      "invariant": "One chapter per surface, armed by the surface that renders it; progress is local-only and each tour keeps its own storage key; the scrim never takes touches and the tour never presses a create/publish button."
+    },
+    {
+      "name": "App update prompts",
+      "path": "components/appUpdate/UpdateSheets.tsx",
+      "status": "shared recipe, rendered by /dev/app-update",
+      "invariant": "The forced-update sheet has no dismiss affordance and swallows Android back; the dismissible ones always offer a later action."
+    },
+    {
       "name": "OAuth registration confirmation",
       "path": "features/auth/OAuthRegistrationForm.tsx",
       "status": "shared Google/Apple legal-confirmation recipe, rendered by /dev/auth-oauth",

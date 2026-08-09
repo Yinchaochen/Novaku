@@ -21,6 +21,7 @@ import {
   useResolveCityFromCoordinates,
   useUpdateProfile,
 } from '../features/auth/useAuth';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { useAuthStore } from '../store/authStore';
 
 type Step = 'city' | 'persona';
@@ -65,16 +66,21 @@ export function OnboardingModal({
 
   const [step, setStep] = useState<Step>('city');
   const [cityQuery, setCityQuery] = useState('');
-  const [submittedCityQuery, setSubmittedCityQuery] = useState('');
+  // Non-empty = the user explicitly asked for a deep (Nominatim) lookup via
+  // the search button / return key; typing always resets to local typeahead.
+  const [deepQuery, setDeepQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState<SelectedCity | null>(null);
   const [selectedIntents, setSelectedIntents] = useState<OnboardingIntentTag[]>([]);
   const [selectedStage, setSelectedStage] = useState<OnboardingArrivalStage>('just_arrived');
   const [locationSource, setLocationSource] = useState<'device' | 'manual' | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
+  const debouncedCityQuery = useDebouncedValue(cityQuery.trim(), 350);
+  const activeCityQuery = deepQuery || debouncedCityQuery;
   const citySuggestions = useCitySuggestions(
-    submittedCityQuery,
-    visible && step === 'city' && submittedCityQuery.length >= 2
+    activeCityQuery,
+    visible && step === 'city' && activeCityQuery.length >= 2,
+    { deep: deepQuery.length > 0 }
   );
 
   useEffect(() => {
@@ -84,7 +90,7 @@ export function OnboardingModal({
 
     setStep('city');
     setCityQuery(user.city ?? '');
-    setSubmittedCityQuery('');
+    setDeepQuery('');
     setSelectedCity(
       user.city
         ? {
@@ -138,7 +144,7 @@ export function OnboardingModal({
         longitude: city.longitude,
       });
       setCityQuery(city.name);
-      setSubmittedCityQuery('');
+      setDeepQuery('');
       setLocationSource('device');
       setStep('persona');
     } catch {
@@ -150,14 +156,14 @@ export function OnboardingModal({
   const handleSelectCity = (city: SelectedCity) => {
     setSelectedCity(city);
     setCityQuery(city.name);
-    setSubmittedCityQuery('');
+    setDeepQuery('');
     setFeedback(null);
   };
 
-  const handleCitySearch = () => {
+  const handleCityDeepSearch = () => {
     const query = cityQuery.trim();
     if (query.length >= 2) {
-      setSubmittedCityQuery(query);
+      setDeepQuery(query);
     }
   };
 
@@ -253,12 +259,12 @@ export function OnboardingModal({
                     value={cityQuery}
                     onChangeText={(value) => {
                       setCityQuery(value);
-                      setSubmittedCityQuery('');
+                      setDeepQuery('');
                       if (selectedCity && value.trim() !== selectedCity.name) {
                         setSelectedCity(null);
                       }
                     }}
-                    onSubmitEditing={handleCitySearch}
+                    onSubmitEditing={handleCityDeepSearch}
                     returnKeyType="search"
                     placeholder={t.onboarding.city_search_placeholder}
                     className="flex-1 rounded-3xl border border-gray-200 bg-gray-50 px-4 py-3 text-base text-gray-900"
@@ -267,7 +273,7 @@ export function OnboardingModal({
                     testID="onboarding.city.search"
                     accessibilityRole="button"
                     accessibilityLabel={t.onboarding.city_search_placeholder}
-                    onPress={handleCitySearch}
+                    onPress={handleCityDeepSearch}
                     disabled={cityQuery.trim().length < 2}
                     className="h-[50px] w-[50px] items-center justify-center rounded-full bg-primary"
                     style={{ opacity: cityQuery.trim().length < 2 ? 0.45 : 1 }}
@@ -320,9 +326,11 @@ export function OnboardingModal({
                         </Pressable>
                       );
                     })
-                  ) : submittedCityQuery.length >= 2 ? (
+                  ) : activeCityQuery.length >= 2 && !citySuggestions.isFetching ? (
                     <Text className="py-4 text-center text-sm text-gray-500">
-                      {t.onboarding.city_empty}
+                      {deepQuery
+                        ? t.onboarding.city_empty
+                        : `${t.onboarding.city_empty} ${t.onboarding.city_empty_deep_hint}`}
                     </Text>
                   ) : null}
                 </View>

@@ -163,12 +163,18 @@ export function BuddyPostCard({ post, onPress }: BuddyPostCardProps) {
         </View>
       </View>
 
-      {/* Title + body — preview truncates at 100 chars total */}
-      <Text className="mt-2.5 text-[15px] font-bold text-black" numberOfLines={2}>
-        {post.title}
-      </Text>
+      {/* Title + body — preview truncates at 100 chars total. Wish posts carry
+          no title (one description only), so the body leads the card. */}
+      {post.title ? (
+        <Text className="mt-2.5 text-[15px] font-bold text-black" numberOfLines={2}>
+          {post.title}
+        </Text>
+      ) : null}
       {post.body ? (
-        <Text className="mt-1 text-[13px] leading-5 text-neutral-600" numberOfLines={3}>
+        <Text
+          className={`text-[13px] leading-5 text-neutral-600 ${post.title ? 'mt-1' : 'mt-2.5'}`}
+          numberOfLines={3}
+        >
           {post.body.length > 100 ? `${post.body.slice(0, 100)}…` : post.body}
         </Text>
       ) : null}

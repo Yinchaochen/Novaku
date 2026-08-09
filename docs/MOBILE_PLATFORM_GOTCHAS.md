@@ -315,6 +315,26 @@ visible={isConversationVisible && !isCreateMeetupVisible}
 
 ---
 
+### 坑 #8 — Android 的 `measureInWindow` 扣掉了状态栏,edge-to-edge overlay 因此整体上移
+
+**症状**(2026-08-06,新手引导 spotlight):真机 Android 上聚光灯的挖洞 + 珊瑚光圈 + 说明卡整体**比真实 Post 按钮高出一个状态栏**(实测约 40dp),尺寸正确(说明测的是对的节点)、横向不偏;iOS 与 Expo Web 全对。
+
+**根因**:RN Android 的 `measureInWindow` 主动减掉 `getWindowVisibleDisplayFrame().top`(= 状态栏高度):
+
+```java
+// ReactAndroid NativeViewHierarchyManager.java
+v.getLocationOnScreen(outputBuffer);
+v.getWindowVisibleDisplayFrame(visibleWindowFrame);
+outputBuffer[0] -= visibleWindowFrame.left;
+outputBuffer[1] -= visibleWindowFrame.top;   // ← 状态栏
+```
+
+新架构走 Fabric 也一样(`FabricUIManager.java` → `RootViewUtil.getViewportOffset()` 里逐字重复该减法)。而 `app.json` 开了 `edgeToEdgeEnabled: true`,root view 铺满全屏画在状态栏底下,所以 `StyleSheet.absoluteFill` 的 y=0 就是屏幕物理顶端 —— 把「已减过状态栏的 y」直接当 overlay 局部坐标用,就差了 `insets.top`。竖屏下 `visibleWindowFrame.left == 0`,故只偏纵向。iOS 无此减法,Expo Web 用 `getBoundingClientRect`,两边都看不到这个 bug。
+
+**规则**:任何用 `measureInWindow` 定位覆盖层的地方,**让 overlay 自己也走一次 `measureInWindow`,两个结果相减**得到 overlay 局部坐标(见 [`features/guide/guideTargets.ts`](../features/guide/guideTargets.ts) 的 `toOverlayRect`)。偏移在相减时自动抵消,iOS / Android / Modal 内外同一条路径,不需要平台分支,也不依赖 edge-to-edge 配置是否开着。**不要**写 `Platform.OS === 'android' ? y + insets.top : y` —— 那把正确性绑死在 edge-to-edge 永远开启上,且 Modal 里要再判一次。被测节点记得 `collapsable={false}`。
+
+---
+
 ## 3. iOS vs Android 关键差异速查表
 
 ### Modal

@@ -287,6 +287,8 @@ export function getCommunitySessionId() {
 export interface CommunityFeedPage {
   items: CommunityPost[];
   next_cursor: string | null;
+  // First page only: viewer has a city but nothing served is from it (D-061).
+  local_pool_empty?: boolean;
 }
 
 export interface CommunitySearchOfficialHit {
@@ -351,6 +353,7 @@ export function useCommunityFeed() {
       return {
         items: res.data.data.items as CommunityPost[],
         next_cursor: (res.data.data.next_cursor ?? null) as string | null,
+        local_pool_empty: Boolean(res.data.data.local_pool_empty),
       };
     },
     initialPageParam: null as string | null,
@@ -403,6 +406,23 @@ export function useSearchCommunityPosts(params: CommunitySearchParams | null) {
     enabled: Boolean(user) && Boolean(params && params.q.trim().length >= 2),
     retry: 1,
     staleTime: 30_000,
+  });
+}
+
+// Trending search terms for the Discover board. The server returns an empty
+// list until enough different people searched the same thing, and the screen
+// hides the section in that case — no invented suggestions.
+export function useSearchDiscover(enabled = true) {
+  const user = useAuthStore((state) => state.user);
+  return useQuery({
+    queryKey: ['community', 'search-discover', user?.id, user?.city ?? 'no-city'],
+    queryFn: async () => {
+      const res = await api.get('/community/search-discover');
+      return (res.data.data.items ?? []) as string[];
+    },
+    enabled: Boolean(user) && enabled,
+    staleTime: 60 * 60 * 1000,
+    retry: 1,
   });
 }
 

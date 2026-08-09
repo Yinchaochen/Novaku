@@ -17,6 +17,7 @@ const locationPendingUser: AuthUser = {
   email: 'city-gallery@postervia.app',
   display_name: 'Mira',
   avatar_url: null,
+  profile_background_url: null,
   locale: 'en',
   identity: 'newcomer',
   city: null,

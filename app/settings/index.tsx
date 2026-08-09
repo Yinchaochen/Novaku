@@ -184,6 +184,12 @@ export default function SettingsHubScreen() {
               hint={t.settings.admin_freshness_hint}
               onPress={() => router.push('/admin/odyssey-freshness' as never)}
             />
+            <SettingsRow
+              icon="megaphone-outline"
+              label={t.settings.admin_releases}
+              hint={t.settings.admin_releases_hint}
+              onPress={() => router.push('/admin/app-releases' as never)}
+            />
           </SettingsSection>
         ) : null}
       </ScrollView>

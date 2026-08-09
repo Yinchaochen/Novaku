@@ -206,7 +206,7 @@ export default function BuddyPostDetailScreen() {
             <Pill label={t.buddy[`type_${post.type}` as const]} tone="coral" />
             <Pill label={t.buddy[`cat_${post.category}` as const]} tone="lavender" />
           </View>
-          <Text style={styles.title}>{post.title}</Text>
+          {post.title ? <Text style={styles.title}>{post.title}</Text> : null}
           <LinkText style={styles.body} text={post.body} />
         </SurfaceCard>
 

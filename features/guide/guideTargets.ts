@@ -36,8 +36,7 @@ export function useGuideTarget(step: ProductGuideStep) {
   );
 }
 
-export function measureGuideTarget(step: ProductGuideStep): Promise<GuideTargetRect | null> {
-  const node = targets.get(step);
+export function measureNode(node: MeasurableNode | null | undefined): Promise<GuideTargetRect | null> {
   if (!node || typeof node.measureInWindow !== 'function') {
     return Promise.resolve(null);
   }
@@ -50,4 +49,25 @@ export function measureGuideTarget(step: ProductGuideStep): Promise<GuideTargetR
       resolve(null);
     }
   });
+}
+
+export function measureGuideTarget(step: ProductGuideStep): Promise<GuideTargetRect | null> {
+  return measureNode(targets.get(step));
+}
+
+// Android's measureInWindow subtracts getWindowVisibleDisplayFrame().top (the
+// status bar) from the on-screen y, while an edge-to-edge overlay's own origin
+// is the physical top of the screen — so raw window coords land insets.top too
+// high. Measuring the overlay with the same API and subtracting cancels that
+// offset on every platform, inside a Modal window as well.
+export function toOverlayRect(
+  target: GuideTargetRect,
+  overlayOrigin: GuideTargetRect | null,
+): GuideTargetRect {
+  return {
+    x: target.x - (overlayOrigin?.x ?? 0),
+    y: target.y - (overlayOrigin?.y ?? 0),
+    width: target.width,
+    height: target.height,
+  };
 }

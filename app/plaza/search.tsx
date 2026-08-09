@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Keyboard, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Keyboard, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { FeedbackPressable } from '../../components/FeedbackPressable';
 import { GlassCard } from '../../components/GlassCard';
@@ -15,6 +15,7 @@ import {
   CommunityPost,
   CommunitySearchParams,
   useSearchCommunityPosts,
+  useSearchDiscover,
 } from '../../features/community/useCommunity';
 import { useAuthStore } from '../../store/authStore';
 import { usePlazaComposeIntentStore } from '../../store/plazaComposeIntentStore';
@@ -29,6 +30,8 @@ type TimeRange = CommunitySearchParams['timeRange'];
 
 const POST_TYPES: PostType[] = ['experience', 'question', 'guide', 'warning', 'recommendation'];
 const TIME_ORDER: TimeRange[] = ['all', 'week', 'month', 'half_year'];
+// Recent searches collapse past this many, like the chevron in XHS's history row.
+const HISTORY_COLLAPSED_COUNT = 8;
 
 function dedupePostsById(posts: CommunityPost[]): CommunityPost[] {
   const seen = new Set<string>();
@@ -109,8 +112,14 @@ export default function PlazaSearchScreen() {
   const [timeRange, setTimeRange] = useState<TimeRange>('all');
   const [sort, setSort] = useState<'relevance' | 'recent'>('relevance');
   const [selectedPost, setSelectedPost] = useState<CommunityPost | null>(null);
+  const [historyExpanded, setHistoryExpanded] = useState(false);
 
   const searchQuery = useSearchCommunityPosts(params);
+  const discoverQuery = useSearchDiscover();
+  const discoverItems = discoverQuery.data ?? [];
+  const visibleHistory = historyExpanded
+    ? historyItems
+    : historyItems.slice(0, HISTORY_COLLAPSED_COUNT);
   const pages = searchQuery.data?.pages;
   const posts = useMemo(() => dedupePostsById(pages?.flatMap((page) => page.items) ?? []), [pages]);
   const firstPage = pages?.[0];
@@ -244,6 +253,9 @@ export default function PlazaSearchScreen() {
         </Text>
       ) : null}
 
+      {/* Filters belong to results: before the first search the page is just
+          the box, what you searched before, and what others are searching. */}
+      {showInitial ? null : (
       <View
         style={{
           flexDirection: 'row',
@@ -307,9 +319,15 @@ export default function PlazaSearchScreen() {
           />
         ))}
       </View>
+      )}
 
       {showInitial ? (
-        <View style={{ flex: 1, paddingHorizontal: 16 }}>
+        <ScrollView
+          style={{ flex: 1 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 28 }}
+        >
           {historyItems.length > 0 ? (
             <>
               <View
@@ -325,22 +343,22 @@ export default function PlazaSearchScreen() {
                 </Text>
                 <FeedbackPressable
                   onPress={() => usePlazaSearchHistoryStore.getState().clear()}
-                  hitSlop={8}
+                  hitSlop={10}
                   testID="plaza-search.clear-history"
+                  accessibilityLabel={t.plaza.search_clear_history}
                   pressedStyle={{ opacity: 0.6 }}
                 >
-                  <Text style={{ fontSize: 12.5, fontWeight: '600', color: colors.textMuted }}>
-                    {t.plaza.search_clear_history}
-                  </Text>
+                  <Ionicons name="trash-outline" size={17} color={colors.textMuted} />
                 </FeedbackPressable>
               </View>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                {historyItems.map((item) => (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                {visibleHistory.map((item) => (
                   <FeedbackPressable
                     key={item}
                     onPress={() => submit(item)}
                     hitSlop={8}
                     style={{
+                      maxWidth: 220,
                       paddingVertical: 7,
                       paddingHorizontal: 13,
                       borderRadius: 999,
@@ -350,20 +368,74 @@ export default function PlazaSearchScreen() {
                     }}
                     pressedStyle={{ opacity: 0.8 }}
                   >
-                    <Text style={{ fontSize: 13, color: colors.textBrown, fontWeight: '600' }}>{item}</Text>
+                    <Text
+                      numberOfLines={1}
+                      style={{ fontSize: 13, color: colors.textBrown, fontWeight: '600' }}
+                    >
+                      {item}
+                    </Text>
                   </FeedbackPressable>
                 ))}
+                {historyItems.length > HISTORY_COLLAPSED_COUNT ? (
+                  <FeedbackPressable
+                    onPress={() => setHistoryExpanded((value) => !value)}
+                    hitSlop={8}
+                    testID="plaza-search.toggle-history"
+                    accessibilityLabel={
+                      historyExpanded ? t.plaza.search_history_less : t.plaza.search_history_more
+                    }
+                    style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: 15,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 1,
+                      borderColor: 'rgba(98, 57, 40, 0.12)',
+                    }}
+                    pressedStyle={{ opacity: 0.7 }}
+                  >
+                    <Ionicons
+                      name={historyExpanded ? 'chevron-up' : 'chevron-down'}
+                      size={15}
+                      color={colors.textMuted}
+                    />
+                  </FeedbackPressable>
+                ) : null}
               </View>
             </>
           ) : (
             <Text
               testID="plaza-search.initial-hint"
-              style={{ paddingTop: 22, fontSize: 13.5, lineHeight: 20, color: colors.textMuted, textAlign: 'center' }}
+              style={{ paddingTop: 6, fontSize: 13.5, lineHeight: 20, color: colors.textMuted }}
             >
               {t.plaza.search_initial_hint}
             </Text>
           )}
-        </View>
+
+          {discoverItems.length > 0 ? (
+            <View style={{ paddingTop: 26 }} testID="plaza-search.discover">
+              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textMuted, paddingBottom: 4 }}>
+                {t.plaza.search_discover}
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                {discoverItems.map((item) => (
+                  <FeedbackPressable
+                    key={item}
+                    onPress={() => submit(item)}
+                    hitSlop={6}
+                    style={{ width: '50%', paddingVertical: 11, paddingRight: 10 }}
+                    pressedStyle={{ opacity: 0.6 }}
+                  >
+                    <Text numberOfLines={1} style={{ fontSize: 14.5, color: colors.textMain }}>
+                      {item}
+                    </Text>
+                  </FeedbackPressable>
+                ))}
+              </View>
+            </View>
+          ) : null}
+        </ScrollView>
       ) : searchQuery.isLoading ? (
         <View style={{ flex: 1, alignItems: 'center', paddingTop: 46, gap: 10 }}>
           <ActivityIndicator color={colors.brandCoral} />

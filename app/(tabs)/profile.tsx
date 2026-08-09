@@ -36,7 +36,14 @@ import { ShareSheet } from '../../components/ShareSheet';
 import { UserQRCodeModal } from '../../components/UserQRCodeModal';
 import { useLanguage } from '../../context/LanguageContext';
 import { colors, gradients, shadows } from '../../theme/tokens';
-import { useCitySuggestions, useUpdateProfile, useUploadAvatar } from '../../features/auth/useAuth';
+import {
+  useCitySuggestions,
+  useUpdateProfile,
+  useUploadAvatar,
+  useUploadProfileBackground,
+} from '../../features/auth/useAuth';
+import { useDebouncedValue } from '../../hooks/useDebouncedValue';
+import { compressImageForUpload } from '../../lib/imageCompression';
 import { CommunityPostDetailModal } from '../../features/community/CommunityPostDetailModal';
 import {
   CommunityPost,
@@ -488,11 +495,15 @@ export default function ProfileScreen() {
   const { user, logout } = useAuthStore();
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [showAvatarViewer, setShowAvatarViewer] = useState(false);
+  const [showBackgroundViewer, setShowBackgroundViewer] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedPost, setSelectedPost] = useState<CommunityPost | null>(null);
   const [draftName, setDraftName] = useState(user?.display_name ?? '');
   const [draftOriginCity, setDraftOriginCity] = useState(user?.origin_city ?? '');
-  const [submittedOriginCity, setSubmittedOriginCity] = useState('');
+  // Non-empty = explicit deep (Nominatim) lookup; typing resets to local typeahead.
+  const [originDeepQuery, setOriginDeepQuery] = useState('');
+  // Once a suggestion is picked, keep the list closed until the user types again.
+  const [originPicked, setOriginPicked] = useState(false);
   const [draftGender, setDraftGender] = useState<
     'male' | 'female' | 'non_binary' | 'prefer_not_to_say' | null
   >(user?.gender ?? null);
@@ -520,9 +531,16 @@ export default function ProfileScreen() {
 
   const updateProfile = useUpdateProfile();
   const uploadAvatar = useUploadAvatar();
+  const uploadProfileBackground = useUploadProfileBackground();
+  const debouncedOriginCity = useDebouncedValue(draftOriginCity.trim(), 350);
+  const activeOriginQuery = originDeepQuery || debouncedOriginCity;
   const originCitySuggestions = useCitySuggestions(
-    submittedOriginCity,
-    showEditModal && submittedOriginCity.length >= 2,
+    activeOriginQuery,
+    showEditModal &&
+      !originPicked &&
+      activeOriginQuery.length >= 2 &&
+      activeOriginQuery !== (user?.origin_city ?? '').trim(),
+    { deep: originDeepQuery.length > 0 },
   );
   const myPostsQuery = useMyCommunityPosts(24);
   const myCommentedQuery = useMyCommentedPosts(activeTab === 'comments');
@@ -538,11 +556,10 @@ export default function ProfileScreen() {
     [posts, notesSubTab],
   );
   const archiveColumns = useMemo(() => splitArchivePosts(visibleNotes), [visibleNotes]);
+  // Hero background is user-set only (lisum 2026-08-08): everyone starts on
+  // the shared translucent-coral default — never derived from posts or avatar.
   const heroMediaUri =
-    resolveMediaUrl(posts[0]?.media_items[0]?.media_url) ??
-    posts[0]?.media_items[0]?.media_url ??
-    resolveMediaUrl(user?.avatar_url) ??
-    null;
+    resolveMediaUrl(user?.profile_background_url) ?? user?.profile_background_url ?? null;
   const savedAvatarUri = resolveMediaUrl(user?.avatar_url) ?? null;
   const viewerAvatarUri = avatarPreview?.uri ?? savedAvatarUri;
   const displayBaseCity = formatDisplayLocation(user?.city) ?? user?.city ?? null;
@@ -572,7 +589,8 @@ export default function ProfileScreen() {
   useEffect(() => {
     setDraftName(user?.display_name ?? '');
     setDraftOriginCity(user?.origin_city ?? '');
-    setSubmittedOriginCity('');
+    setOriginDeepQuery('');
+    setOriginPicked(false);
     setDraftGender(user?.gender ?? null);
   }, [user?.display_name, user?.origin_city, user?.gender]);
 
@@ -654,6 +672,31 @@ export default function ProfileScreen() {
     // branches on user existing.
     router.replace('/(auth)/login');
     await logout();
+  };
+
+  const handlePickBackground = async () => {
+    setFeedback(null);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        allowsMultipleSelection: false,
+        quality: 0.92,
+      });
+      if (result.canceled || !result.assets?.[0]) {
+        return;
+      }
+      const compressed = await compressImageForUpload(result.assets[0]);
+      await uploadProfileBackground.mutateAsync({
+        uri: compressed.uri,
+        mimeType: compressed.mimeType,
+        fileName: compressed.fileName,
+      });
+      setShowBackgroundViewer(false);
+      setFeedback(t.profile.save_success);
+    } catch {
+      setFeedback(t.common.error);
+    }
   };
 
   const handlePickAvatar = async () => {
@@ -753,7 +796,13 @@ export default function ProfileScreen() {
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
 
         {/* ── HERO ── */}
-        <View style={{ backgroundColor: heroMediaUri ? colors.textBrown : '#3B2A22' }}>
+        {/* The hero itself is pressable: tapping blank space opens the
+            background viewer (interactive children keep their own touches).
+            Default = shared translucent-coral wash, same for every account. */}
+        <Pressable
+          onPress={() => setShowBackgroundViewer(true)}
+          style={{ backgroundColor: heroMediaUri ? colors.textBrown : 'rgba(255, 159, 110, 0.5)' }}
+        >
           {heroMediaUri ? (
             <Image source={heroMediaUri} contentFit="cover" transition={120} style={StyleSheet.absoluteFillObject} />
           ) : null}
@@ -1055,7 +1104,7 @@ export default function ProfileScreen() {
               </FeedbackPressable>
             </View>
           </View>
-        </View>
+        </Pressable>
 
         {/* ── TAB BAR — horizontal scroll, content-width items so labels never
             wrap and the row can pan when it overflows. The earlier `flex: 1`
@@ -1442,11 +1491,15 @@ export default function ProfileScreen() {
                   value={draftOriginCity}
                   onChangeText={(value) => {
                     setDraftOriginCity(value);
-                    setSubmittedOriginCity('');
+                    setOriginDeepQuery('');
+                    setOriginPicked(false);
                   }}
                   onSubmitEditing={() => {
                     const query = draftOriginCity.trim();
-                    if (query.length >= 2) setSubmittedOriginCity(query);
+                    if (query.length >= 2) {
+                      setOriginDeepQuery(query);
+                      setOriginPicked(false);
+                    }
                   }}
                   returnKeyType="search"
                   placeholder={t.profile.from_placeholder}
@@ -1458,7 +1511,10 @@ export default function ProfileScreen() {
                   accessibilityLabel={t.onboarding.city_search_placeholder}
                   onPress={() => {
                     const query = draftOriginCity.trim();
-                    if (query.length >= 2) setSubmittedOriginCity(query);
+                    if (query.length >= 2) {
+                      setOriginDeepQuery(query);
+                      setOriginPicked(false);
+                    }
                   }}
                   style={{
                     width: 50,
@@ -1481,15 +1537,15 @@ export default function ProfileScreen() {
                     {t.onboarding.city_searching}
                   </Text>
                 </View>
-              ) : (originCitySuggestions.data ?? []).length > 0 &&
-                submittedOriginCity !== user?.origin_city ? (
+              ) : (originCitySuggestions.data ?? []).length > 0 && !originPicked ? (
                 <View className="mt-2 overflow-hidden rounded-[22px] border border-neutral-200 bg-white">
                   {(originCitySuggestions.data ?? []).slice(0, 5).map((city) => (
                     <FeedbackPressable
                       key={`${city.name}-${city.latitude}-${city.longitude}`}
                       onPress={() => {
                         setDraftOriginCity(city.name);
-                        setSubmittedOriginCity('');
+                        setOriginDeepQuery('');
+                        setOriginPicked(true);
                       }}
                       style={{
                         paddingHorizontal: 16,
@@ -1719,6 +1775,82 @@ export default function ProfileScreen() {
                 </Text>
               </View>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Background viewer — opened by tapping blank hero space. Shows the
+          current background full-size (or the shared coral default) with a
+          change button underneath. */}
+      <Modal
+        visible={showBackgroundViewer}
+        animationType="slide"
+        onRequestClose={() => {
+          if (!uploadProfileBackground.isPending) setShowBackgroundViewer(false);
+        }}
+      >
+        <View
+          className="flex-1 bg-[#05070D]"
+          style={{
+            paddingTop: Math.max(insets.top, 20),
+            paddingBottom: Math.max(insets.bottom, 0),
+          }}
+        >
+          <View className="flex-row items-center justify-between px-5 py-4">
+            <Pressable
+              onPress={() => setShowBackgroundViewer(false)}
+              disabled={uploadProfileBackground.isPending}
+              hitSlop={12}
+              className="h-11 w-11 items-start justify-center"
+            >
+              <Ionicons name="arrow-back" size={28} color="#FFFFFF" />
+            </Pressable>
+            <Text className="text-2xl font-semibold text-white">{t.profile.profile_background}</Text>
+            <View className="h-11 w-11" />
+          </View>
+
+          <View className="flex-1 items-center justify-center px-6">
+            {heroMediaUri ? (
+              <Image
+                source={heroMediaUri}
+                contentFit="contain"
+                style={{ width: '100%', height: '70%' }}
+              />
+            ) : (
+              <View
+                style={{
+                  width: '100%',
+                  height: '55%',
+                  borderRadius: 24,
+                  backgroundColor: 'rgba(255, 159, 110, 0.5)',
+                }}
+              />
+            )}
+          </View>
+
+          <View className="px-6 pb-6">
+            <FeedbackPressable
+              onPress={handlePickBackground}
+              disabled={uploadProfileBackground.isPending}
+              accessibilityRole="button"
+              accessibilityLabel={t.profile.change_background}
+              style={{
+                borderRadius: 24,
+                paddingVertical: 15,
+                alignItems: 'center',
+                backgroundColor: colors.brandCoral,
+                opacity: uploadProfileBackground.isPending ? 0.6 : 1,
+              }}
+              pressedStyle={{ opacity: 0.8 }}
+            >
+              {uploadProfileBackground.isPending ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={{ fontSize: 16, fontWeight: '800', color: '#FFFFFF' }}>
+                  {t.profile.change_background}
+                </Text>
+              )}
+            </FeedbackPressable>
           </View>
         </View>
       </Modal>

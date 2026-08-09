@@ -15,22 +15,28 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
+  StyleProp,
   StyleSheet,
   Text,
   TextInput,
   View,
+  ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LinkPreviewCard } from '../../components/LinkPreviewCard';
 import { LinkText } from '../../components/LinkText';
 import { ChalkIcon } from '../../components/ChalkIcon';
+import { SocialGuideAnchor } from '../../components/guide/SocialGuideAnchor';
+import { SocialGuideSpotlight } from '../../components/guide/SocialGuideSpotlight';
 import { FeedbackPressable } from '../../components/FeedbackPressable';
 import { KeyboardSafeTextInput } from '../../components/KeyboardSafeTextInput';
 import { DateTimeRangePicker } from '../../components/datetime/DateTimeRangePicker';
 import { PlacePicker, type PickedPlace } from '../../components/places/PlacePicker';
 import { Screen } from '../../components/Screen';
 import { useLanguage } from '../../context/LanguageContext';
+import type { SocialGuideStep } from '../../features/guide/socialGuide';
+import { useSocialGuide } from '../../features/guide/useSocialGuide';
 import { useAuthStore } from '../../store/authStore';
 import { colors, shadows } from '../../theme/tokens';
 import { formatDisplayLocation } from '../../lib/displayLocation';
@@ -216,6 +222,27 @@ function ConversationRow({ item, langCode, onPress }: { item: ConversationItem; 
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return <Text className="px-5 pb-2 pt-2 text-xs font-bold uppercase tracking-[1.3px] text-slate-400">{children}</Text>;
+}
+
+// Registers a walkthrough target only for one item of a repeated list — a step
+// registered twice would leave the ring on whichever node measured last.
+function AnchorIf({
+  active,
+  step,
+  style,
+  children,
+}: {
+  active: boolean;
+  step: SocialGuideStep;
+  style?: StyleProp<ViewStyle>;
+  children: React.ReactNode;
+}) {
+  if (!active) return <View style={style}>{children}</View>;
+  return (
+    <SocialGuideAnchor step={step} style={style}>
+      {children}
+    </SocialGuideAnchor>
+  );
 }
 
 // Renders a single message bubble. Exported for the /dev/network-resilience
@@ -515,6 +542,20 @@ export default function SocialScreen() {
   const [reportSheetVisible, setReportSheetVisible] = useState(false);
   const blockUser = useBlockUser();
   const chatPeerUserId = selectedConversation?.friendUserId ?? null;
+
+  // Walkthrough (D-058): one chapter per surface, armed by the spotlight each
+  // surface mounts. These two instances only read the chapter's step so the
+  // real Create buttons can pop a confirm card instead of firing — the tour
+  // points at the button, it never presses it.
+  const isGroupChat = selectedConversation?.kind === 'group';
+  const chatChapter = isGroupChat ? 'group_chat' : 'chat';
+  const chatGuideStep = (base: 'input' | 'emoji' | 'image' | 'plus'): SocialGuideStep =>
+    (isGroupChat ? `group_chat_${base}` : `chat_${base}`) as SocialGuideStep;
+  const groupGuide = useSocialGuide('group', false);
+  const eventGuide = useSocialGuide('event', false);
+  // Read-only handle for the + menu's "getting started" row; the tab's own
+  // spotlight (below) is what actually arms the list chapter.
+  const listGuide = useSocialGuide('list', false);
 
   const confirmBlockChatPeer = () => {
     if (!chatPeerUserId) return;
@@ -1068,6 +1109,16 @@ export default function SocialScreen() {
     }
   };
 
+  // The walkthrough points at the real Create button, so a guided tap opens a
+  // confirm card first — the tour never creates a group on the user's behalf.
+  const handleCreateGroupPress = () => {
+    if (groupGuide.step === 'group_submit') {
+      groupGuide.requestPublishConfirm();
+      return;
+    }
+    void handleCreateGroup();
+  };
+
   const handleCreateGroup = async () => {
     if (!groupName.trim() || selectedFriendIds.length === 0) return;
     if (!user.city) {
@@ -1096,6 +1147,15 @@ export default function SocialScreen() {
       group,
       groupId: group.id,
     });
+  };
+
+  // Same rule as the group form: guided taps confirm first, never create.
+  const handleCreateMeetupPress = () => {
+    if (eventGuide.step === 'event_submit') {
+      eventGuide.requestPublishConfirm();
+      return;
+    }
+    void handleCreateMeetup();
   };
 
   const handleCreateMeetup = async () => {
@@ -1190,6 +1250,7 @@ export default function SocialScreen() {
           }}
         >
           <View className="flex-row items-center justify-between">
+            <SocialGuideAnchor step="list_create">
             <Pressable
               onPress={() => setIsMenuVisible(true)}
               className="h-12 w-12 items-center justify-center rounded-full bg-white"
@@ -1197,7 +1258,9 @@ export default function SocialScreen() {
             >
               <ChalkIcon name="plus" size={26} color="#241A16" />
             </Pressable>
+            </SocialGuideAnchor>
             <View className="flex-row items-center gap-3">
+              <SocialGuideAnchor step="list_notifications">
               <Pressable
                 onPress={() => router.push('/notifications?category=social' as never)}
                 className="h-12 w-12 items-center justify-center rounded-full bg-white"
@@ -1225,14 +1288,16 @@ export default function SocialScreen() {
                   </View>
                 ) : null}
               </Pressable>
+              </SocialGuideAnchor>
               <Pressable onPress={() => router.push('/(tabs)/profile')}>
                 <SingleAvatar uri={userAvatar} size={48} label={user.display_name} tint="#FFE8DA" />
               </Pressable>
             </View>
           </View>
+          <SocialGuideAnchor step="list_search" style={{ marginTop: 20 }}>
           <Pressable
             onPress={() => router.push('/social/search')}
-            className="mt-5 flex-row items-center rounded-[20px] bg-white px-4"
+            className="flex-row items-center rounded-[20px] bg-white px-4"
             style={[styles.searchShell, { height: 50 }]}
           >
             <ChalkIcon name="search" size={20} color={colors.textSubtle} />
@@ -1240,6 +1305,7 @@ export default function SocialScreen() {
               {t.social.search_messages_placeholder}
             </Text>
           </Pressable>
+          </SocialGuideAnchor>
         </View>
 
         {socialQuery.isError ? (
@@ -1318,10 +1384,9 @@ export default function SocialScreen() {
           ) : null}
 
           <SectionTitle>{t.social.title}</SectionTitle>
+          <SocialGuideAnchor step="list_tabs" style={{ marginHorizontal: 20, marginBottom: 10 }}>
           <View
             style={{
-              marginHorizontal: 20,
-              marginBottom: 10,
               flexDirection: 'row',
               backgroundColor: '#FFFFFF',
               borderRadius: 999,
@@ -1352,6 +1417,7 @@ export default function SocialScreen() {
               );
             })}
           </View>
+          </SocialGuideAnchor>
           <View
             style={{
               marginHorizontal: 20,
@@ -1363,7 +1429,13 @@ export default function SocialScreen() {
           >
             {conversations.map((item, index) => (
               <View key={item.id}>
-                <ConversationRow item={item} langCode={langCode} onPress={() => void openConversation(item)} />
+                {item.kind === 'self' ? (
+                  <SocialGuideAnchor step="list_self_chat">
+                    <ConversationRow item={item} langCode={langCode} onPress={() => void openConversation(item)} />
+                  </SocialGuideAnchor>
+                ) : (
+                  <ConversationRow item={item} langCode={langCode} onPress={() => void openConversation(item)} />
+                )}
                 {index < conversations.length - 1 ? (
                   <View style={{ marginLeft: 88, height: 1, backgroundColor: colors.lineSofter }} />
                 ) : null}
@@ -1470,6 +1542,20 @@ export default function SocialScreen() {
 
           <View style={{ height: 28 }} />
         </ScrollView>
+
+        {/* The tab's own chapter. Held back while any modal is up: that surface
+            owns the tour, and an overlay behind a native modal window is both
+            invisible and unreachable. */}
+        <SocialGuideSpotlight
+          chapter="list"
+          enabled={
+            !isMenuVisible &&
+            !isConnectionsVisible &&
+            !isCreateGroupVisible &&
+            !isConversationVisible &&
+            !isCreateMeetupVisible
+          }
+        />
       </View>
 
       {/* ── Menu modal ── */}
@@ -1493,6 +1579,14 @@ export default function SocialScreen() {
               <Ionicons name="person-add-outline" size={22} color="#111827" />
               <Text className="ml-3 text-[16px] font-semibold text-slate-900">{t.social.menu_add_friend_group}</Text>
             </Pressable>
+            <Pressable
+              onPress={() => { setIsMenuVisible(false); listGuide.restart(); }}
+              className="flex-row items-center rounded-[18px] px-4 py-4"
+              testID="social.guide-entry"
+            >
+              <Ionicons name="help-circle-outline" size={22} color="#111827" />
+              <Text className="ml-3 text-[16px] font-semibold text-slate-900">{t.social_guide.entry_label}</Text>
+            </Pressable>
           </View>
         </Pressable>
       </Modal>
@@ -1512,7 +1606,8 @@ export default function SocialScreen() {
             <ScrollView className="flex-1 px-5" keyboardShouldPersistTaps="handled">
               <View className="rounded-[24px] bg-white px-4 py-4" style={styles.panelCard}>
                 <Text className="text-[15px] leading-6 text-slate-500">{t.social.manage_connections_hint}</Text>
-                <View className="mt-4 flex-row items-center rounded-[18px] bg-[#F3F6FC] px-4 py-3">
+                <SocialGuideAnchor step="connections_search" style={{ marginTop: 16 }}>
+                <View className="flex-row items-center rounded-[18px] bg-[#F3F6FC] px-4 py-3">
                   <Ionicons name="search" size={20} color="#94A3B8" />
                   <TextInput
                     value={peopleSearch}
@@ -1522,11 +1617,13 @@ export default function SocialScreen() {
                     className="ml-3 flex-1 text-[16px] text-slate-900"
                   />
                 </View>
+                </SocialGuideAnchor>
               </View>
 
               {incomingRequests.length > 0 ? (
                 <>
                   <SectionTitle>{t.social.incoming_requests}</SectionTitle>
+                  <SocialGuideAnchor step="connections_requests">
                   <View className="overflow-hidden rounded-[24px] bg-white" style={styles.panelCard}>
                     {incomingRequests.map((request, index) => (
                       <View key={request.id}>
@@ -1551,6 +1648,7 @@ export default function SocialScreen() {
                       </View>
                     ))}
                   </View>
+                  </SocialGuideAnchor>
                 </>
               ) : null}
 
@@ -1568,6 +1666,7 @@ export default function SocialScreen() {
               ) : null}
 
               <SectionTitle>{t.social.search_title}</SectionTitle>
+              <SocialGuideAnchor step="connections_results">
               <View className="overflow-hidden rounded-[24px] bg-white" style={styles.panelCard}>
                 {searchUsersQuery.isFetching ? (
                   <View className="px-4 py-5">
@@ -1612,9 +1711,14 @@ export default function SocialScreen() {
                   </View>
                 ) : null}
               </View>
+              </SocialGuideAnchor>
               <View style={{ height: 24 }} />
             </ScrollView>
           </KeyboardAvoidingView>
+
+          {/* RN Modal is its own native window: a screen-level overlay cannot
+              paint on top of it, so every modal surface mounts its own. */}
+          <SocialGuideSpotlight chapter="connections" enabled={isConnectionsVisible} />
         </View>
       </Modal>
 
@@ -1633,16 +1737,19 @@ export default function SocialScreen() {
             <ScrollView className="flex-1 px-5" keyboardShouldPersistTaps="handled">
               <View className="rounded-[24px] bg-white px-4 py-4" style={styles.panelCard}>
                 <Text className="text-[13px] font-bold uppercase tracking-[1px] text-slate-400">{t.social.group_name_label}</Text>
+                <SocialGuideAnchor step="group_name" style={{ marginTop: 12 }}>
                 <KeyboardSafeTextInput
                   value={groupName}
                   onChangeText={setGroupName}
                   placeholder={t.social.group_name}
                   placeholderTextColor="#94A3B8"
-                  className="mt-3 rounded-[18px] bg-[#F3F6FC] px-4 py-3 text-[16px] text-slate-900"
+                  className="rounded-[18px] bg-[#F3F6FC] px-4 py-3 text-[16px] text-slate-900"
                 />
+                </SocialGuideAnchor>
               </View>
 
               <SectionTitle>{t.social.select_friends}</SectionTitle>
+              <SocialGuideAnchor step="group_members">
               <View className="rounded-[24px] bg-white px-4 py-4" style={styles.panelCard}>
                 {friends.length === 0 ? (
                   <View>
@@ -1677,11 +1784,13 @@ export default function SocialScreen() {
                   </View>
                 )}
               </View>
+              </SocialGuideAnchor>
 
+              <SocialGuideAnchor step="group_submit" style={{ marginBottom: 32, marginTop: 20 }}>
               <Pressable
-                onPress={() => void handleCreateGroup()}
+                onPress={handleCreateGroupPress}
                 disabled={!groupName.trim() || selectedFriendIds.length === 0 || createGroup.isPending}
-                className="mb-8 mt-5 items-center rounded-[24px] px-5 py-4"
+                className="items-center rounded-[24px] px-5 py-4"
                 style={{
                   backgroundColor:
                     !groupName.trim() || selectedFriendIds.length === 0 || createGroup.isPending ? '#D6DBF2' : '#FF385C',
@@ -1691,8 +1800,15 @@ export default function SocialScreen() {
                   {createGroup.isPending ? t.common.loading : t.social.create_group_submit}
                 </Text>
               </Pressable>
+              </SocialGuideAnchor>
             </ScrollView>
           </KeyboardAvoidingView>
+
+          <SocialGuideSpotlight
+            chapter="group"
+            enabled={isCreateGroupVisible}
+            onConfirmSubmit={() => void handleCreateGroup()}
+          />
         </View>
       </Modal>
 
@@ -1785,9 +1901,11 @@ export default function SocialScreen() {
                     ) : null}
                   </View>
                   {chatPeerUserId ? (
+                    <SocialGuideAnchor step="chat_more">
                     <Pressable onPress={openChatActionMenu} style={{ padding: 4 }} hitSlop={8}>
                       <Ionicons name="ellipsis-horizontal" size={24} color="#374151" />
                     </Pressable>
+                    </SocialGuideAnchor>
                   ) : (
                     <View style={{ width: 32 }} />
                   )}
@@ -1823,12 +1941,12 @@ export default function SocialScreen() {
                 }}
                 ListHeaderComponent={
                   selectedConversation?.kind === 'group' ? (
+                    <SocialGuideAnchor step="group_chat_events" style={{ marginBottom: 14 }}>
                     <View
                       style={{
                         backgroundColor: '#FFFFFF',
                         borderRadius: 20,
                         padding: 16,
-                        marginBottom: 14,
                         shadowColor: '#000',
                         shadowOpacity: 0.05,
                         shadowRadius: 8,
@@ -1841,19 +1959,21 @@ export default function SocialScreen() {
                           <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>{t.social.group_events}</Text>
                           <Text style={{ fontSize: 13, color: '#6B7280', marginTop: 3 }}>{t.social.open_group_space}</Text>
                         </View>
+                        <SocialGuideAnchor step="group_chat_create_event">
                         <Pressable
                           onPress={() => setIsCreateMeetupVisible(true)}
                           style={{ backgroundColor: '#111827', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 }}
                         >
                           <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>{t.social.create_event}</Text>
                         </Pressable>
+                        </SocialGuideAnchor>
                       </View>
                       {groupDetailQuery.isLoading ? (
                         <View style={{ paddingVertical: 16, alignItems: 'center' }}>
                           <ActivityIndicator size="small" color="#FF9F6E" />
                         </View>
                       ) : null}
-                      {(groupDetailQuery.data?.events ?? []).map((event) => (
+                      {(groupDetailQuery.data?.events ?? []).map((event, eventIndex) => (
                         <View
                           key={event.id}
                           style={{
@@ -1871,12 +1991,19 @@ export default function SocialScreen() {
                             {event.location_hint ? ` · ${event.location_hint}` : ''}
                           </Text>
                           <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>{formatEventLine(event, langCode)}</Text>
+                          {/* Only the first meetup carries the anchor: two
+                              registrations for one step would fight over the
+                              ring. With no meetups yet the step has no target
+                              and its card explains the action on its own. */}
+                          <AnchorIf
+                            active={eventIndex === 0}
+                            step="group_chat_add_to_odyssey"
+                            style={{ alignSelf: 'flex-start', marginTop: 12 }}
+                          >
                           <Pressable
                             onPress={() => void addSocialEventToOdyssey.mutateAsync(event.id)}
                             disabled={event.viewer_added_to_tasks || addSocialEventToOdyssey.isPending}
                             style={{
-                              marginTop: 12,
-                              alignSelf: 'flex-start',
                               borderRadius: 20,
                               paddingHorizontal: 14,
                               paddingVertical: 8,
@@ -1887,6 +2014,7 @@ export default function SocialScreen() {
                               {event.viewer_added_to_tasks ? t.social.added_to_tasks : t.social.add_to_tasks}
                             </Text>
                           </Pressable>
+                          </AnchorIf>
                         </View>
                       ))}
                       {!groupDetailQuery.isLoading && (groupDetailQuery.data?.events.length ?? 0) === 0 ? (
@@ -1895,6 +2023,7 @@ export default function SocialScreen() {
                         </Text>
                       ) : null}
                     </View>
+                    </SocialGuideAnchor>
                   ) : null
                 }
                 ListEmptyComponent={
@@ -2014,10 +2143,9 @@ export default function SocialScreen() {
               }}
             >
               {/* Voice recording entry hidden until voice messages ship (V2 WS4). */}
+              <SocialGuideAnchor step={chatGuideStep('input')} style={{ flex: 1, marginHorizontal: 8 }}>
               <View
                 style={{
-                  flex: 1,
-                  marginHorizontal: 8,
                   backgroundColor: '#FFFFFF',
                   borderRadius: 22,
                   paddingHorizontal: 14,
@@ -2042,6 +2170,7 @@ export default function SocialScreen() {
                   onFocus={() => { setIsEmojiVisible(false); setIsPlusVisible(false); }}
                 />
               </View>
+              </SocialGuideAnchor>
               {draftMessage.trim() ? (
                 <Pressable
                   onPress={() => void handleSendText()}
@@ -2058,6 +2187,7 @@ export default function SocialScreen() {
                 </Pressable>
               ) : (
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <SocialGuideAnchor step={chatGuideStep('emoji')}>
                   <Pressable
                     style={{ padding: 5 }}
                     hitSlop={6}
@@ -2065,9 +2195,13 @@ export default function SocialScreen() {
                   >
                     <Ionicons name="happy-outline" size={26} color={isEmojiVisible ? '#FF9F6E' : '#6B7280'} />
                   </Pressable>
+                  </SocialGuideAnchor>
+                  <SocialGuideAnchor step={chatGuideStep('image')}>
                   <Pressable style={{ padding: 5 }} hitSlop={6} onPress={() => void handlePickImage()}>
                     <Ionicons name="image-outline" size={26} color="#6B7280" />
                   </Pressable>
+                  </SocialGuideAnchor>
+                  <SocialGuideAnchor step={chatGuideStep('plus')}>
                   <Pressable
                     style={{ padding: 5 }}
                     hitSlop={6}
@@ -2075,6 +2209,7 @@ export default function SocialScreen() {
                   >
                     <Ionicons name="add-circle-outline" size={26} color={isPlusVisible ? '#FF9F6E' : '#6B7280'} />
                   </Pressable>
+                  </SocialGuideAnchor>
                 </View>
               )}
             </View>
@@ -2209,6 +2344,16 @@ export default function SocialScreen() {
               </View>
             ) : null}
           </KeyboardAvoidingView>
+
+          {/* A group conversation runs its own chapter: the composer steps are
+              repeated there on purpose, because someone whose first chat is a
+              group has never been shown how to send anything. Held back while
+              the meetup modal or multi-select is up — that surface owns the
+              screen. */}
+          <SocialGuideSpotlight
+            chapter={chatChapter}
+            enabled={isConversationVisible && !isCreateMeetupVisible && !isMultiSelect}
+          />
 
           {/* ── Context menu (positioned near message) ── */}
           {(() => {
@@ -2359,6 +2504,7 @@ export default function SocialScreen() {
 
             <ScrollView className="flex-1 px-5" keyboardShouldPersistTaps="handled">
               <View className="rounded-[24px] bg-white px-4 py-4" style={styles.panelCard}>
+                <SocialGuideAnchor step="event_title">
                 <KeyboardSafeTextInput
                   value={eventTitle}
                   onChangeText={setEventTitle}
@@ -2366,26 +2512,28 @@ export default function SocialScreen() {
                   placeholderTextColor="#94A3B8"
                   className="rounded-[18px] bg-[#F3F6FC] px-4 py-3 text-[16px] text-slate-900"
                 />
-                <View className="mt-3">
+                </SocialGuideAnchor>
+                <SocialGuideAnchor step="event_place" style={{ marginTop: 12 }}>
                   <PlacePicker
                     value={eventPlace}
                     onChange={setEventPlace}
                     placeholder={t.social.event_place}
                     outerInsets={insets}
                   />
-                </View>
-                <View className="mt-3">
+                </SocialGuideAnchor>
+                <SocialGuideAnchor step="event_when" style={{ marginTop: 12 }}>
                   <DateTimeRangePicker
                     value={eventTimeRange}
                     onChange={setEventTimeRange}
                     placeholder={t.social.event_start_date}
                     minDate={new Date()}
                   />
-                </View>
+                </SocialGuideAnchor>
               </View>
 
+              <SocialGuideAnchor step="event_submit">
               <Pressable
-                onPress={() => void handleCreateMeetup()}
+                onPress={handleCreateMeetupPress}
                 disabled={
                   !eventTitle.trim() ||
                   !eventPlace ||
@@ -2409,8 +2557,15 @@ export default function SocialScreen() {
                   {createGroupEvent.isPending ? t.common.loading : t.social.event_create_submit}
                 </Text>
               </Pressable>
+              </SocialGuideAnchor>
             </ScrollView>
           </KeyboardAvoidingView>
+
+          <SocialGuideSpotlight
+            chapter="event"
+            enabled={isCreateMeetupVisible}
+            onConfirmSubmit={() => void handleCreateMeetup()}
+          />
         </View>
       </Modal>
     </Screen>

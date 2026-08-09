@@ -177,6 +177,10 @@ export default function PlazaScreen() {
   // Single cursor-paginated snapshot is the only feed source now; "caught up" =
   // the cursor returned no next page (no separate refill mechanism to track).
   const isFeedCaughtUp = data.length > 0 && !hasNextPage;
+  // Honest empty-city state (D-061): the viewer picked a city but nothing in
+  // the served feed is from it — label the global fallback instead of
+  // silently passing it off as local.
+  const localPoolEmpty = Boolean(pages?.[0]?.local_pool_empty) && data.length > 0;
   const createPost = useCreateCommunityPost();
   const updatePost = useUpdateCommunityPost(editingPost?.id ?? null);
   const trackCommunityEvents = useTrackCommunityEvents()?.mutate ?? (() => undefined);
@@ -609,7 +613,10 @@ export default function PlazaScreen() {
   return (
     <AppBackground>
     <SafeAreaView testID="screen.plaza" className="flex-1" edges={[]}>
-      {/* Yellow band hero — same YumQuick treatment as Tasks/Buddy/auth. */}
+      {/* Yellow band hero — same YumQuick treatment as Tasks/Buddy/auth.
+          zIndex lifts it above the feed so cards scroll UNDER the curved edge:
+          the corner cutouts then show live content instead of a dead white
+          wedge (lisum 2026-08-08). */}
       <View
         style={{
           backgroundColor: '#FFD17E',
@@ -618,6 +625,7 @@ export default function PlazaScreen() {
           paddingHorizontal: 22,
           borderBottomLeftRadius: 32,
           borderBottomRightRadius: 32,
+          zIndex: 2,
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -678,7 +686,7 @@ export default function PlazaScreen() {
           tone={plazaBanner.tone === 'success' ? 'cream' : 'cream'}
           radiusKey="lg"
           padding={14}
-          style={{ marginHorizontal: 14, marginTop: 8 }}
+          style={{ marginHorizontal: 14, marginTop: 8, zIndex: 2 }}
         >
           <Text
             testID="plaza.banner"
@@ -694,7 +702,11 @@ export default function PlazaScreen() {
       ) : null}
       {/* FlashList recycles cards as they leave the viewport. The previous
           ScrollView + .map() kept every loaded page mounted, so by page 3 all
-          60 cards — and all 60 image requests — were live at once. */}
+          60 cards — and all 60 image requests — were live at once.
+          The -32 tuck slides the list under the hero's rounded edge (see
+          zIndex note above); paddingTop compensates so resting layout is
+          unchanged. */}
+      <View style={{ flex: 1, marginTop: -32, zIndex: 0 }}>
       <FlashList
         data={filteredPosts}
         masonry
@@ -707,11 +719,35 @@ export default function PlazaScreen() {
         )}
         contentContainerStyle={{
           paddingHorizontal: 4,
-          paddingTop: 14,
+          paddingTop: 46,
           paddingBottom: Math.max(insets.bottom + 180, 200),
         }}
+        ListHeaderComponent={
+          localPoolEmpty ? (
+            <View
+              testID="plaza.local-pool-empty"
+              style={{
+                marginHorizontal: 10,
+                marginBottom: 10,
+                borderRadius: 16,
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+                backgroundColor: 'rgba(255, 159, 110, 0.14)',
+              }}
+            >
+              <Text style={{ fontSize: 12.5, lineHeight: 18, color: '#9A6411', fontWeight: '600' }}>
+                {t.plaza.feed_no_local_content}
+              </Text>
+            </View>
+          ) : null
+        }
         refreshControl={
-          <RefreshControl refreshing={isFetching && !isLoading} onRefresh={refetch} tintColor={colors.brandCoral} />
+          <RefreshControl
+            refreshing={isFetching && !isLoading}
+            onRefresh={refetch}
+            tintColor={colors.brandCoral}
+            progressViewOffset={40}
+          />
         }
         onEndReached={() => {
           if (hasNextPage && !isFetchingNextPage) {
@@ -749,6 +785,7 @@ export default function PlazaScreen() {
           ) : null
         }
       />
+      </View>
 
       {/* Floating Post button — bumped to a real "main CTA" silhouette
           (2026-05-10): explicit height 60, icon 26, fontSize 22 ExtraBold.

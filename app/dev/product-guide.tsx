@@ -5,7 +5,7 @@ import {
   GuideStepCard,
   SpotlightRing,
   SpotlightScrim,
-} from '../../components/guide/GuideSpotlight';
+} from '../../components/guide/spotlightParts';
 import { PageHeader } from '../../components/PageHeader';
 import { Screen } from '../../components/Screen';
 import { SettingsRow } from '../../components/SettingsRow';

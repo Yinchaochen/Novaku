@@ -15,6 +15,8 @@ interface BuddyCreateMenuProps {
   bottom?: number;
   right?: number;
   initiallyOpen?: boolean;
+  /** Lets the Buddy walkthrough measure and highlight the real + button. */
+  toggleRef?: (node: View | null) => void;
 }
 
 interface MenuActionProps {
@@ -64,6 +66,7 @@ export function BuddyCreateMenu({
   bottom = 0,
   right = 0,
   initiallyOpen = false,
+  toggleRef,
 }: BuddyCreateMenuProps) {
   const [isOpen, setIsOpen] = useState(initiallyOpen);
   const progress = useRef(new Animated.Value(initiallyOpen ? 1 : 0)).current;
@@ -140,7 +143,7 @@ export function BuddyCreateMenu({
         }}
         style={styles.toggleHitArea}
       >
-        <View style={styles.toggleCircle}>
+        <View ref={toggleRef} collapsable={false} style={styles.toggleCircle}>
           <Ionicons name={isOpen ? 'close' : 'add'} size={30} color="#FFFFFF" />
         </View>
       </Pressable>

@@ -65,6 +65,14 @@ function mockPost(id: string, title: string, body: string): CommunityPost {
 }
 
 const HISTORY_MOCK = ['Anmeldung Termin', '儿科医生', 'SIM Karte', 'Wohnung'];
+const DISCOVER_MOCK = [
+  'anmeldung termin',
+  'bürgeramt wartezeit',
+  '柏林 银行开户',
+  'sim karte prepaid',
+  'anerkennung zeugnis',
+  'wohnungsanmeldung bestätigung des wohnungsgebers',
+];
 
 function Chip({ label, active = false }: { label: string; active?: boolean }) {
   return (
@@ -101,9 +109,7 @@ export default function PlazaSearchGallery() {
             <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textMuted }}>
               {t.plaza.search_history}
             </Text>
-            <Text style={{ fontSize: 12.5, fontWeight: '600', color: colors.textMuted }}>
-              {t.plaza.search_clear_history}
-            </Text>
+            <Ionicons name="trash-outline" size={17} color={colors.textMuted} />
           </View>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {HISTORY_MOCK.map((item) => (
@@ -124,12 +130,28 @@ export default function PlazaSearchGallery() {
           </View>
         </View>
 
+        <SectionLabel>1b · Discover board (trending terms; hidden when empty)</SectionLabel>
+        <View>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textMuted, paddingBottom: 4 }}>
+            {t.plaza.search_discover}
+          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+            {DISCOVER_MOCK.map((item) => (
+              <View key={item} style={{ width: '50%', paddingVertical: 11, paddingRight: 10 }}>
+                <Text numberOfLines={1} style={{ fontSize: 14.5, color: colors.textMain }}>
+                  {item}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
         <SectionLabel>2 · Initial (no history)</SectionLabel>
         <Text style={{ fontSize: 13.5, lineHeight: 20, color: colors.textMuted, textAlign: 'center' }}>
           {t.plaza.search_initial_hint}
         </Text>
 
-        <SectionLabel>3 · Filters row (long German labels)</SectionLabel>
+        <SectionLabel>3 · Filters row (results only — hidden on the initial page)</SectionLabel>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           <Chip label={t.plaza.search_sort_relevance} active />
           <Chip label={t.plaza.search_sort_recent} />

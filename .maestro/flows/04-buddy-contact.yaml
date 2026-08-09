@@ -7,6 +7,15 @@ tags:
     file: ../subflows/login.yaml
 - tapOn:
     id: tab.buddy
+# login.yaml clears state, so a first-run Buddy walkthrough (D-054) starts here
+# and its step card floats over the feed. Dismiss it before touching a post.
+- runFlow:
+    when:
+      visible:
+        id: buddy.guide.spotlight.feed
+    commands:
+      - tapOn:
+          id: guide.card.skip-all
 - extendedWaitUntil:
     visible:
       id: buddy.post.contactable

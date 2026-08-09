@@ -43,6 +43,7 @@ export interface AuthUser {
   email: string;
   display_name: string;
   avatar_url: string | null;
+  profile_background_url: string | null;
   locale: string;
   identity: UserIdentity;
   city: string | null;
@@ -307,6 +308,30 @@ export function useUploadAvatar() {
   });
 }
 
+export function useUploadProfileBackground() {
+  const { setUser } = useAuthStore();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ uri, mimeType, fileName }: { uri: string; mimeType: string; fileName: string }) => {
+      const form = new FormData();
+      form.append('file', { uri, name: fileName, type: mimeType } as any);
+      const res = await api.post('/auth/me/profile-background', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 60000,
+      });
+      return res.data.data as {
+        profile_background_url: string;
+        user: AuthUser;
+      };
+    },
+    onSuccess: async (payload) => {
+      setUser(payload.user);
+      await queryClient.invalidateQueries({ queryKey: ['me'] });
+    },
+  });
+}
+
 export function useMe() {
   const setUser = useAuthStore((s) => s.setUser);
 
@@ -321,15 +346,16 @@ export function useMe() {
   });
 }
 
-export function useCitySuggestions(query: string, enabled = true) {
+export function useCitySuggestions(query: string, enabled = true, options?: { deep?: boolean }) {
   const { langCode } = useLanguage();
   const trimmed = query.trim();
+  const deep = options?.deep ?? false;
 
   return useQuery({
-    queryKey: ['auth', 'city-suggestions', trimmed, langCode],
+    queryKey: ['auth', 'city-suggestions', trimmed, langCode, deep],
     queryFn: async () => {
       const res = await api.get('/auth/city-suggestions', {
-        params: { query: trimmed },
+        params: deep ? { query: trimmed, deep: true } : { query: trimmed },
       });
       return res.data.data.items as CitySuggestion[];
     },
