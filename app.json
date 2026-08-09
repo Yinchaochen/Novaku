@@ -55,6 +55,7 @@
       "favicon": "./assets/icon.png"
     },
     "plugins": [
+      "./plugins/withAndroidBuildTuning",
       [
         "expo-build-properties",
         {

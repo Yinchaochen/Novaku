@@ -49,7 +49,12 @@ jobs:
   build-android:
     name: Build Android AAB/APK on Ubuntu runner
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # Run #37 was cancelled at 60 minutes while still compiling native code for
+    # four ABIs — everything before that (npm ci, prebuild, Metro bundle, every
+    # Kotlin/Java module) had already succeeded. plugins/withAndroidBuildTuning
+    # now halves the native work on production builds; this ceiling exists so a
+    # cold runner still has room instead of throwing away 60 minutes of work.
+    timeout-minutes: 120
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
