@@ -21,6 +21,11 @@ export const colors = {
   brandOrange: '#D79168',
   brandDeep: '#623928',
 
+  // Verified-account badge (D-063). A darkened coral rather than brandCoral:
+  // #F67673 on white measures 2.7:1, under the 3:1 WCAG floor for a graphic
+  // that carries meaning. This one clears it while staying in the family.
+  badgeVerified: '#DE5350',
+
   // Text
   textMain: '#241A16',
   textBrown: '#3B2A22',

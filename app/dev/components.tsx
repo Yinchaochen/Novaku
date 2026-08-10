@@ -6,6 +6,7 @@ import { GradientButton } from '../../components/GradientButton';
 import { PageHeader } from '../../components/PageHeader';
 import { Pill } from '../../components/Pill';
 import { Screen } from '../../components/Screen';
+import { VerifiedBadge } from '../../components/VerifiedBadge';
 
 /**
  * Component catalog — renders the reusable primitives in the states that break
@@ -33,6 +34,27 @@ export default function ComponentsGallery() {
       bottomGap={28}
       contentClassName="px-5 gap-4"
     >
+      <Section title="VerifiedBadge — real sizes beside real text">
+        {/* The badge only ever appears next to a name, and 12px on a 11.5px
+            label is where it either reads or turns to mush. */}
+        <View className="flex-row items-center">
+          <Text style={{ fontSize: 11.5, color: '#81746D' }}>Feed card · 11.5px label</Text>
+          <VerifiedBadge size={12} />
+        </View>
+        <View className="flex-row items-center">
+          <Text style={{ fontSize: 15, color: '#000' }}>Post detail · 15px name</Text>
+          <VerifiedBadge size={14} />
+        </View>
+        <View className="flex-row items-center">
+          <Text style={{ fontSize: 16, fontWeight: '700', color: '#000' }}>{LONG_DE}</Text>
+          <VerifiedBadge size={16} />
+        </View>
+        <View className="flex-row items-center gap-4">
+          <VerifiedBadge size={40} />
+          <VerifiedBadge size={72} />
+        </View>
+      </Section>
+
       <Section title="GradientButton — variants">
         <View className="flex-row flex-wrap items-center gap-3">
           <GradientButton label="Primary" variant="primary" />
