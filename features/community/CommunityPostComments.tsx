@@ -22,6 +22,7 @@ import {
   useTrackCommunityEvents,
   useUnmarkCommentHelpful,
 } from './useCommunity';
+import { VerifiedBadge } from '../../components/VerifiedBadge';
 
 interface Props {
   post: CommunityPost;
@@ -387,10 +388,15 @@ export function CommentRow({
       </Pressable>
       <View className="flex-1">
         <View className="flex-row items-start justify-between">
-          <Pressable onPress={openAuthorProfile} hitSlop={4} className="flex-1">
-            <Text className="text-[15px] font-semibold text-black" numberOfLines={1}>
+          <Pressable
+            onPress={openAuthorProfile}
+            hitSlop={4}
+            className="flex-1 flex-row items-center"
+          >
+            <Text className="shrink text-[15px] font-semibold text-black" numberOfLines={1}>
               {comment.author.display_name}
             </Text>
+            {comment.author.is_verified ? <VerifiedBadge size={13} /> : null}
           </Pressable>
           {pending ? null : (
             <Pressable onPress={onPressMore} hitSlop={8} className="ml-2">

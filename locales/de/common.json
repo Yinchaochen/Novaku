@@ -743,6 +743,7 @@
     "paywall_generic_body": "Postervia+ entfernt alle Limits. 7 Tage kostenlos testen."
   },
   "profile": {
+    "verified_badge_label": "Verifiziertes Konto",
     "title": "Profil",
     "language": "Sprache",
     "change_identity": "Ändern",
@@ -1104,6 +1105,16 @@
     "view_participants": "Teilnehmer ansehen"
   },
   "settings": {
+    "admin_verified_state_off": "Nicht verifiziert",
+    "admin_verified_state_on": "Verifiziert",
+    "admin_verified_revoke": "Abzeichen entfernen",
+    "admin_verified_grant": "Abzeichen vergeben",
+    "admin_verified_not_found": "Kein Konto mit dieser ID.",
+    "admin_verified_lookup_cta": "Konto suchen",
+    "admin_verified_lookup_placeholder": "10 Ziffern von der Profilkarte",
+    "admin_verified_lookup_label": "Postervia-ID",
+    "admin_verified_hint": "Das Abzeichen betrifft das Konto, nicht die Richtigkeit der Beiträge.",
+    "admin_verified_title": "Konto-Verifizierung",
     "admin_releases": "Versionshinweise",
     "admin_releases_hint": "Text bearbeiten, den Nutzer nach einem Update sehen",
     "title": "Einstellungen",

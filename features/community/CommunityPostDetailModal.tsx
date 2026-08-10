@@ -60,6 +60,7 @@ import {
   useUnfollowUser,
   useUpdatePostVisibility,
 } from './useCommunity';
+import { VerifiedBadge } from '../../components/VerifiedBadge';
 
 interface Props {
   post: CommunityPost | null;
@@ -718,9 +719,12 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
             <View className="flex-1 flex-row items-center">
               <Avatar name={post.author.display_name} avatarUrl={post.author.avatar_url} size={34} />
               <View className="ml-3 flex-1">
-                <Text numberOfLines={1} className="text-[15px] font-semibold text-black">
-                  {post.author.display_name}
-                </Text>
+                <View className="flex-row items-center">
+                  <Text numberOfLines={1} className="shrink text-[15px] font-semibold text-black">
+                    {post.author.display_name}
+                  </Text>
+                  {post.author.is_verified ? <VerifiedBadge /> : null}
+                </View>
                 {displayHeaderCity ? (
                   <Text numberOfLines={1} className="mt-0.5 text-[12px] text-neutral-400">
                     {displayHeaderCity}

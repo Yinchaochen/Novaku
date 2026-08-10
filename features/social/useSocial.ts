@@ -11,6 +11,8 @@ export interface SocialUserSummary {
   avatar_url?: string | null;
   city: string | null;
   identity: string;
+  /** Account badge (D-063) — not the same as a source's verification_status. */
+  is_verified?: boolean;
 }
 
 export interface SocialSearchResult extends SocialUserSummary {

@@ -743,6 +743,7 @@
     "paywall_generic_body": "Postervia+ 解除免费额度限制。7 天免费试用。"
   },
   "profile": {
+    "verified_badge_label": "已认证账号",
     "title": "个人中心",
     "language": "界面语言",
     "change_identity": "修改状态",
@@ -1104,6 +1105,16 @@
     "view_participants": "查看参与者"
   },
   "settings": {
+    "admin_verified_state_off": "未认证",
+    "admin_verified_state_on": "已认证",
+    "admin_verified_revoke": "移除标识",
+    "admin_verified_grant": "授予标识",
+    "admin_verified_not_found": "没有这个 ID 的账号。",
+    "admin_verified_lookup_cta": "查找账号",
+    "admin_verified_lookup_placeholder": "名片上那串 10 位数字",
+    "admin_verified_lookup_label": "Postervia ID",
+    "admin_verified_hint": "这个标识说的是账号本身，不代表它发的内容经过核实。",
+    "admin_verified_title": "账号认证",
     "admin_releases": "更新说明",
     "admin_releases_hint": "编辑用户更新后看到的说明",
     "title": "设置",

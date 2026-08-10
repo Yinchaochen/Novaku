@@ -42,6 +42,7 @@ import { numericDisplayId } from '../../lib/displayId';
 import { formatDisplayLocation } from '../../lib/displayLocation';
 import { resolveMediaUrl } from '../../lib/media';
 import { useAuthStore } from '../../store/authStore';
+import { VerifiedBadge } from '../../components/VerifiedBadge';
 
 function showCopiedToast(message: string) {
   if (Platform.OS === 'android') {
@@ -325,9 +326,12 @@ export default function UserProfileScreen() {
         <Pressable onPress={() => router.back()} hitSlop={8}>
           <Ionicons name="chevron-back" size={26} color="#111111" />
         </Pressable>
-        <Text numberOfLines={1} className="flex-1 px-4 text-center text-[16px] font-semibold text-black">
-          {profileData.display_name}
-        </Text>
+        <View className="flex-1 flex-row items-center justify-center px-4">
+          <Text numberOfLines={1} className="shrink text-[16px] font-semibold text-black">
+            {profileData.display_name}
+          </Text>
+          {profileData.is_verified ? <VerifiedBadge /> : null}
+        </View>
         <Pressable onPress={openProfileActions} hitSlop={8}>
           <Ionicons name="ellipsis-horizontal" size={22} color="#111111" />
         </Pressable>

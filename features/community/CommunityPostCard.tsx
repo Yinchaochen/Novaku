@@ -17,6 +17,7 @@ import {
   useMarkCommunityHelpful,
   useUnmarkCommunityHelpful,
 } from './useCommunity';
+import { VerifiedBadge } from '../../components/VerifiedBadge';
 
 function formatDuration(totalSeconds?: number | null): string {
   const safe = Math.max(0, Math.floor(totalSeconds ?? 0));
@@ -341,10 +342,11 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
             <Avatar name={post.author.display_name} avatarUrl={post.author.avatar_url} />
             <Text
               numberOfLines={1}
-              style={{ marginLeft: 8, flex: 1, fontSize: 11.5, color: colors.textMuted }}
+              style={{ marginLeft: 8, flexShrink: 1, fontSize: 11.5, color: colors.textMuted }}
             >
               {post.author.display_name}
             </Text>
+            {post.author.is_verified ? <VerifiedBadge size={12} /> : null}
           </Pressable>
 
           <Pressable

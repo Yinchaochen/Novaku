@@ -749,6 +749,7 @@ export type Translations = {
     paywall_generic_body: string;
   };
   profile: {
+    verified_badge_label: string;
     title: string;
     language: string;
     change_identity: string;
@@ -837,6 +838,16 @@ export type Translations = {
     menu_settings: string;
   };
   settings: {
+    admin_verified_title: string;
+    admin_verified_hint: string;
+    admin_verified_lookup_label: string;
+    admin_verified_lookup_placeholder: string;
+    admin_verified_lookup_cta: string;
+    admin_verified_not_found: string;
+    admin_verified_grant: string;
+    admin_verified_revoke: string;
+    admin_verified_state_on: string;
+    admin_verified_state_off: string;
     admin_releases: string;
     admin_releases_hint: string;
     title: string;

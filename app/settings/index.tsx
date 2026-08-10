@@ -190,6 +190,12 @@ export default function SettingsHubScreen() {
               hint={t.settings.admin_releases_hint}
               onPress={() => router.push('/admin/app-releases' as never)}
             />
+            <SettingsRow
+              icon="checkmark-circle-outline"
+              label={t.settings.admin_verified_title}
+              hint={t.settings.admin_verified_hint}
+              onPress={() => router.push('/admin/verified-accounts' as never)}
+            />
           </SettingsSection>
         ) : null}
       </ScrollView>

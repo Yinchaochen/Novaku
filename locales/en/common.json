@@ -743,6 +743,7 @@
     "paywall_generic_body": "Postervia+ removes free-tier limits across the app. Try 7 days free."
   },
   "profile": {
+    "verified_badge_label": "Verified account",
     "title": "Profile",
     "language": "Language",
     "change_identity": "Change",
@@ -1104,6 +1105,16 @@
     "view_participants": "View participants"
   },
   "settings": {
+    "admin_verified_state_off": "Not verified",
+    "admin_verified_state_on": "Verified",
+    "admin_verified_revoke": "Remove the badge",
+    "admin_verified_grant": "Give the badge",
+    "admin_verified_not_found": "No account with that ID.",
+    "admin_verified_lookup_cta": "Find account",
+    "admin_verified_lookup_placeholder": "10 digits from the profile card",
+    "admin_verified_lookup_label": "Postervia ID",
+    "admin_verified_hint": "The badge marks the account, not the accuracy of what it posts.",
+    "admin_verified_title": "Verified accounts",
     "admin_releases": "Release notes",
     "admin_releases_hint": "Edit the what's-new copy shown after an update",
     "title": "Settings",

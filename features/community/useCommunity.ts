@@ -113,6 +113,8 @@ export interface CommunityAuthor {
   avatar_url?: string | null;
   city: string | null;
   identity: string;
+  /** Account badge (D-063) — not the same as a source's verification_status. */
+  is_verified?: boolean;
   viewer_is_following?: boolean;
 }
 
@@ -1180,6 +1182,8 @@ export interface UserProfile {
   identity: string;
   intent_tags: string[];
   bio: string | null;
+  /** Account badge (D-063) — not the same as a source's verification_status. */
+  is_verified?: boolean;
   created_at: string;
   follower_count: number;
   following_count: number;
