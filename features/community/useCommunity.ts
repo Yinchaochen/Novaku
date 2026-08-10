@@ -10,6 +10,7 @@
 
 import { useLanguage } from '../../context/LanguageContext';
 import { api } from '../../lib/api';
+import { useFeedForegroundRefresh } from './useFeedForegroundRefresh';
 import { addSentryBreadcrumb } from '../../lib/sentry';
 import { useAuthStore } from '../../store/authStore';
 
@@ -340,8 +341,12 @@ export function communityFeedQueryKey(
 export function useCommunityFeed() {
   const { langCode } = useLanguage();
   const user = useAuthStore((state) => state.user);
+  const queryKey = communityFeedQueryKey(user, langCode);
+  // Reopening the app after a real absence asks the backend for a new feed
+  // session, which is what makes the D-062 variety visible at all.
+  useFeedForegroundRefresh(queryKey, Boolean(user));
   return useInfiniteQuery({
-    queryKey: communityFeedQueryKey(user, langCode),
+    queryKey,
     queryFn: async ({ pageParam }): Promise<CommunityFeedPage> => {
       const res = await api.get('/community/feed', {
         params: {
