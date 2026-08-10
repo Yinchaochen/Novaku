@@ -32,6 +32,7 @@ import { OnboardingModal } from '../../components/OnboardingModal';
 import { PrivacyModal } from '../../components/PrivacyModal';
 import { ProfileShareCard } from '../../components/ProfileShareCard';
 import { Screen } from '../../components/Screen';
+import { VerifiedBadge } from '../../components/VerifiedBadge';
 import { ShareSheet } from '../../components/ShareSheet';
 import { UserQRCodeModal } from '../../components/UserQRCodeModal';
 import { useLanguage } from '../../context/LanguageContext';
@@ -920,19 +921,23 @@ export default function ProfileScreen() {
                 </View>
               </Pressable>
               <View className="ml-4 flex-1">
-                <Text
-                  style={{
-                    fontSize: 26,
-                    fontWeight: '800',
-                    color: '#FFFFFF',
-                    letterSpacing: -0.2,
-                    textShadowColor: 'rgba(0,0,0,0.45)',
-                    textShadowOffset: { width: 0, height: 1 },
-                    textShadowRadius: 6,
-                  }}
-                >
-                  {user?.display_name ?? 'Postervia'}
-                </Text>
+                <View className="flex-row items-center">
+                  <Text
+                    style={{
+                      flexShrink: 1,
+                      fontSize: 26,
+                      fontWeight: '800',
+                      color: '#FFFFFF',
+                      letterSpacing: -0.2,
+                      textShadowColor: 'rgba(0,0,0,0.45)',
+                      textShadowOffset: { width: 0, height: 1 },
+                      textShadowRadius: 6,
+                    }}
+                  >
+                    {user?.display_name ?? 'Postervia'}
+                  </Text>
+                  {user?.is_verified ? <VerifiedBadge size={20} tone="onDark" /> : null}
+                </View>
                 <View className="mt-1 flex-row items-center">
                   <Text style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.7)', letterSpacing: 0.3 }}>
                     Postervia ID: {shortId}

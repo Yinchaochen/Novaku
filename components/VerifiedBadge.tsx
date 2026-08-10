@@ -20,8 +20,21 @@ import { colors } from '../theme/tokens';
 const GATE = 'M6 22 L6 10 A6 6 0 0 1 18 10 L18 22 Z';
 const STAR = 'M12 8.4l1.5 3.3 3.3 1.5 -3.3 1.5 -1.5 3.3 -1.5 -3.3 -3.3 -1.5 3.3 -1.5 Z';
 
-export function VerifiedBadge({ size = 14 }: { size?: number }) {
+/**
+ * `tone="onDark"` is for the profile hero, where the display name is white on
+ * a photo the user chose. A coral gate would sink into that background, so the
+ * fill inverts — and it keeps a coral outline, because the hero image can just
+ * as easily be pale, and a plain white badge would vanish there instead.
+ */
+export function VerifiedBadge({
+  size = 14,
+  tone = 'brand',
+}: {
+  size?: number;
+  tone?: 'brand' | 'onDark';
+}) {
   const { t } = useLanguage();
+  const onDark = tone === 'onDark';
   return (
     <View
       accessible
@@ -31,8 +44,13 @@ export function VerifiedBadge({ size = 14 }: { size?: number }) {
       style={{ marginLeft: 4, justifyContent: 'center' }}
     >
       <Svg width={size} height={size} viewBox="0 0 24 24">
-        <Path d={GATE} fill={colors.badgeVerified} />
-        <Path d={STAR} fill="#FFFFFF" />
+        <Path
+          d={GATE}
+          fill={onDark ? '#FFFFFF' : colors.badgeVerified}
+          stroke={onDark ? colors.badgeVerified : undefined}
+          strokeWidth={onDark ? 1.4 : undefined}
+        />
+        <Path d={STAR} fill={onDark ? colors.badgeVerified : '#FFFFFF'} />
       </Svg>
     </View>
   );

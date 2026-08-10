@@ -60,6 +60,8 @@ export interface AuthUser {
   tab_saves_public: boolean;
   tab_likes_public: boolean;
   is_staff: boolean;
+  /** Account badge (D-063) — not the same as a source's verification_status. */
+  is_verified?: boolean;
   is_vianter_plus: boolean;
   search_visibility: 'open' | 'limited' | 'hidden';
   profile_visibility: 'public' | 'followers' | 'friends' | 'only_me';
