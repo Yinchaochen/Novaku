@@ -22,6 +22,7 @@ import {
   useTrackCommunityEvents,
   useUnmarkCommentHelpful,
 } from './useCommunity';
+import { OfficialChip, isOfficialAuthor } from '../../components/OfficialChip';
 import { VerifiedBadge } from '../../components/VerifiedBadge';
 
 interface Props {
@@ -397,6 +398,7 @@ export function CommentRow({
               {comment.author.display_name}
             </Text>
             {comment.author.is_verified ? <VerifiedBadge size={13} /> : null}
+            {isOfficialAuthor(comment.author) ? <OfficialChip /> : null}
           </Pressable>
           {pending ? null : (
             <Pressable onPress={onPressMore} hitSlop={8} className="ml-2">

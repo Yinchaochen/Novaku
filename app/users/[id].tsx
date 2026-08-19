@@ -42,6 +42,7 @@ import { numericDisplayId } from '../../lib/displayId';
 import { formatDisplayLocation } from '../../lib/displayLocation';
 import { resolveMediaUrl } from '../../lib/media';
 import { useAuthStore } from '../../store/authStore';
+import { OfficialChip, isOfficialAuthor } from '../../components/OfficialChip';
 import { VerifiedBadge } from '../../components/VerifiedBadge';
 
 function showCopiedToast(message: string) {
@@ -331,6 +332,7 @@ export default function UserProfileScreen() {
             {profileData.display_name}
           </Text>
           {profileData.is_verified ? <VerifiedBadge /> : null}
+          {isOfficialAuthor(profileData) ? <OfficialChip size="md" /> : null}
         </View>
         <Pressable onPress={openProfileActions} hitSlop={8}>
           <Ionicons name="ellipsis-horizontal" size={22} color="#111111" />

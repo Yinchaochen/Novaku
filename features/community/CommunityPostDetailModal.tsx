@@ -60,6 +60,7 @@ import {
   useUnfollowUser,
   useUpdatePostVisibility,
 } from './useCommunity';
+import { OfficialChip, isOfficialAuthor } from '../../components/OfficialChip';
 import { VerifiedBadge } from '../../components/VerifiedBadge';
 
 interface Props {
@@ -724,6 +725,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
                     {post.author.display_name}
                   </Text>
                   {post.author.is_verified ? <VerifiedBadge /> : null}
+                  {isOfficialAuthor(post.author) ? <OfficialChip size="md" /> : null}
                 </View>
                 {displayHeaderCity ? (
                   <Text numberOfLines={1} className="mt-0.5 text-[12px] text-neutral-400">
@@ -964,6 +966,12 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
                 textClassName="mt-4 text-[16px] leading-8 text-neutral-800"
                 linkify
               />
+
+              {isOfficialAuthor(post.author) ? (
+                <Text className="mt-3 text-[12px] leading-[18px] text-neutral-500">
+                  {t.plaza.official_ai_disclosure}
+                </Text>
+              ) : null}
 
               {post.extracted_summary ? (
                 <View className="mt-5 rounded-[20px] bg-[#FFF6F7] px-4 py-3">

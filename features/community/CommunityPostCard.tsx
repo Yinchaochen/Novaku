@@ -17,6 +17,7 @@ import {
   useMarkCommunityHelpful,
   useUnmarkCommunityHelpful,
 } from './useCommunity';
+import { OfficialChip, isOfficialAuthor } from '../../components/OfficialChip';
 import { VerifiedBadge } from '../../components/VerifiedBadge';
 
 function formatDuration(totalSeconds?: number | null): string {
@@ -347,6 +348,7 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
               {post.author.display_name}
             </Text>
             {post.author.is_verified ? <VerifiedBadge size={12} /> : null}
+            {isOfficialAuthor(post.author) ? <OfficialChip /> : null}
           </Pressable>
 
           <Pressable

@@ -115,6 +115,9 @@ export interface CommunityAuthor {
   identity: string;
   /** Account badge (D-063) — not the same as a source's verification_status. */
   is_verified?: boolean;
+  /** 'human' | 'official' (D-065). Official = published by Postervia, not a
+   *  person. A different claim from is_verified; never render them as one. */
+  account_kind?: string;
   viewer_is_following?: boolean;
 }
 
@@ -1184,6 +1187,9 @@ export interface UserProfile {
   bio: string | null;
   /** Account badge (D-063) — not the same as a source's verification_status. */
   is_verified?: boolean;
+  /** 'human' | 'official' (D-065). Official = published by Postervia, not a
+   *  person. A different claim from is_verified; never render them as one. */
+  account_kind?: string;
   created_at: string;
   follower_count: number;
   following_count: number;

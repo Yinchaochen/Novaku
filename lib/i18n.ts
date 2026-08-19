@@ -384,6 +384,9 @@ export type Translations = {
     moderation_review: string;
     moderation_rejected_post: string;
     moderation_rejected_comment: string;
+    official_account_chip: string;
+    official_account_label: string;
+    official_ai_disclosure: string;
     personal_task_badge: string;
     type_experience: string;
     type_question: string;

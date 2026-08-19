@@ -468,7 +468,10 @@
     "profile_tab_private": "私密",
     "search_discover": "发现",
     "search_history_more": "展开更多搜索记录",
-    "search_history_less": "收起搜索记录"
+    "search_history_less": "收起搜索记录",
+    "official_account_chip": "官方",
+    "official_account_label": "Postervia 官方账号",
+    "official_ai_disclosure": "本文由 Postervia 依据下方官方来源、借助 AI 整理，不是个人经历。"
   },
   "documents": {
     "title": "Scribe",
