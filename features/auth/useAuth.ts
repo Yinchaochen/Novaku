@@ -222,25 +222,32 @@ export function useUpdateProfile() {
       const res = await api.patch('/auth/me', data);
       return res.data.data as AuthUser;
     },
-    onMutate: (data) => {
+    onMutate: async (data) => {
       // Optimistic: merge patches into the cached user so subscribers
       // (PrivacyModal switches, identity chips, avatar tiles) re-render in
-      // the same frame as the tap. Skip `locale` — switching it triggers an
-      // i18next reload that should happen after server confirms, not before.
+      // the same frame as the tap. Locale is device-local first: a failed
+      // account sync must not stop the app language from changing.
+      if (data.locale) {
+        await setLangCode(data.locale);
+      }
       const previous = useAuthStore.getState().user;
       if (!previous) return { previous: null };
       const patches: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(data)) {
-        if (value !== undefined && key !== 'locale') {
+        if (value !== undefined) {
           patches[key] = value;
         }
       }
       setUser({ ...previous, ...patches } as AuthUser);
       return { previous };
     },
-    onError: (_err, _data, context) => {
+    onError: (_err, data, context) => {
       if (context?.previous) {
-        setUser(context.previous);
+        setUser(
+          data.locale
+            ? { ...context.previous, locale: data.locale }
+            : context.previous,
+        );
       }
     },
     onSuccess: async (user) => {
