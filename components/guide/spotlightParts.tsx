@@ -236,7 +236,7 @@ export function GuideStepCard({
           testID="guide.card.continue"
           hitSlop={8}
           style={{
-            minHeight: 36,
+            minHeight: 44,
             justifyContent: 'center',
             borderRadius: 999,
             paddingHorizontal: 16,

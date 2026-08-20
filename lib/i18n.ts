@@ -170,6 +170,7 @@ export type Translations = {
     back_step: string;
     skip_all: string;
     continue_step: string;
+    finish_tour: string;
     compose_entry_title: string;
     compose_entry_body: string;
     photo_step_title: string;

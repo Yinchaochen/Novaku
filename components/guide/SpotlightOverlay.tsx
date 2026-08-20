@@ -18,7 +18,8 @@ const MEASURE_INTERVAL_MS = 400;
 // never gate visibility: RN Web does not deliver the initial onLayout for this
 // card, so an opacity-gated card stayed invisible forever — a dimmed screen
 // with no Continue button and no way out of the tour.
-const CARD_HEIGHT_ESTIMATE = 150;
+// Reserve two action rows because translated labels wrap before RN Web reports onLayout.
+const CARD_HEIGHT_ESTIMATE = 230;
 
 function padRect(rect: GuideTargetRect): GuideTargetRect {
   return {
@@ -53,6 +54,7 @@ export interface SpotlightOverlayProps {
   onBack: () => void;
   onSkipAll: () => void;
   onContinue: () => void;
+  continueLabel?: string;
   testID?: string;
   cardTestID?: string;
   /** Extra layer above the scrim, e.g. a publish confirm sheet. */
@@ -72,6 +74,7 @@ export function SpotlightOverlay({
   onBack,
   onSkipAll,
   onContinue,
+  continueLabel,
   testID,
   cardTestID,
   footer,
@@ -161,7 +164,7 @@ export function SpotlightOverlay({
         progressTemplate={t.guide.step_progress}
         backLabel={t.guide.back_step}
         skipAllLabel={t.guide.skip_all}
-        continueLabel={t.guide.continue_step}
+        continueLabel={continueLabel ?? t.guide.continue_step}
         showBack={showBack}
         onBack={onBack}
         onSkipAll={onSkipAll}

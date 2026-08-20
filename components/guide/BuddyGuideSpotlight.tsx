@@ -62,7 +62,8 @@ export function BuddyGuideSpotlight({
 
   const { index, total } = buddyStepPosition(step);
   const copy = stepCopy(t, step);
-  const showConfirm = guide.confirmingPublish && isBuddyChapterLastStep(step);
+  const isLastStep = isBuddyChapterLastStep(step);
+  const showConfirm = guide.confirmingPublish && isLastStep;
 
   return (
     <SpotlightOverlay
@@ -78,6 +79,7 @@ export function BuddyGuideSpotlight({
       onBack={guide.goBack}
       onSkipAll={guide.end}
       onContinue={guide.advance}
+      continueLabel={isLastStep ? t.guide.finish_tour : t.guide.continue_step}
       testID={`buddy.guide.spotlight.${chapter}`}
       cardTestID={`buddy.guide.step.${step}`}
       footer={

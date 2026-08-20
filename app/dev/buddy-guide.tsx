@@ -36,6 +36,7 @@ function SpotlightStage({
   body,
   showBack,
   targetLabel,
+  continueLabel,
 }: {
   t: typeof en;
   stepNumber: number;
@@ -44,6 +45,7 @@ function SpotlightStage({
   body: string;
   showBack: boolean;
   targetLabel: string;
+  continueLabel?: string;
 }) {
   const hole = { x: 26, y: 30, width: 200, height: 60 };
   return (
@@ -75,7 +77,7 @@ function SpotlightStage({
         progressTemplate={t.guide.step_progress}
         backLabel={t.guide.back_step}
         skipAllLabel={t.guide.skip_all}
-        continueLabel={t.guide.continue_step}
+        continueLabel={continueLabel ?? t.guide.continue_step}
         showBack={showBack}
         onBack={noop}
         onSkipAll={noop}
@@ -102,18 +104,19 @@ export default function BuddyGuideGallery() {
   );
 
   return (
-    <Screen
-      header={(
-        <PageHeader
-          title="Buddy walkthrough + wish form"
-          subtitle="Normal · long German · empty · loading · self · other"
-        />
-      )}
-      scroll
-      bottomGap={spacing['2xl']}
-      contentStyle={{ paddingHorizontal: spacing.xl, gap: spacing['2xl'] }}
-      testID="screen.dev.buddy-guide"
-    >
+    <View style={{ flex: 1 }}>
+      <Screen
+        header={(
+          <PageHeader
+            title="Buddy walkthrough + wish form"
+            subtitle="Normal · long German · empty · loading · self · other"
+          />
+        )}
+        scroll
+        bottomGap={spacing['2xl']}
+        contentStyle={{ paddingHorizontal: spacing.xl, gap: spacing['2xl'] }}
+        testID="screen.dev.buddy-guide"
+      >
       <View style={{ gap: spacing.md }}>
         <StateHeading>0. Live — real overlay, real anchors (bottom-pinned target)</StateHeading>
         <Pressable
@@ -283,6 +286,7 @@ export default function BuddyGuideGallery() {
           body={en.buddy_guide.feed_create_body}
           showBack
           targetLabel="＋"
+          continueLabel={en.guide.finish_tour}
         />
         <StateBlock
           tone="neutral"
@@ -292,7 +296,9 @@ export default function BuddyGuideGallery() {
         />
       </View>
 
-      {/* Bottom-pinned target: same geometry as the Buddy tab's + button. */}
+      </Screen>
+
+      {/* Keep the live rig viewport-bound, matching the fixed production Buddy screen. */}
       <BuddyGuideAnchor
         step="feed_create"
         style={{ position: 'absolute', bottom: 24, right: 24, zIndex: 30 }}
@@ -312,6 +318,6 @@ export default function BuddyGuideGallery() {
       </BuddyGuideAnchor>
 
       <BuddyGuideSpotlight chapter="feed" />
-    </Screen>
+    </View>
   );
 }
