@@ -967,12 +967,6 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
                 linkify
               />
 
-              {isOfficialAuthor(post.author) ? (
-                <Text className="mt-3 text-[12px] leading-[18px] text-neutral-500">
-                  {t.plaza.official_ai_disclosure}
-                </Text>
-              ) : null}
-
               {post.extracted_summary ? (
                 <View className="mt-5 rounded-[20px] bg-[#FFF6F7] px-4 py-3">
                   <TranslatedText

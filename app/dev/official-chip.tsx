@@ -4,7 +4,6 @@ import { OfficialChip, isOfficialAuthor } from '../../components/OfficialChip';
 import { Screen } from '../../components/Screen';
 import { SectionLabel } from '../../components/SectionLabel';
 import { VerifiedBadge } from '../../components/VerifiedBadge';
-import { useLanguage } from '../../context/LanguageContext';
 import { CommunityPostCard } from '../../features/community/CommunityPostCard';
 import type { CommunityPost } from '../../features/community/useCommunity';
 import { colors } from '../../theme/tokens';
@@ -56,7 +55,7 @@ function mockPost(
     created_at: '2026-08-19T10:00:00Z',
     author: {
       id: '00000000-0000-4000-8000-00000000dev1',
-      display_name: 'Postervia',
+      display_name: 'Magdalena',
       avatar_url: null,
       city: 'berlin',
       identity: 'local',
@@ -99,7 +98,6 @@ function AuthorRow({
 }
 
 export default function OfficialChipGallery() {
-  const { t } = useLanguage();
 
   return (
     <Screen background="default" topInset>
@@ -131,7 +129,7 @@ export default function OfficialChipGallery() {
         <SectionLabel>5 · Chip beside the verified badge (two claims, one row)</SectionLabel>
         <AuthorRow name="Postervia" official verified />
 
-        <SectionLabel>6 · Real feed card + AI disclosure copy</SectionLabel>
+        <SectionLabel>6 · Real feed card</SectionLabel>
         <CommunityPostCard
           post={mockPost(
             '00000000-0000-4000-8000-0000000000c1',
@@ -140,17 +138,6 @@ export default function OfficialChipGallery() {
           )}
           onPress={() => {}}
         />
-        <View
-          style={{
-            padding: 12,
-            borderRadius: 12,
-            backgroundColor: 'rgba(98, 57, 40, 0.05)',
-          }}
-        >
-          <Text style={{ fontSize: 12, lineHeight: 18, color: colors.textMuted }}>
-            {t.plaza.official_ai_disclosure}
-          </Text>
-        </View>
       </ScrollView>
     </Screen>
   );
