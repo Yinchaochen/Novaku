@@ -94,12 +94,21 @@ const DEFAULT_FORM_VALUES: FormData = {
 // A refetched feed can legitimately surface the same post in more than one
 // query page (ranking shifts between snapshots on pull-to-refresh), so flatten
 // defensively by post id — keeping first occurrence preserves display order.
-function dedupePostsById(posts: CommunityPost[]): CommunityPost[] {
+// The feed loops: once the reader has been through everything, the next page
+// starts a new round with a re-seeded order rather than ending. So a post can
+// legitimately appear twice, and identity is (round, id), not id. Deduping on
+// id alone would delete round two entirely and the loop would look broken.
+function feedItemKey(post: CommunityPost): string {
+  return post._feed_key ?? post.id;
+}
+
+function dedupeFeedItems(posts: CommunityPost[]): CommunityPost[] {
   const seen = new Set<string>();
   const out: CommunityPost[] = [];
   for (const post of posts) {
-    if (seen.has(post.id)) continue;
-    seen.add(post.id);
+    const key = feedItemKey(post);
+    if (seen.has(key)) continue;
+    seen.add(key);
     out.push(post);
   }
   return out;
@@ -166,7 +175,13 @@ export default function PlazaScreen() {
   const [editingPost, setEditingPost] = useState<CommunityPost | null>(null);
   const feedQuery = useCommunityFeed();
   const pages = feedQuery?.data?.pages;
-  const data = dedupePostsById(pages?.flatMap((page) => page.items) ?? []);
+  const data = dedupeFeedItems(
+    pages?.flatMap((page) =>
+      page.items.map((item) =>
+        page.feed_round ? { ...item, _feed_key: `${page.feed_round}:${item.id}` } : item,
+      ),
+    ) ?? [],
+  );
   const isLoading = feedQuery?.isLoading ?? false;
   const isError = feedQuery?.isError ?? false;
   const isFetching = feedQuery?.isFetching ?? false;
@@ -716,7 +731,7 @@ export default function PlazaScreen() {
         data={filteredPosts}
         masonry
         numColumns={2}
-        keyExtractor={(post) => post.id}
+        keyExtractor={feedItemKey}
         renderItem={({ item }) => (
           <View style={{ paddingHorizontal: 6 }}>
             <CommunityPostCard post={item} onPress={openPostFromFeed} />

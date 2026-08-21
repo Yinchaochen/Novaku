@@ -6,6 +6,7 @@ import { Alert, Pressable, Text, View } from 'react-native';
 
 import { colors, shadows } from '../../theme/tokens';
 import { useLanguage } from '../../context/LanguageContext';
+import { clampAspect } from '../../lib/cardAspect';
 import { resolveMediaUrl } from '../../lib/media';
 import { useAuthStore } from '../../store/authStore';
 import { ActionSheet } from '../../components/ActionSheet';
@@ -32,6 +33,9 @@ interface Props {
   titleHighlight?: string;
 }
 
+// A card without a picture is a coloured panel, and varying its height is what
+// keeps a masonry column from looking like a table. Cards WITH a picture take
+// their height from the picture instead — see clampAspect.
 function getVisualHeight(post: CommunityPost) {
   const seed = post.id.charCodeAt(0) % 3;
   if (post.media_items.length > 0) {
@@ -126,6 +130,9 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
   const isOwnPost = viewerId != null && post.author.id === viewerId;
   const typeColor = getTypeColor(post.post_type);
   const imageHeight = getVisualHeight(post);
+  // Unknown until the image reports its size. Until then the card keeps the
+  // placeholder height, so the column does not collapse and re-expand.
+  const [imageAspect, setImageAspect] = useState<number | null>(null);
   const hasEventCandidate = post.action_candidates.some(
     (candidate) => candidate.metadata_json?.['card_type'] === 'event'
   );
@@ -189,7 +196,15 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
               }
               contentFit="cover"
               transition={120}
-              style={{ width: '100%', height: imageHeight, backgroundColor: '#1F1B18' }}
+              onLoad={(event) => {
+                const size = event.source;
+                setImageAspect(size ? clampAspect(size.width, size.height) : null);
+              }}
+              style={
+                imageAspect
+                  ? { width: '100%', aspectRatio: imageAspect, backgroundColor: '#1F1B18' }
+                  : { width: '100%', height: imageHeight, backgroundColor: '#1F1B18' }
+              }
             />
             {isVideoMedia(post.media_items[0]) ? (
               <>

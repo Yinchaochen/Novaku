@@ -23,6 +23,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import ViewShot from 'react-native-view-shot';
 
 import { useLanguage } from '../../context/LanguageContext';
+import { detailMediaHeight } from '../../lib/cardAspect';
 import { formatDisplayLocation } from '../../lib/displayLocation';
 import { normalizeMapUrl } from '../../lib/maps';
 import { resolveMediaUrl } from '../../lib/media';
@@ -211,7 +212,10 @@ function wrapMediaIndex(index: number, itemCount: number) {
 export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onEditPost }: Props) {
   const { t, langCode } = useLanguage();
   const insets = useSafeAreaInsets();
-  const { width: viewportWidth } = useWindowDimensions();
+  const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
+  // Sized from the first picture once it loads. Event posters are mostly
+  // words, and a fixed frame cut them off at both edges.
+  const [measuredMediaHeight, setMeasuredMediaHeight] = useState<number | null>(null);
   const user = useAuthStore((state) => state.user);
   const qc = useQueryClient();
   const { mutate: trackCommunityEvents } = useTrackCommunityEvents();
@@ -372,7 +376,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
     return null;
   }
 
-  const mediaHeight = Math.min(Math.round(viewportWidth * 1.02), 440);
+  const mediaHeight = measuredMediaHeight ?? Math.min(Math.round(viewportWidth * 1.02), 440);
   const dotSlot = 14;
   const inactiveDotSize = 6;
   const activeDotSize = 8;
@@ -826,8 +830,19 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
                               resolveMediaUrl(isVideo ? media.thumb_url ?? media.media_url : media.media_url) ??
                               media.media_url
                             }
-                            contentFit="cover"
+                            contentFit={isVideo ? 'cover' : 'contain'}
                             transition={120}
+                            onLoad={(event) => {
+                              if (isVideo || index !== 0) {
+                                return;
+                              }
+                              const size = event?.source;
+                              setMeasuredMediaHeight(
+                                size
+                                  ? detailMediaHeight(size.width, size.height, viewportWidth, viewportHeight)
+                                  : null,
+                              );
+                            }}
                             style={{ width: viewportWidth, height: mediaHeight, backgroundColor: isVideo ? '#101010' : undefined }}
                           />
                           {isVideo ? (

@@ -152,6 +152,9 @@ export interface CommunityComment {
 
 export interface CommunityPost {
   id: string;
+  /** Client-only list identity. The feed loops, so the same post can appear in
+   *  more than one round and `id` alone stops being unique on screen. */
+  _feed_key?: string;
   post_type: 'experience' | 'question' | 'guide' | 'warning' | 'recommendation';
   title: string;
   body: string;
@@ -299,6 +302,9 @@ export interface CommunityFeedPage {
   local_pool_empty?: boolean;
   /** Posts on this page the viewer has never been shown (D-065). */
   unseen_on_page?: number;
+  /** Laps the reader has made round the library. The feed re-orders and loops
+   *  instead of ending, so list identity is (round, id). 0 on the first lap. */
+  feed_round?: number;
 }
 
 export interface CommunitySearchOfficialHit {
@@ -369,6 +375,7 @@ export function useCommunityFeed() {
         next_cursor: (res.data.data.next_cursor ?? null) as string | null,
         local_pool_empty: Boolean(res.data.data.local_pool_empty),
         unseen_on_page: Number(res.data.data.unseen_on_page ?? 0),
+        feed_round: Number(res.data.data.feed_round ?? 0),
       };
     },
     initialPageParam: null as string | null,
