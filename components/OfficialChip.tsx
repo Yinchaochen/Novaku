@@ -3,14 +3,21 @@ import { Text, View } from 'react-native';
 import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../theme/tokens';
 
-// "Published by Postervia" (D-065), shown next to the author name on seeded
-// cold-start content.
+// The byline role on accounts Postervia itself publishes under (D-065),
+// shown next to the author name.
+//
+// It reads "Editor" rather than "Official" because a masthead is the honest
+// description: these are named voices with their own beats, written and
+// reviewed by us, the way a magazine's columnists are. "Official" made the
+// same fact sound like a notice board. What it must never do is disappear —
+// the AI Act Art. 50 disclosure and the Terms clause both hang on this chip
+// being present.
 //
 // Deliberately a word, not a second glyph. The verified badge (D-063) already
 // occupies the icon slot beside a name, and two small marks side by side read
 // as one decoration rather than two separate claims — which is exactly the
 // confusion to avoid here, because the claims are unrelated: that badge says
-// "a checked real person", this one says "not a person at all".
+// "a checked real person", this one says "written by us".
 //
 // Warm neutral rather than coral: coral is the verified badge's colour, and
 // reusing it would tie the two together again through the palette after the
