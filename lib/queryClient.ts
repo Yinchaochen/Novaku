@@ -52,15 +52,31 @@ onlineManager.setEventListener((setOnline) => {
   return () => subscription();
 });
 
+/** HTTP status off an axios-shaped error, or undefined for network failures. */
+export function errorStatus(error: unknown): number | undefined {
+  return (error as { response?: { status?: number } })?.response?.status;
+}
+
+/**
+ * Retry policy for reads. A 4xx is a real answer and is never retried;
+ * network failures and 5xx are retried up to `max` times, on the jittered
+ * delay below. Screens that sit on the critical path (the feed) pass a higher
+ * `max` than the default, because a deploy switchover fails requests for some
+ * tens of seconds and the default single retry does not outlast it.
+ */
+export function retryReads(max: number) {
+  return (failureCount: number, error: unknown): boolean => {
+    const status = errorStatus(error);
+    if (status && status >= 400 && status < 500) return false;
+    return failureCount < max;
+  };
+}
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5,
-      retry: (failureCount, error) => {
-        const status = (error as { response?: { status?: number } })?.response?.status;
-        if (status && status >= 400 && status < 500) return false;
-        return failureCount < 1;
-      },
+      retry: retryReads(1),
       // MS-16: exponential backoff with full jitter (AWS Builders' Library) —
       // randomizing each client's wait decorrelates retries so a whole cohort
       // of phones coming back online after a subway tunnel doesn't stampede

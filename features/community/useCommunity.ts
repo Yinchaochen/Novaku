@@ -6,10 +6,12 @@
   useMutation,
   useQuery,
   useQueryClient,
+  keepPreviousData,
 } from '@tanstack/react-query';
 
 import { useLanguage } from '../../context/LanguageContext';
 import { api } from '../../lib/api';
+import { retryReads } from '../../lib/queryClient';
 import { useFeedForegroundRefresh } from './useFeedForegroundRefresh';
 import { addSentryBreadcrumb } from '../../lib/sentry';
 import { useAuthStore } from '../../store/authStore';
@@ -369,7 +371,13 @@ export function useCommunityFeed() {
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
     enabled: Boolean(user),
-    retry: 1,
+    // The key carries the locale, so switching language is a brand-new query.
+    // Without this the screen goes blank (or straight to the error state) for
+    // the duration of the refetch, which is exactly when a deploy blip hurts.
+    placeholderData: keepPreviousData,
+    // A deploy switchover on Railway fails requests for some tens of seconds;
+    // the global single retry does not outlast it, four jittered ones usually do.
+    retry: retryReads(4),
     refetchOnMount: 'always',
     refetchOnReconnect: true,
   });

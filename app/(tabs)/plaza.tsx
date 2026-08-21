@@ -761,9 +761,22 @@ export default function PlazaScreen() {
               <ActivityIndicator size="large" color={colors.brandCoral} />
             </View>
           ) : isError ? (
-            <Text style={{ color: colors.danger, paddingHorizontal: 16, paddingVertical: 24, textAlign: 'center' }}>
-              {t.common.error}
-            </Text>
+            <View style={{ alignItems: 'center', paddingHorizontal: 16, paddingVertical: 24, gap: 14 }}>
+              <Text style={{ color: colors.danger, textAlign: 'center' }}>{t.common.error}</Text>
+              <Pressable
+                onPress={() => refetch()}
+                accessibilityRole="button"
+                testID="plaza.feed-retry"
+                style={{
+                  paddingHorizontal: 18,
+                  paddingVertical: 9,
+                  borderRadius: 999,
+                  backgroundColor: colors.brandCoral,
+                }}
+              >
+                <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>{t.common.retry}</Text>
+              </Pressable>
+            </View>
           ) : (
             <GlassCard tone="white" radiusKey="3xl" padding={32} style={{ alignItems: 'center', marginHorizontal: 12 }}>
               <Text style={{ fontSize: 28, opacity: 0.5, marginBottom: 12 }}>✦</Text>
