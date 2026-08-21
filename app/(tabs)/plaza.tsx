@@ -181,6 +181,11 @@ export default function PlazaScreen() {
   // the served feed is from it — label the global fallback instead of
   // silently passing it off as local.
   const localPoolEmpty = Boolean(pages?.[0]?.local_pool_empty) && data.length > 0;
+  // Ranking now reserves places for posts this viewer has not seen (D-065
+  // step A); the count says so, rather than leaving them to spot it. First
+  // page only — page two is all new by definition and the pill would lie.
+  const unseenCount = pages?.[0]?.unseen_on_page ?? 0;
+  const showNewPill = unseenCount > 0 && data.length > 0;
   const createPost = useCreateCommunityPost();
   const updatePost = useUpdateCommunityPost(editingPost?.id ?? null);
   const trackCommunityEvents = useTrackCommunityEvents()?.mutate ?? (() => undefined);
@@ -723,7 +728,26 @@ export default function PlazaScreen() {
           paddingBottom: Math.max(insets.bottom + 180, 200),
         }}
         ListHeaderComponent={
-          localPoolEmpty ? (
+          showNewPill || localPoolEmpty ? (
+            <View>
+              {showNewPill ? (
+                <View
+                  testID="plaza.new-posts-pill"
+                  style={{
+                    alignSelf: 'center',
+                    marginBottom: 10,
+                    borderRadius: 999,
+                    paddingHorizontal: 14,
+                    paddingVertical: 6,
+                    backgroundColor: colors.brandCoral,
+                  }}
+                >
+                  <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#FFFFFF' }}>
+                    {t.plaza.new_posts_pill.replace('{count}', String(unseenCount))}
+                  </Text>
+                </View>
+              ) : null}
+              {localPoolEmpty ? (
             <View
               testID="plaza.local-pool-empty"
               style={{
@@ -738,6 +762,8 @@ export default function PlazaScreen() {
               <Text style={{ fontSize: 12.5, lineHeight: 18, color: '#9A6411', fontWeight: '600' }}>
                 {t.plaza.feed_no_local_content}
               </Text>
+                </View>
+              ) : null}
             </View>
           ) : null
         }

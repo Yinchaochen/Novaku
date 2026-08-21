@@ -472,6 +472,7 @@
     "search_history_less": "收起搜索记录",
     "official_account_chip": "官方",
     "official_account_label": "Postervia 官方账号",
+    "new_posts_pill": "上次来之后新增 {count} 条",
     "official_ai_disclosure": "本文由 Postervia 依据下方官方来源、借助 AI 整理，不是个人经历。"
   },
   "documents": {

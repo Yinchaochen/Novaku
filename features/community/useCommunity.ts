@@ -297,6 +297,8 @@ export interface CommunityFeedPage {
   next_cursor: string | null;
   // First page only: viewer has a city but nothing served is from it (D-061).
   local_pool_empty?: boolean;
+  /** Posts on this page the viewer has never been shown (D-065). */
+  unseen_on_page?: number;
 }
 
 export interface CommunitySearchOfficialHit {
@@ -366,6 +368,7 @@ export function useCommunityFeed() {
         items: res.data.data.items as CommunityPost[],
         next_cursor: (res.data.data.next_cursor ?? null) as string | null,
         local_pool_empty: Boolean(res.data.data.local_pool_empty),
+        unseen_on_page: Number(res.data.data.unseen_on_page ?? 0),
       };
     },
     initialPageParam: null as string | null,

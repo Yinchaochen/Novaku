@@ -472,6 +472,7 @@
     "search_history_less": "Show fewer recent searches",
     "official_account_chip": "Official",
     "official_account_label": "Official Postervia account",
+    "new_posts_pill": "{count} new since your last visit",
     "official_ai_disclosure": "Written by Postervia from the official source below, with AI assistance. Not a personal experience."
   },
   "documents": {
