@@ -62,6 +62,7 @@ import {
   getCommunitySessionId,
   useCommunityFeed,
   useCreateCommunityPost,
+  useRefreshCommunityFeed,
   useTrackCommunityEvents,
   useUpdateCommunityPost,
   useUploadCommunityMedia,
@@ -188,6 +189,7 @@ export default function PlazaScreen() {
   const isFetchingNextPage = feedQuery?.isFetchingNextPage ?? false;
   const hasNextPage = feedQuery?.hasNextPage ?? false;
   const refetch = feedQuery?.refetch ?? noopRefetch;
+  const refreshFeed = useRefreshCommunityFeed();
   const fetchNextPage = feedQuery?.fetchNextPage ?? (() => Promise.resolve(undefined));
   // Single cursor-paginated snapshot is the only feed source now; "caught up" =
   // the cursor returned no next page (no separate refill mechanism to track).
@@ -784,8 +786,11 @@ export default function PlazaScreen() {
         }
         refreshControl={
           <RefreshControl
-            refreshing={isFetching && !isLoading}
-            onRefresh={refetch}
+            // isFetching alone is also true while the next page loads, which
+            // put the top spinner on every scroll-to-load — and left it there,
+            // because the feed now always has a next page.
+            refreshing={isFetching && !isFetchingNextPage && !isLoading}
+            onRefresh={refreshFeed}
             tintColor={colors.brandCoral}
             progressViewOffset={40}
           />

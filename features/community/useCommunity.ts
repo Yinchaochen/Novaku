@@ -9,10 +9,12 @@
   keepPreviousData,
 } from '@tanstack/react-query';
 
+import { useCallback } from 'react';
+
 import { useLanguage } from '../../context/LanguageContext';
 import { api } from '../../lib/api';
 import { retryReads } from '../../lib/queryClient';
-import { useFeedForegroundRefresh } from './useFeedForegroundRefresh';
+import { firstPageOnly, useFeedForegroundRefresh } from './useFeedForegroundRefresh';
 import { addSentryBreadcrumb } from '../../lib/sentry';
 import { useAuthStore } from '../../store/authStore';
 
@@ -391,6 +393,34 @@ export function useCommunityFeed() {
     refetchOnMount: 'always',
     refetchOnReconnect: true,
   });
+}
+
+/**
+ * Pull-to-refresh for the feed.
+ *
+ * Deliberately not `query.refetch()`. Refetching an infinite query refetches
+ * every page the reader has already scrolled through — one request per page,
+ * in sequence, before the spinner can stop. Since the feed stopped having an
+ * end, a reader who has been scrolling has many pages loaded, so that is a
+ * long stall on a phone network and looks like refresh is broken. It is also
+ * wrong: the later pages replay a snapshot built by the previous feed session,
+ * so they get stitched onto a page 1 ordered by a different seed.
+ *
+ * Dropping to page 1 first costs exactly one request and asks the backend for
+ * a genuinely new session, which is what a pull gesture means. Same reasoning
+ * — and the same helper — as the foreground path.
+ */
+export function useRefreshCommunityFeed() {
+  const { langCode } = useLanguage();
+  const user = useAuthStore((state) => state.user);
+  const queryKey = communityFeedQueryKey(user, langCode);
+  const queryClient = useQueryClient();
+  const key = queryKey.join('|');
+  // queryKey is a fresh array every render, so the joined string is its identity.
+  return useCallback(async () => {
+    queryClient.setQueryData(queryKey, firstPageOnly);
+    await queryClient.invalidateQueries({ queryKey });
+  }, [queryClient, key]);
 }
 
 export function useSearchCommunityPosts(params: CommunitySearchParams | null) {
