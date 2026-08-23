@@ -87,7 +87,10 @@ function routeForNotification(
   data: Record<string, unknown> | undefined,
   track: (events: CommunityRecommendationEventInput[]) => void,
 ): void {
-  if (data?.type === 'post_deadline' && typeof data.post_id === 'string') {
+  if (
+    (data?.type === 'post_deadline' || data?.type === 'event_reminder') &&
+    typeof data.post_id === 'string'
+  ) {
     // D-073: the tap itself is the signal — what someone opens from a push
     // outranks a scroll in the interest profile that picks the next one.
     track([

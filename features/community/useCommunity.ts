@@ -1146,7 +1146,8 @@ export interface CommunityNotification {
     | 'comment_mention'
     | 'buddy_chat_started'
     | 'friend_request'
-    | 'post_deadline';
+    | 'post_deadline'
+    | 'event_reminder';
   actor: CommunityAuthor;
   post_id?: string | null;
   comment_id?: string | null;

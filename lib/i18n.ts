@@ -914,6 +914,27 @@ export type Translations = {
     privacy_recommendations_hint: string;
     deadline_push_label: string;
     deadline_push_hint: string;
+    event_push_title: string;
+    event_push_label: string;
+    event_push_hint: string;
+    event_push_row_hint: string;
+    event_push_explainer: string;
+    event_interests_section: string;
+    event_interests_none_hint: string;
+    event_interest_founder: string;
+    event_interest_founder_hint: string;
+    event_interest_developer: string;
+    event_interest_developer_hint: string;
+    event_interest_designer: string;
+    event_interest_designer_hint: string;
+    event_interest_investor: string;
+    event_interest_investor_hint: string;
+    event_interest_student: string;
+    event_interest_student_hint: string;
+    event_interest_jobseeker: string;
+    event_interest_jobseeker_hint: string;
+    event_interest_creative: string;
+    event_interest_creative_hint: string;
     privacy_cookies: string;
     privacy_cookies_hint: string;
     legal_impressum: string;
@@ -1344,6 +1365,7 @@ export type Translations = {
     replied_to_you: string;
     mentioned_you: string;
     deadline_reminder: string;
+    event_reminder: string;
     sent_friend_request: string;
   };
   common: {

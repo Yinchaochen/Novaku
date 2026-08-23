@@ -67,6 +67,8 @@ export interface AuthUser {
   profile_visibility: 'public' | 'followers' | 'friends' | 'only_me';
   feed_mode: 'personalized' | 'chronological' | 'following';
   deadline_push_enabled?: boolean;
+  event_push_enabled?: boolean;
+  event_interests?: string[];
   gender: 'male' | 'female' | 'non_binary' | 'prefer_not_to_say' | null;
   buddy_publish_banned_at: string | null;
   // D-046 first-value guide: 0 = current guide not completed/skipped yet.

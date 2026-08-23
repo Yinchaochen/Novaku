@@ -142,6 +142,8 @@ export default function NotificationsScreen() {
                       ? t.notifications.sent_friend_request
                       : n.type === 'post_deadline'
                       ? t.notifications.deadline_reminder
+                      : n.type === 'event_reminder'
+                      ? t.notifications.event_reminder
                       : t.notifications.mentioned_you}
                   </Text>
                 </Text>

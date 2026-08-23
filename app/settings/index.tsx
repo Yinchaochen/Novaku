@@ -128,6 +128,12 @@ export default function SettingsHubScreen() {
             }
           />
           <SettingsRow
+            icon="calendar-outline"
+            label={t.settings.event_push_label}
+            hint={t.settings.event_push_row_hint}
+            onPress={() => router.push('/settings/event-reminders' as never)}
+          />
+          <SettingsRow
             icon="shield-checkmark-outline"
             label={t.settings.privacy_cookies}
             hint={t.settings.privacy_cookies_hint}

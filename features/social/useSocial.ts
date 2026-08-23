@@ -224,6 +224,30 @@ export function useUpdateFeedMode() {
   });
 }
 
+export const EVENT_INTERESTS = [
+  'founder',
+  'developer',
+  'designer',
+  'investor',
+  'student',
+  'jobseeker',
+  'creative',
+] as const;
+export type EventInterest = (typeof EVENT_INTERESTS)[number];
+
+export function useUpdateEventPush() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (patch: { enabled?: boolean; interests?: EventInterest[] }) => {
+      const res = await api.patch('/auth/me/event-push', patch);
+      return res.data.data;
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['auth', 'me'] });
+    },
+  });
+}
+
 export function useUpdateDeadlinePush() {
   const qc = useQueryClient();
   return useMutation({
