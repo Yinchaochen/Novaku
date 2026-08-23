@@ -737,12 +737,15 @@ export default function PlazaScreen() {
         numColumns={2}
         keyExtractor={feedItemKey}
         renderItem={({ item }) => (
-          <View style={{ paddingHorizontal: 6 }}>
+          <View style={{ paddingHorizontal: 3 }}>
             <CommunityPostCard post={item} onPress={openPostFromFeed} />
           </View>
         )}
+        // 3px either side of each card plus 6 here = a 6px gutter between
+        // columns and 6px to the screen edge, so the wall reads as one surface
+        // rather than as cards floating apart.
         contentContainerStyle={{
-          paddingHorizontal: 4,
+          paddingHorizontal: 6,
           paddingTop: 46,
           paddingBottom: Math.max(insets.bottom + 180, 200),
         }}

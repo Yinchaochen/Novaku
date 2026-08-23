@@ -179,8 +179,8 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
   return (
     <View
       style={{
-        marginBottom: 14,
-        borderRadius: 22,
+        marginBottom: 6,
+        borderRadius: 14,
         overflow: 'hidden',
         backgroundColor: '#FFFFFF',
         ...shadows.card,
@@ -225,7 +225,7 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
                     style={{
                       width: 44,
                       height: 44,
-                      borderRadius: 22,
+                      borderRadius: 14,
                       alignItems: 'center',
                       justifyContent: 'center',
                       backgroundColor: 'rgba(0,0,0,0.38)',
@@ -275,18 +275,22 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
         ) : (
           <View
             style={{
-              height: imageHeight,
+              // Sized to the words, not to a picture that is not there. A
+              // text post used to occupy a full image-height block, which made
+              // the two guide cards at the top of the feed the loudest thing
+              // on screen and pushed everything else below the fold.
+              minHeight: 96,
               backgroundColor: typeColor.bg,
-              paddingHorizontal: 16,
-              paddingTop: 18,
-              paddingBottom: 14,
+              paddingHorizontal: 12,
+              paddingTop: 12,
+              paddingBottom: 12,
               justifyContent: 'flex-end',
             }}
           >
             <View
               style={{
                 alignSelf: 'flex-start',
-                marginBottom: 12,
+                marginBottom: 8,
                 backgroundColor: 'rgba(255,255,255,0.85)',
                 borderRadius: 999,
                 paddingHorizontal: 10,
@@ -301,14 +305,16 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
               originalText={post.body}
               translatedText={post.translated_body}
               sourceLanguage={post.body_source_language ?? post.source_language}
-              numberOfLines={4}
-              textStyle={{ color: colors.textMain, fontSize: 16, fontWeight: '700', lineHeight: 22 }}
+              numberOfLines={3}
+              // Was 16/bold: the body then outweighed the title printed under
+              // it, so a reader met the same post twice, louder first.
+              textStyle={{ color: colors.textBrown, fontSize: 13, fontWeight: '400', lineHeight: 18 }}
             />
           </View>
         )}
       </Pressable>
 
-      <View style={{ paddingHorizontal: 14, paddingVertical: 12 }}>
+      <View style={{ paddingHorizontal: 10, paddingVertical: 8 }}>
         <Pressable onPress={openDetail}>
           {titleHighlight ? (
             <HighlightedCardTitle
