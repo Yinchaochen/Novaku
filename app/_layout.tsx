@@ -150,6 +150,13 @@ function RootLayout() {
 // Keep the root export plain. Sentry.wrap is unsafe on iOS 26 + new arch.
 export default RootLayout;
 
+/** Registers for push and routes notification taps, from inside the query
+ *  provider its tap reporting needs. Renders nothing. */
+function PushNotificationsBridge() {
+  usePushNotifications();
+  return null;
+}
+
 function AppBody() {
   const { setLangCode } = useLanguage();
   const hydrate = useAuthStore((s) => s.hydrate);
@@ -162,7 +169,10 @@ function AppBody() {
   const lastRedirect = useRef<string | null>(null);
 
   // Register for OS push once authenticated; route on notification tap.
-  usePushNotifications();
+  // Deliberately NOT called here: usePushNotifications reports notification
+  // taps through useTrackCommunityEvents (D-075), and a hook cannot see a
+  // provider the same component renders — the PersistQueryClientProvider
+  // below is its child. It runs in PushNotificationsBridge instead.
 
   const [, fontError] = useFonts({
     PlusJakartaSans_500Medium,
@@ -264,6 +274,7 @@ function AppBody() {
         void queryClient.resumePausedMutations();
       }}
     >
+      <PushNotificationsBridge />
       <StatusBar style="dark" />
       {isAuthenticated ? <PendingDeletionBanner /> : null}
       <NetworkHealthBanner />
