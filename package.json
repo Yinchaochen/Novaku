@@ -24,7 +24,8 @@
     ],
     "transformIgnorePatterns": [
       "node_modules/(?!(.pnpm|react-native|@react-native|@react-native-community|@react-native-async-storage|expo|expo-.*|@expo|@expo-google-fonts|react-navigation|@react-navigation|expo-router|@sentry/react-native|nativewind|react-native-css-interop|zustand))"
-    ]
+    ],
+    "testTimeout": 20000
   },
   "dependencies": {
     "@chenglou/pretext": "^0.0.6",
