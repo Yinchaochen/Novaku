@@ -1,12 +1,13 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import { Alert, ScrollView } from 'react-native';
+import { Alert, ScrollView, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SettingsHeader, SettingsRow, SettingsSection } from '../../components/SettingsRow';
 import { useLanguage } from '../../context/LanguageContext';
 import { useCreateDSR } from '../../features/compliance/useCompliance';
 import { useProductGuide } from '../../features/guide/useProductGuide';
+import { useUpdateDeadlinePush } from '../../features/social/useSocial';
 import { useAuthStore } from '../../store/authStore';
 
 export default function SettingsHubScreen() {
@@ -14,6 +15,8 @@ export default function SettingsHubScreen() {
   const { restart: restartGuide } = useProductGuide();
   const version = Constants.expoConfig?.version ?? '0.1.0';
   const isStaff = useAuthStore((s) => s.user?.is_staff ?? false);
+  const deadlinePushEnabled = useAuthStore((s) => s.user?.deadline_push_enabled ?? true);
+  const updateDeadlinePush = useUpdateDeadlinePush();
   const createDsr = useCreateDSR();
 
   // App Store Guideline 5.1.1(v): account deletion must be reachable in-app.
@@ -111,6 +114,18 @@ export default function SettingsHubScreen() {
             label={t.settings.privacy_recommendations}
             hint={t.settings.privacy_recommendations_hint}
             onPress={() => router.push('/settings/recommendations' as never)}
+          />
+          <SettingsRow
+            icon="alarm-outline"
+            label={t.settings.deadline_push_label}
+            hint={t.settings.deadline_push_hint}
+            trailing={
+              <Switch
+                value={deadlinePushEnabled}
+                onValueChange={(next) => updateDeadlinePush.mutate(next)}
+                trackColor={{ true: '#F47C7C', false: '#D6D9E0' }}
+              />
+            }
           />
           <SettingsRow
             icon="shield-checkmark-outline"

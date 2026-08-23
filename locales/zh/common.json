@@ -872,6 +872,7 @@
     "followed_you": "关注了你",
     "replied_to_you": "回复了你的评论",
     "mentioned_you": "在评论中提到了你",
+    "deadline_reminder": "发布的内容报名即将截止",
     "sent_friend_request": "向你发送了好友申请"
   },
   "common": {
@@ -1165,6 +1166,8 @@
     "privacy_data_hint": "导出、删除或限制处理你的数据",
     "privacy_recommendations": "推荐与个性化",
     "privacy_recommendations_hint": "切换个性化推荐与了解算法",
+    "deadline_push_label": "截止提醒",
+    "deadline_push_hint": "同城帖子报名快截止时推送提醒，每天最多一条。",
     "privacy_cookies": "Cookie 与跟踪",
     "privacy_cookies_hint": "查看第三方追踪与第三方服务清单",
     "legal_impressum": "Impressum",

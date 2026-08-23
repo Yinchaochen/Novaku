@@ -264,6 +264,7 @@ export interface CommunityRecommendationEventInput {
     | 'plaza_impression'
     | 'plaza_card_visible'
     | 'plaza_open_post'
+    | 'push_open'
     | 'plaza_dwell'
     | 'plaza_expand_comments'
     | 'plaza_open_source_link'
@@ -271,7 +272,7 @@ export interface CommunityRecommendationEventInput {
     | 'plaza_report_post'
     | 'plaza_report_comment';
   session_id: string;
-  surface: 'plaza_feed' | 'plaza_detail' | 'odyssey_from_plaza';
+  surface: 'plaza_feed' | 'plaza_detail' | 'odyssey_from_plaza' | 'push';
   post_id?: string | null;
   comment_id?: string | null;
   odyssey_id?: string | null;
@@ -1139,7 +1140,13 @@ export type NotificationCategory = 'social' | 'buddy';
 
 export interface CommunityNotification {
   id: string;
-  type: 'follow' | 'comment_reply' | 'comment_mention' | 'buddy_chat_started' | 'friend_request';
+  type:
+    | 'follow'
+    | 'comment_reply'
+    | 'comment_mention'
+    | 'buddy_chat_started'
+    | 'friend_request'
+    | 'post_deadline';
   actor: CommunityAuthor;
   post_id?: string | null;
   comment_id?: string | null;

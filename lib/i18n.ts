@@ -912,6 +912,8 @@ export type Translations = {
     privacy_data_hint: string;
     privacy_recommendations: string;
     privacy_recommendations_hint: string;
+    deadline_push_label: string;
+    deadline_push_hint: string;
     privacy_cookies: string;
     privacy_cookies_hint: string;
     legal_impressum: string;
@@ -1341,6 +1343,7 @@ export type Translations = {
     followed_you: string;
     replied_to_you: string;
     mentioned_you: string;
+    deadline_reminder: string;
     sent_friend_request: string;
   };
   common: {

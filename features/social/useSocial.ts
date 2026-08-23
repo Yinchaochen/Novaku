@@ -224,6 +224,19 @@ export function useUpdateFeedMode() {
   });
 }
 
+export function useUpdateDeadlinePush() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const res = await api.patch('/auth/me/deadline-push', { enabled });
+      return res.data.data;
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['auth', 'me'] });
+    },
+  });
+}
+
 export function useUserByDisplayId(displayId: string | null, enabled = true) {
   const user = useAuthStore((state) => state.user);
   const { langCode } = useLanguage();

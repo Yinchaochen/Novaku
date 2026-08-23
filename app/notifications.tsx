@@ -140,6 +140,8 @@ export default function NotificationsScreen() {
                       ? t.notifications.replied_to_you
                       : n.type === 'friend_request'
                       ? t.notifications.sent_friend_request
+                      : n.type === 'post_deadline'
+                      ? t.notifications.deadline_reminder
                       : t.notifications.mentioned_you}
                   </Text>
                 </Text>

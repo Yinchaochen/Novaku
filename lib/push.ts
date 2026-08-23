@@ -6,6 +6,11 @@ import { Platform } from 'react-native';
 
 import { api } from './api';
 import { reportToSentry } from './sentry';
+import {
+  type CommunityRecommendationEventInput,
+  getCommunitySessionId,
+  useTrackCommunityEvents,
+} from '../features/community/useCommunity';
 import { useAuthStore } from '../store/authStore';
 
 // Foreground presentation: show the banner + add to the tray list, no badge
@@ -80,9 +85,24 @@ export async function unregisterPushTokenAsync(): Promise<void> {
 function routeForNotification(
   router: ReturnType<typeof useRouter>,
   data: Record<string, unknown> | undefined,
+  track: (events: CommunityRecommendationEventInput[]) => void,
 ): void {
-  // No dedicated conversation/post-detail routes exist yet, so we land the user
-  // on the relevant tab (parity with the in-app notification center).
+  if (data?.type === 'post_deadline' && typeof data.post_id === 'string') {
+    // D-073: the tap itself is the signal — what someone opens from a push
+    // outranks a scroll in the interest profile that picks the next one.
+    track([
+      {
+        event_name: 'push_open',
+        session_id: getCommunitySessionId(),
+        surface: 'push',
+        post_id: data.post_id,
+      },
+    ]);
+    router.push(`/p/${data.post_id}` as never);
+    return;
+  }
+  // No dedicated conversation route exists yet, so we land the user on the
+  // relevant tab (parity with the in-app notification center).
   if (data?.type === 'comment_reply') {
     router.push('/(tabs)/plaza');
   } else {
@@ -95,6 +115,7 @@ function routeForNotification(
 export function usePushNotifications(): void {
   const router = useRouter();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const { mutate: track } = useTrackCommunityEvents();
 
   useEffect(() => {
     if (isAuthenticated) void registerForPushNotificationsAsync();
@@ -105,7 +126,7 @@ export function usePushNotifications(): void {
       const data = response.notification.request.content.data as
         | Record<string, unknown>
         | undefined;
-      routeForNotification(router, data);
+      routeForNotification(router, data, track);
     });
     const tokenSub = Notifications.addPushTokenListener(() => {
       if (useAuthStore.getState().isAuthenticated) {
@@ -117,5 +138,5 @@ export function usePushNotifications(): void {
       responseSub.remove();
       tokenSub.remove();
     };
-  }, [router]);
+  }, [router, track]);
 }

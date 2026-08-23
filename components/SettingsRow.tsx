@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import type { ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 export interface SettingsRowProps {
@@ -7,9 +8,11 @@ export interface SettingsRowProps {
   hint?: string;
   onPress?: () => void;
   destructive?: boolean;
+  /** Rendered in place of the chevron, e.g. a Switch for an inline toggle. */
+  trailing?: ReactNode;
 }
 
-export function SettingsRow({ icon, label, hint, onPress, destructive }: SettingsRowProps) {
+export function SettingsRow({ icon, label, hint, onPress, destructive, trailing }: SettingsRowProps) {
   const color = destructive ? '#F47C7C' : '#3B2A22';
   return (
     <Pressable
@@ -31,7 +34,7 @@ export function SettingsRow({ icon, label, hint, onPress, destructive }: Setting
           </Text>
         ) : null}
       </View>
-      {onPress ? <Ionicons name="chevron-forward" size={18} color="#C4C9D4" /> : null}
+      {trailing ?? (onPress ? <Ionicons name="chevron-forward" size={18} color="#C4C9D4" /> : null)}
     </Pressable>
   );
 }

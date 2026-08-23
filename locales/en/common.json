@@ -1018,6 +1018,7 @@
     "followed_you": "started following you",
     "replied_to_you": "replied to your comment",
     "mentioned_you": "mentioned you in a comment",
+    "deadline_reminder": "posted something with an application deadline coming up",
     "sent_friend_request": "sent you a friend request"
   },
   "common": {
@@ -1165,6 +1166,8 @@
     "privacy_data_hint": "Export, delete or restrict processing of your data",
     "privacy_recommendations": "Recommendations & personalization",
     "privacy_recommendations_hint": "Switch personalized feed and learn how it works",
+    "deadline_push_label": "Deadline reminders",
+    "deadline_push_hint": "A push when a post in your city has an application closing soon. At most one a day.",
     "privacy_cookies": "Cookies & tracking",
     "privacy_cookies_hint": "Review third-party trackers and processors",
     "legal_impressum": "Imprint",
