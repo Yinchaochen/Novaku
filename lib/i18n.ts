@@ -5,6 +5,20 @@ import allTranslations from '../locales/all_translations';
 
 export type Translations = {
   app_name: string;
+  /** Form validation copy, keyed by the codes schemas emit (D-072). */
+  validation: {
+    generic: string;
+    required: string;
+    email_invalid: string;
+    password_too_short: string;
+    password_mismatch: string;
+    name_required: string;
+    title_too_short: string;
+    title_too_long: string;
+    body_too_short: string;
+    body_too_long: string;
+    token_invalid: string;
+  };
   social_guide: {
     confirm_group_title: string;
     confirm_group_cta: string;

@@ -1340,5 +1340,18 @@
     "moderation_tab_videos": "Videos",
     "moderation_empty_videos": "No videos waiting for human review",
     "moderation_video_label": "Video review"
+  },
+  "validation": {
+    "body_too_long": "That is too long — 4000 characters at most.",
+    "body_too_short": "Your post needs at least 12 characters.",
+    "email_invalid": "Please enter a valid email address.",
+    "generic": "Please check this field.",
+    "name_required": "Please enter a name.",
+    "password_mismatch": "These two passwords do not match.",
+    "password_too_short": "Your password needs at least 8 characters.",
+    "required": "This cannot be empty.",
+    "title_too_long": "That title is too long — 160 characters at most.",
+    "title_too_short": "The title needs at least 4 characters.",
+    "token_invalid": "This reset link looks incomplete. Please request a new one."
   }
 }

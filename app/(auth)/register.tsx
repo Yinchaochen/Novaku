@@ -1,4 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
+
+import { fieldErrorText } from '../../lib/formErrors';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { router } from 'expo-router';
@@ -40,9 +42,9 @@ const INPUT_FILL = '#FFE9A8';        // soft butter for input fields
 const INPUT_FILL_FOCUSED = '#FFE2A0'; // not used yet but reserved for focus state
 
 const schema = z.object({
-  email: z.email(),
-  password: z.string().min(8),
-  display_name: z.string().min(1),
+  email: z.email('email_invalid'),
+  password: z.string().min(8, 'password_too_short'),
+  display_name: z.string().min(1, 'name_required'),
 });
 type FormData = z.infer<typeof schema>;
 
@@ -234,7 +236,7 @@ export default function RegisterScreen() {
           )}
         />
         {errors.display_name ? (
-          <Text style={{ marginTop: 4, fontSize: 12, color: colors.danger }}>{errors.display_name.message}</Text>
+          <Text style={{ marginTop: 4, fontSize: 12, color: colors.danger }}>{fieldErrorText(t.validation, errors.display_name)}</Text>
         ) : null}
 
         {/* Password — with eye toggle */}
@@ -282,7 +284,7 @@ export default function RegisterScreen() {
           </Pressable>
         </View>
         {errors.password ? (
-          <Text style={{ marginTop: 4, fontSize: 12, color: colors.danger }}>{errors.password.message}</Text>
+          <Text style={{ marginTop: 4, fontSize: 12, color: colors.danger }}>{fieldErrorText(t.validation, errors.password)}</Text>
         ) : null}
 
         {/* Email */}
@@ -308,7 +310,7 @@ export default function RegisterScreen() {
           )}
         />
         {errors.email ? (
-          <Text style={{ marginTop: 4, fontSize: 12, color: colors.danger }}>{errors.email.message}</Text>
+          <Text style={{ marginTop: 4, fontSize: 12, color: colors.danger }}>{fieldErrorText(t.validation, errors.email)}</Text>
         ) : null}
 
         {/* The API validates the exact birthday and stores only the birth year. */}

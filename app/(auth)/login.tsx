@@ -1,4 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
+
+import { fieldErrorText } from '../../lib/formErrors';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { router } from 'expo-router';
@@ -35,8 +37,8 @@ import { oauthErrorMessage } from '../../features/auth/oauthErrorMessage';
 const INPUT_FILL = '#FFE9A8';
 
 const schema = z.object({
-  email: z.email(),
-  password: z.string().min(8),
+  email: z.email('email_invalid'),
+  password: z.string().min(8, 'password_too_short'),
 });
 type FormData = z.infer<typeof schema>;
 
@@ -208,7 +210,7 @@ export default function LoginScreen() {
           )}
         />
         {errors.email ? (
-          <Text style={{ marginTop: 4, fontSize: 12, color: colors.danger }}>{errors.email.message}</Text>
+          <Text style={{ marginTop: 4, fontSize: 12, color: colors.danger }}>{fieldErrorText(t.validation, errors.email)}</Text>
         ) : null}
 
         {/* Password — eye toggle */}
@@ -256,7 +258,7 @@ export default function LoginScreen() {
           </Pressable>
         </View>
         {errors.password ? (
-          <Text style={{ marginTop: 4, fontSize: 12, color: colors.danger }}>{errors.password.message}</Text>
+          <Text style={{ marginTop: 4, fontSize: 12, color: colors.danger }}>{fieldErrorText(t.validation, errors.password)}</Text>
         ) : null}
 
         {/* Remember me + Forgot password row */}

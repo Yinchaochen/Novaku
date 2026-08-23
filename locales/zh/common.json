@@ -1340,5 +1340,18 @@
     "moderation_tab_videos": "视频待审",
     "moderation_empty_videos": "没有等待人工复核的视频",
     "moderation_video_label": "视频审核"
+  },
+  "validation": {
+    "body_too_long": "正文太长了，最多 4000 个字。",
+    "body_too_short": "正文至少 12 个字。",
+    "email_invalid": "请填一个有效的邮箱地址。",
+    "generic": "这一项需要检查一下。",
+    "name_required": "请填一个名字。",
+    "password_mismatch": "两次输入的密码不一致。",
+    "password_too_short": "密码至少 8 个字符。",
+    "required": "这一项不能空着。",
+    "title_too_long": "标题太长了，最多 160 个字。",
+    "title_too_short": "标题至少 4 个字。",
+    "token_invalid": "这个重置链接看起来不完整，请重新申请一个。"
   }
 }

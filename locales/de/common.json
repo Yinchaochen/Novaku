@@ -1322,5 +1322,18 @@
     "moderation_tab_videos": "Videos",
     "moderation_empty_videos": "Keine Videos in der manuellen Prüfung",
     "moderation_video_label": "Videoprüfung"
+  },
+  "validation": {
+    "body_too_long": "Das ist zu lang – höchstens 4000 Zeichen.",
+    "body_too_short": "Dein Beitrag braucht mindestens 12 Zeichen.",
+    "email_invalid": "Bitte gib eine gültige E-Mail-Adresse ein.",
+    "generic": "Bitte überprüfe dieses Feld.",
+    "name_required": "Bitte gib einen Namen ein.",
+    "password_mismatch": "Die beiden Passwörter stimmen nicht überein.",
+    "password_too_short": "Dein Passwort braucht mindestens 8 Zeichen.",
+    "required": "Das darf nicht leer sein.",
+    "title_too_long": "Der Titel ist zu lang – höchstens 160 Zeichen.",
+    "title_too_short": "Der Titel braucht mindestens 4 Zeichen.",
+    "token_invalid": "Dieser Link sieht unvollständig aus. Bitte fordere einen neuen an."
   }
 }

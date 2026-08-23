@@ -1,4 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
+
+import { fieldErrorText } from '../../lib/formErrors';
 import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -72,8 +74,8 @@ import { usePlazaComposeIntentStore } from '../../store/plazaComposeIntentStore'
 
 const schema = z.object({
   post_type: z.enum(['experience', 'question', 'guide', 'warning', 'recommendation']),
-  title: z.string().min(4).max(160),
-  body: z.string().min(12).max(4000),
+  title: z.string().min(4, 'title_too_short').max(160, 'title_too_long'),
+  body: z.string().min(12, 'body_too_short').max(4000, 'body_too_long'),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -1103,7 +1105,7 @@ export default function PlazaScreen() {
                   />
                 )}
               />
-              {errors.title ? <Text className="mb-2 text-sm text-danger">{errors.title.message}</Text> : null}
+              {errors.title ? <Text className="mb-2 text-sm text-danger">{fieldErrorText(t.validation, errors.title)}</Text> : null}
 
               <Controller
                 control={control}
@@ -1128,7 +1130,7 @@ export default function PlazaScreen() {
                   />
                 )}
               />
-              {errors.body ? <Text className="mb-2 text-sm text-danger">{errors.body.message}</Text> : null}
+              {errors.body ? <Text className="mb-2 text-sm text-danger">{fieldErrorText(t.validation, errors.body)}</Text> : null}
 
               <ScrollView
                 horizontal

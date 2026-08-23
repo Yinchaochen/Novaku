@@ -1,4 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
+
+import { fieldErrorText } from '../../lib/formErrors';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -25,7 +27,7 @@ const HERO_YELLOW = '#FFD17E';
 const INPUT_FILL = '#FFE9A8';
 
 const schema = z.object({
-  email: z.email(),
+  email: z.email('email_invalid'),
 });
 type FormData = z.infer<typeof schema>;
 
@@ -167,7 +169,7 @@ export default function ForgotPasswordScreen() {
               )}
             />
             {errors.email ? (
-              <Text style={{ marginTop: 4, fontSize: 12, color: colors.danger }}>{errors.email.message}</Text>
+              <Text style={{ marginTop: 4, fontSize: 12, color: colors.danger }}>{fieldErrorText(t.validation, errors.email)}</Text>
             ) : null}
 
             <View style={{ marginTop: 26 }}>

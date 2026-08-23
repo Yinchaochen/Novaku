@@ -1,4 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
+
+import { fieldErrorText } from '../../lib/formErrors';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -33,9 +35,9 @@ const INPUT_FILL = '#FFE9A8';
 
 const schema = z
   .object({
-    token: z.string().min(20),
-    password: z.string().min(8),
-    confirmPassword: z.string().min(8),
+    token: z.string().min(20, 'token_invalid'),
+    password: z.string().min(8, 'password_too_short'),
+    confirmPassword: z.string().min(8, 'password_too_short'),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'password_mismatch',
@@ -237,7 +239,7 @@ export default function ResetPasswordScreen() {
         </View>
         {errors.password ? (
           <Text style={{ marginTop: 4, fontSize: 12, color: colors.danger }}>
-            {errors.password.message}
+            {fieldErrorText(t.validation, errors.password)}
           </Text>
         ) : null}
 
@@ -273,9 +275,7 @@ export default function ResetPasswordScreen() {
         </View>
         {errors.confirmPassword ? (
           <Text style={{ marginTop: 4, fontSize: 12, color: colors.danger }}>
-            {errors.confirmPassword.message === 'password_mismatch'
-              ? t.auth.errors.password_mismatch
-              : errors.confirmPassword.message}
+            {fieldErrorText(t.validation, errors.confirmPassword)}
           </Text>
         ) : null}
 
