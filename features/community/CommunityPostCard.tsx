@@ -6,7 +6,7 @@ import { Alert, Pressable, Text, View } from 'react-native';
 
 import { colors, shadows } from '../../theme/tokens';
 import { useLanguage } from '../../context/LanguageContext';
-import { clampAspect } from '../../lib/cardAspect';
+import { cardAspectFor } from '../../lib/cardAspect';
 import { resolveMediaUrl } from '../../lib/media';
 import { useAuthStore } from '../../store/authStore';
 import { ActionSheet } from '../../components/ActionSheet';
@@ -34,15 +34,8 @@ interface Props {
 }
 
 // A card without a picture is a coloured panel, and varying its height is what
-// keeps a masonry column from looking like a table. Cards WITH a picture take
-// their height from the picture instead — see clampAspect.
-function getVisualHeight(post: CommunityPost) {
-  const seed = post.id.charCodeAt(0) % 3;
-  if (post.media_items.length > 0) {
-    return seed === 0 ? 220 : seed === 1 ? 276 : 244;
-  }
-  return seed === 0 ? 150 : seed === 1 ? 190 : 170;
-}
+// keeps a masonry column from looking like a table. Cards WITH a picture
+// reserve a ratio instead — see cardAspectFor.
 
 /**
  * Warm-palette type color: replaces all cold blue/purple/red with peach,
@@ -129,10 +122,13 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
   const viewerId = useAuthStore((s) => s.user?.id ?? null);
   const isOwnPost = viewerId != null && post.author.id === viewerId;
   const typeColor = getTypeColor(post.post_type);
-  const imageHeight = getVisualHeight(post);
-  // Unknown until the image reports its size. Until then the card keeps the
-  // placeholder height, so the column does not collapse and re-expand.
-  const [imageAspect, setImageAspect] = useState<number | null>(null);
+  // Decided before the first render and never revised. Sizing from onLoad was
+  // correct about the picture and wrong about the list: a card that changes
+  // height after layout shoves every card below it in a masonry column, and
+  // with images arriving at different moments the whole feed twitches while
+  // you scroll. A slot is reserved now, from what we already know, and the
+  // image is fitted into it.
+  const imageAspect = cardAspectFor(post.media_items[0], post.id);
   const hasEventCandidate = post.action_candidates.some(
     (candidate) => candidate.metadata_json?.['card_type'] === 'event'
   );
@@ -194,17 +190,12 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
                 resolveMediaUrl(post.media_items[0].thumb_url ?? post.media_items[0].media_url) ??
                 post.media_items[0].media_url
               }
+              // `cover` inside a slot the picture's own ratio chose: when the
+              // ratio is known nothing is cropped, and when it is not the slot
+              // is a stable guess rather than a moving target.
               contentFit="cover"
               transition={120}
-              onLoad={(event) => {
-                const size = event.source;
-                setImageAspect(size ? clampAspect(size.width, size.height) : null);
-              }}
-              style={
-                imageAspect
-                  ? { width: '100%', aspectRatio: imageAspect, backgroundColor: '#1F1B18' }
-                  : { width: '100%', height: imageHeight, backgroundColor: '#1F1B18' }
-              }
+              style={{ width: '100%', aspectRatio: imageAspect, backgroundColor: '#1F1B18' }}
             />
             {isVideoMedia(post.media_items[0]) ? (
               <>

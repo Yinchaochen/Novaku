@@ -38,6 +38,12 @@ export interface CommunityPostMedia {
   sort_order: number;
   /** Video items only (D-033); null/undefined for images. */
   duration_seconds?: number | null;
+  /** Pixel dimensions, when known. The feed reserves a card's picture slot
+   *  from these *before* laying out, which is what stops a masonry column
+   *  twitching as images arrive (D-074). Null on rows written before the
+   *  columns existed. */
+  width?: number | null;
+  height?: number | null;
 }
 
 export function isVideoMedia(item: Pick<CommunityPostMedia, 'mime_type'>): boolean {

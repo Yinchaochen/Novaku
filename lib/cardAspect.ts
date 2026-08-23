@@ -51,3 +51,33 @@ export function detailMediaHeight(
   // fills the screen reads as the whole post and readers stop scrolling.
   return Math.min(Math.round(viewportWidth / aspect), Math.round(viewportHeight * 0.62));
 }
+
+/**
+ * The aspect ratio a feed card reserves for its picture, decided before the
+ * first render (D-074).
+ *
+ * Measuring the image with `onLoad` and then resizing was right about the
+ * picture and wrong about the list. In a masonry column a card that grows
+ * after layout pushes everything beneath it down, and since images arrive at
+ * different moments the whole feed twitches while you scroll — which is what
+ * lisum filmed on 2026-08-24.
+ *
+ * So the ratio must be known before layout. When the media carries its own
+ * dimensions there is nothing to guess and nothing is cropped. When it does
+ * not — older rows, and hotlinked covers — we fall back to a *stable* guess
+ * derived from the post id: wrong for that picture, but the same wrong value
+ * on every render, which is what keeps the column still.
+ */
+export function cardAspectFor(
+  media: { width?: number | null; height?: number | null } | undefined,
+  postId: string,
+): number {
+  const known = media?.width && media?.height ? clampAspect(media.width, media.height) : null;
+  if (known !== null) {
+    return known;
+  }
+  // Three ratios rather than one: a masonry column of identical cards reads
+  // as a table. Portrait-leaning, because most feed photos are.
+  const seed = postId.charCodeAt(0) % 3;
+  return seed === 0 ? 0.95 : seed === 1 ? 0.78 : 1.2;
+}
