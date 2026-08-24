@@ -54,7 +54,7 @@ export function detailMediaHeight(
 
 /**
  * The aspect ratio a feed card reserves for its picture, decided before the
- * first render (D-074).
+ * first render (D-078).
  *
  * Measuring the image with `onLoad` and then resizing was right about the
  * picture and wrong about the list. In a masonry column a card that grows

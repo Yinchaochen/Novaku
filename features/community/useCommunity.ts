@@ -40,7 +40,7 @@ export interface CommunityPostMedia {
   duration_seconds?: number | null;
   /** Pixel dimensions, when known. The feed reserves a card's picture slot
    *  from these *before* laying out, which is what stops a masonry column
-   *  twitching as images arrive (D-074). Null on rows written before the
+   *  twitching as images arrive (D-078). Null on rows written before the
    *  columns existed. */
   width?: number | null;
   height?: number | null;
