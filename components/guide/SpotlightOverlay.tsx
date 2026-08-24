@@ -61,6 +61,44 @@ export interface SpotlightOverlayProps {
   footer?: ReactNode;
 }
 
+/**
+ * Where the step card goes, in the same coordinate space as `hole`.
+ *
+ * Extracted because the bug it now pins was invisible in review and in every
+ * web render: the caller was mixing overlay coordinates with window ones, and
+ * the two only differ on Android. A target hugging the bottom then looked like
+ * it had room underneath, and the card went below the tab bar — ring on the
+ * button, no card, no way to finish the tour.
+ */
+export function stepCardTop({
+  hole,
+  cardHeight,
+  visibleBottom,
+  safeTop,
+}: {
+  hole: { y: number; height: number } | null;
+  cardHeight: number;
+  visibleBottom: number;
+  safeTop: number;
+}): number {
+  const floor = safeTop + 8;
+  if (!hole) {
+    return Math.max(safeTop + 24, (visibleBottom - cardHeight) / 2);
+  }
+  const below = hole.y + hole.height + CARD_GAP;
+  const preferred =
+    below + cardHeight > visibleBottom
+      ? Math.max(floor, hole.y - CARD_GAP - cardHeight)
+      : below;
+  // Clamped at both ends. The bottom one is why this bug was filed; the top
+  // one a property test found on the way — a target at y=0 put the card at 38,
+  // under the status bar, in every platform including the ones that looked
+  // fine. The tour is unusable the moment its only controls are unreachable,
+  // and "unreachable" has two edges.
+  return Math.max(floor, Math.min(preferred, Math.max(floor, visibleBottom - cardHeight)));
+}
+
+
 export function SpotlightOverlay({
   visible,
   stepKey,
@@ -84,6 +122,12 @@ export function SpotlightOverlay({
   const { height: windowHeight } = useWindowDimensions();
   const overlayRef = useRef<View | null>(null);
   const [rect, setRect] = useState<GuideTargetRect | null>(null);
+  // The overlay's own box, in window coordinates. Everything below is placed
+  // in *overlay* coordinates, and on Android those are not the same thing:
+  // measureInWindow gives the overlay a non-zero origin, so a bound written
+  // as `windowHeight` is off by exactly that origin. Keeping the overlay's
+  // own geometry lets both ends of every comparison live in one space.
+  const [overlayBox, setOverlayBox] = useState<GuideTargetRect | null>(null);
   const [keyboardTop, setKeyboardTop] = useState<number | null>(null);
   const [cardHeight, setCardHeight] = useState(0);
 
@@ -113,6 +157,7 @@ export function SpotlightOverlay({
       if (cancelled) return;
       const next = target ? toOverlayRect(target, origin) : null;
       setRect((prev) => (sameRect(prev, next) ? prev : next));
+      setOverlayBox((prev) => (sameRect(prev, origin) ? prev : origin));
     };
     void run();
     const timer = setInterval(run, MEASURE_INTERVAL_MS);
@@ -128,20 +173,22 @@ export function SpotlightOverlay({
 
   const hole = rect ? padRect(rect) : null;
   const height = cardHeight || CARD_HEIGHT_ESTIMATE;
-  const visibleBottom = (keyboardTop ?? windowHeight) - 8;
-  let cardTop: number;
-  if (!hole) {
-    cardTop = Math.max(insets.top + 24, (visibleBottom - height) / 2);
-  } else {
-    const below = hole.y + hole.height + CARD_GAP;
-    cardTop =
-      below + height > visibleBottom
-        ? Math.max(insets.top + 8, hole.y - CARD_GAP - height)
-        : below;
-  }
-  // Last resort: a target hugging the bottom edge must not push the card off
-  // screen — the tour is unusable the moment its only controls are unreachable.
-  cardTop = Math.min(cardTop, Math.max(insets.top + 8, visibleBottom - height));
+  // In overlay coordinates, which is the space `hole` and `cardTop` are in.
+  // Using windowHeight here put the card below the screen on Android whenever
+  // the target hugged the bottom: the "does it fit underneath?" test compared
+  // an overlay-space number against a window-space one, decided it fitted,
+  // and placed the card past the tab bar. The Buddy tour's last step was
+  // exactly that shape — ring on the button, no card, no way to finish.
+  const overlayOriginY = overlayBox?.y ?? 0;
+  const overlayHeight = overlayBox?.height ?? windowHeight;
+  const keyboardTopInOverlay = keyboardTop == null ? null : keyboardTop - overlayOriginY;
+  const visibleBottom = (keyboardTopInOverlay ?? overlayHeight) - 8;
+  const cardTop = stepCardTop({
+    hole,
+    cardHeight: height,
+    visibleBottom,
+    safeTop: insets.top,
+  });
 
   return (
     <View
