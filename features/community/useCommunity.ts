@@ -362,6 +362,12 @@ export function communityFeedQueryKey(
   ] as const;
 }
 
+// Set by useRefreshCommunityFeed for exactly one request. A module flag rather
+// than query state because the refetch is triggered through invalidateQueries,
+// which has no way to pass anything to queryFn — and because it must not
+// survive into the next page load, or every scroll would drop the stable head.
+let pullToRefreshPending = false;
+
 export function useCommunityFeed() {
   const { langCode } = useLanguage();
   const user = useAuthStore((state) => state.user);
@@ -377,8 +383,15 @@ export function useCommunityFeed() {
           city: user?.city,
           identity: user?.identity,
           cursor: pageParam ?? undefined,
+          // Only ever on the first page of a pull-to-refresh: the backend
+          // reads it as "the reader asked for something else" and stops
+          // holding the top of the feed in place (D-079).
+          refresh: pageParam == null && pullToRefreshPending ? true : undefined,
         },
       });
+      if (pageParam == null) {
+        pullToRefreshPending = false;
+      }
       return {
         items: res.data.data.items as CommunityPost[],
         next_cursor: (res.data.data.next_cursor ?? null) as string | null,
@@ -425,8 +438,16 @@ export function useRefreshCommunityFeed() {
   const key = queryKey.join('|');
   // queryKey is a fresh array every render, so the joined string is its identity.
   return useCallback(async () => {
+    pullToRefreshPending = true;
     queryClient.setQueryData(queryKey, firstPageOnly);
-    await queryClient.invalidateQueries({ queryKey });
+    try {
+      await queryClient.invalidateQueries({ queryKey });
+    } finally {
+      // The refetch clears it on success; this covers the request never
+      // happening, so a failed pull cannot leave the flag armed for whatever
+      // loads next.
+      pullToRefreshPending = false;
+    }
   }, [queryClient, key]);
 }
 
