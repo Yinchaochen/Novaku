@@ -1273,6 +1273,8 @@
     "admin_moderation_hint": "Handle user reports and auto-flagged content.",
     "admin_freshness": "Task info updates",
     "admin_freshness_hint": "Review AI-detected source changes on canonical tasks",
+    "admin_luma_calendars": "Luma seed calendars",
+    "admin_luma_calendars_hint": "See which organiser calendars event posts come from.",
     "section_labs": "Labs",
     "labs_entry": "Labs",
     "labs_entry_hint": "Experimental and legacy tools."
@@ -1362,6 +1364,14 @@
     "freshness_toast_resolved": "Resolved",
     "freshness_confirm_accept_title": "Apply this update?",
     "freshness_confirm_accept_body": "The task content will change for all users and be re-translated.",
+    "luma_title": "Luma seed calendars",
+    "luma_empty": "No calendars yet. The discovery scan adds organisers as it finds them.",
+    "luma_source_env": "Config list",
+    "luma_source_discovered": "Auto-discovered",
+    "luma_enabled_chip": "Seeding",
+    "luma_disabled_chip": "Disabled",
+    "luma_found_via_label": "Found via",
+    "luma_added_label": "Added",
     "moderation_tab_videos": "Videos",
     "moderation_empty_videos": "No videos waiting for human review",
     "moderation_video_label": "Video review"

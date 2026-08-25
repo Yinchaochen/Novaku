@@ -206,6 +206,12 @@ export default function SettingsHubScreen() {
               onPress={() => router.push('/admin/odyssey-freshness' as never)}
             />
             <SettingsRow
+              icon="calendar-outline"
+              label={t.settings.admin_luma_calendars}
+              hint={t.settings.admin_luma_calendars_hint}
+              onPress={() => router.push('/admin/luma-calendars' as never)}
+            />
+            <SettingsRow
               icon="megaphone-outline"
               label={t.settings.admin_releases}
               hint={t.settings.admin_releases_hint}

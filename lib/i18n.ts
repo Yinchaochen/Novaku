@@ -1018,6 +1018,8 @@ export type Translations = {
     admin_moderation_hint: string;
     admin_freshness: string;
     admin_freshness_hint: string;
+    admin_luma_calendars: string;
+    admin_luma_calendars_hint: string;
     section_labs: string;
     labs_entry: string;
     labs_entry_hint: string;
@@ -1073,6 +1075,14 @@ export type Translations = {
     freshness_toast_resolved: string;
     freshness_confirm_accept_title: string;
     freshness_confirm_accept_body: string;
+    luma_title: string;
+    luma_empty: string;
+    luma_source_env: string;
+    luma_source_discovered: string;
+    luma_enabled_chip: string;
+    luma_disabled_chip: string;
+    luma_found_via_label: string;
+    luma_added_label: string;
   };
   report: {
     sheet_title: string;

@@ -1273,6 +1273,8 @@
     "admin_moderation_hint": "处理用户举报和系统待审内容。",
     "admin_freshness": "任务信息更新",
     "admin_freshness_hint": "复核 AI 检测到的官方任务来源变化",
+    "admin_luma_calendars": "Luma 播种日历",
+    "admin_luma_calendars_hint": "查看活动帖来自哪些组织方日历。",
     "section_labs": "实验室",
     "labs_entry": "实验室",
     "labs_entry_hint": "实验功能与即将下线的工具。"
@@ -1362,6 +1364,14 @@
     "freshness_toast_resolved": "已处理",
     "freshness_confirm_accept_title": "应用这条更新？",
     "freshness_confirm_accept_body": "任务内容将对所有用户生效，并重新翻译。",
+    "luma_title": "Luma 播种日历",
+    "luma_empty": "还没有日历。发现扫描找到组织方后会加进来。",
+    "luma_source_env": "配置清单",
+    "luma_source_discovered": "自动发现",
+    "luma_enabled_chip": "播种中",
+    "luma_disabled_chip": "已停用",
+    "luma_found_via_label": "发现途径",
+    "luma_added_label": "加入时间",
     "moderation_tab_videos": "视频待审",
     "moderation_empty_videos": "没有等待人工复核的视频",
     "moderation_video_label": "视频审核"

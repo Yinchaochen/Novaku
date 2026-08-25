@@ -1271,6 +1271,8 @@
     "admin_buddy_applications_hint": "Offene Buddy-Bewerbungen prüfen.",
     "admin_freshness": "Aufgaben-Info-Updates",
     "admin_freshness_hint": "KI-erkannte Quellenänderungen an offiziellen Aufgaben prüfen",
+    "admin_luma_calendars": "Luma-Seed-Kalender",
+    "admin_luma_calendars_hint": "Zeigt, aus welchen Organisator-Kalendern Event-Beiträge stammen.",
     "section_labs": "Labs",
     "labs_entry": "Labs",
     "labs_entry_hint": "Experimentelle und auslaufende Tools."
@@ -1344,6 +1346,14 @@
     "freshness_toast_resolved": "Erledigt",
     "freshness_confirm_accept_title": "Dieses Update übernehmen?",
     "freshness_confirm_accept_body": "Der Aufgabeninhalt ändert sich für alle Nutzer:innen und wird neu übersetzt.",
+    "luma_title": "Luma-Seed-Kalender",
+    "luma_empty": "Noch keine Kalender. Der Discovery-Scan trägt gefundene Organisatoren hier ein.",
+    "luma_source_env": "Konfigurationsliste",
+    "luma_source_discovered": "Automatisch gefunden",
+    "luma_enabled_chip": "Aktiv",
+    "luma_disabled_chip": "Deaktiviert",
+    "luma_found_via_label": "Gefunden über",
+    "luma_added_label": "Hinzugefügt",
     "moderation_tab_videos": "Videos",
     "moderation_empty_videos": "Keine Videos in der manuellen Prüfung",
     "moderation_video_label": "Videoprüfung"
