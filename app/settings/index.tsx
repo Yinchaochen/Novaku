@@ -212,6 +212,12 @@ export default function SettingsHubScreen() {
               onPress={() => router.push('/admin/luma-calendars' as never)}
             />
             <SettingsRow
+              icon="people-outline"
+              label={t.settings.admin_organisers}
+              hint={t.settings.admin_organisers_hint}
+              onPress={() => router.push('/admin/organiser-applications' as never)}
+            />
+            <SettingsRow
               icon="megaphone-outline"
               label={t.settings.admin_releases}
               hint={t.settings.admin_releases_hint}
