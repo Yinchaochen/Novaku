@@ -1,5 +1,6 @@
 ﻿import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { router } from 'expo-router';
 import { InfiniteData, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -273,6 +274,17 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
     : '';
   const hasMediaPager = mediaItemCount > 1;
   const canEditPost = Boolean(user?.id && post?.author.id === user.id);
+
+  // Tap the avatar or name in the header -> that person's profile. The close
+  // has to come first: this screen is a react-native Modal, which is its own
+  // native window sitting above the navigator, so pushing without closing
+  // navigates underneath it and looks to the reader like the tap did nothing.
+  const openAuthorProfile = () => {
+    if (!post) return;
+    const target = canEditPost ? '/(tabs)/profile' : `/users/${post.author.id}`;
+    onClose();
+    router.push(target as never);
+  };
   const blockUser = useBlockUser();
 
   useEffect(() => {
@@ -722,21 +734,28 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
             </Pressable>
 
             <View className="flex-1 flex-row items-center">
-              <Avatar name={post.author.display_name} avatarUrl={post.author.avatar_url} size={34} />
-              <View className="ml-3 flex-1">
-                <View className="flex-row items-center">
-                  <Text numberOfLines={1} className="shrink text-[15px] font-semibold text-black">
-                    {post.author.display_name}
-                  </Text>
-                  {post.author.is_verified ? <VerifiedBadge /> : null}
-                  {isOfficialAuthor(post.author) ? <OfficialChip size="md" /> : null}
+              <Pressable
+                onPress={openAuthorProfile}
+                hitSlop={4}
+                testID="plaza.detail.author"
+                className="flex-1 flex-row items-center"
+              >
+                <Avatar name={post.author.display_name} avatarUrl={post.author.avatar_url} size={34} />
+                <View className="ml-3 flex-1">
+                  <View className="flex-row items-center">
+                    <Text numberOfLines={1} className="shrink text-[15px] font-semibold text-black">
+                      {post.author.display_name}
+                    </Text>
+                    {post.author.is_verified ? <VerifiedBadge /> : null}
+                    {isOfficialAuthor(post.author) ? <OfficialChip size="md" /> : null}
+                  </View>
+                  {displayHeaderCity ? (
+                    <Text numberOfLines={1} className="mt-0.5 text-[12px] text-neutral-400">
+                      {displayHeaderCity}
+                    </Text>
+                  ) : null}
                 </View>
-                {displayHeaderCity ? (
-                  <Text numberOfLines={1} className="mt-0.5 text-[12px] text-neutral-400">
-                    {displayHeaderCity}
-                  </Text>
-                ) : null}
-              </View>
+              </Pressable>
               {!canEditPost ? (
                 <Pressable
                   onPress={handleToggleFollow}
