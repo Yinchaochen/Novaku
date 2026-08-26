@@ -1,4 +1,5 @@
-﻿import { Ionicons } from '@expo/vector-icons';
+﻿import { PlanWhenSheet } from '../../components/odyssey/PlanWhenSheet';
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { InfiniteData, useQueryClient } from '@tanstack/react-query';
@@ -560,8 +561,17 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
 
   const captureShareCard = async () => (await storyShotRef.current?.capture?.()) ?? null;
 
+  const [planTarget, setPlanTarget] = useState<string | null>(null);
+
   const handleAddLocationToTasks = (actionCandidateId: string) => {
-    addAction.mutate(actionCandidateId, {
+    // D-083: ask when they plan to go before saving. Both sheet buttons end
+    // in the same mutation; only the date differs.
+    setPlanTarget(actionCandidateId);
+  };
+
+  const submitAddToTasks = (actionCandidateId: string, plannedAt: Date | null) => {
+    setPlanTarget(null);
+    addAction.mutate({ actionId: actionCandidateId, plannedAt }, {
       onSuccess: () => {
         hadDownstreamSignalRef.current = true;
         showToast(t.plaza.add_to_odyssey_success, 2000);
@@ -1218,6 +1228,12 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
       />
 
       <Toast message={toast} onDismiss={() => setToast(null)} />
+
+      <PlanWhenSheet
+        visible={planTarget !== null}
+        onConfirm={(when) => planTarget && submitAddToTasks(planTarget, when)}
+        onSkip={() => planTarget && submitAddToTasks(planTarget, null)}
+      />
 
       <ReportSheet
         visible={reportSheetVisible}

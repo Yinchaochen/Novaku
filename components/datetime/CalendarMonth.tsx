@@ -41,6 +41,10 @@ export interface CalendarMonthProps {
   onSelect: (date: Date) => void;
   minDate?: Date;
   maxDate?: Date;
+  // Days that carry something (local 'YYYY-MM-DD' keys). Purely decorative:
+  // a small dot under the number, no effect on selection. Added for the
+  // Odyssey calendar (D-083); pickers simply omit it.
+  markedDates?: ReadonlySet<string>;
 }
 
 export function CalendarMonth({
@@ -52,6 +56,7 @@ export function CalendarMonth({
   onSelect,
   minDate,
   maxDate,
+  markedDates,
 }: CalendarMonthProps) {
   const { t, langCode } = useLanguage();
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -147,6 +152,8 @@ export function CalendarMonth({
             (rangeStart && isSameDay(d, rangeStart)) ||
             (rangeEnd && isSameDay(d, rangeEnd));
           const isInRange = rangeStart && rangeEnd && isBetween(d, rangeStart, rangeEnd);
+          const dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          const isMarked = markedDates?.has(dayKey) ?? false;
 
           return (
             <Pressable
@@ -179,6 +186,11 @@ export function CalendarMonth({
                 >
                   {d.getDate()}
                 </Text>
+                {isMarked ? (
+                  <View
+                    style={[styles.markDot, isSelected ? styles.markDotOnSelected : null]}
+                  />
+                ) : null}
               </View>
             </Pressable>
           );
@@ -189,6 +201,18 @@ export function CalendarMonth({
 }
 
 const styles = StyleSheet.create({
+  markDot: {
+    position: 'absolute',
+    bottom: 2,
+    alignSelf: 'center',
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: CORAL,
+  },
+  markDotOnSelected: {
+    backgroundColor: '#FFFFFF',
+  },
   dayBubble: {
     width: 32,
     height: 32,

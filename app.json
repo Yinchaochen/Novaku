@@ -7,7 +7,10 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "scheme": ["postervia", "app.novaku.mobile"],
+    "scheme": [
+      "postervia",
+      "app.novaku.mobile"
+    ],
     "splash": {
       "image": "./assets/splash-brand.png",
       "resizeMode": "contain",
@@ -17,13 +20,18 @@
       "supportsTablet": false,
       "usesAppleSignIn": true,
       "bundleIdentifier": "app.novaku.mobile",
-      "associatedDomains": ["applinks:postervia.app"],
+      "associatedDomains": [
+        "applinks:postervia.app"
+      ],
       "entitlements": {
         "com.apple.developer.declared-age-range": true
       },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "LSApplicationQueriesSchemes": ["instagram-stories", "instagram"],
+        "LSApplicationQueriesSchemes": [
+          "instagram-stories",
+          "instagram"
+        ],
         "_comment_uiscene": "Build 28 (2026-05-25 IOS-LOGIN-106): explicit single-scene UIScene manifest. iOS 26 strictly enforces scene lifecycle (warning: 'UIScene lifecycle will soon be required. Failure to adopt will result in an assert'). Without UIApplicationSceneManifest, SpringBoardUI's SBCrossfadeView fails to find the RCTRootView in expected container during launch-storyboard crossfade -> frame not updated -> white screen.",
         "UIApplicationSceneManifest": {
           "UIApplicationSupportsMultipleScenes": false
@@ -43,10 +51,21 @@
           "action": "VIEW",
           "autoVerify": true,
           "data": [
-            { "scheme": "https", "host": "postervia.app", "pathPrefix": "/p" },
-            { "scheme": "https", "host": "postervia.app", "pathPrefix": "/u" }
+            {
+              "scheme": "https",
+              "host": "postervia.app",
+              "pathPrefix": "/p"
+            },
+            {
+              "scheme": "https",
+              "host": "postervia.app",
+              "pathPrefix": "/u"
+            }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -62,8 +81,14 @@
           "ios": {
             "buildReactNativeFromSource": true,
             "extraPods": [
-              { "name": "GoogleUtilities", "modular_headers": true },
-              { "name": "RecaptchaInterop", "modular_headers": true }
+              {
+                "name": "GoogleUtilities",
+                "modular_headers": true
+              },
+              {
+                "name": "RecaptchaInterop",
+                "modular_headers": true
+              }
             ]
           }
         }
@@ -136,8 +161,13 @@
       [
         "react-native-share",
         {
-          "ios": ["instagram-stories", "instagram"],
-          "android": ["com.instagram.android"]
+          "ios": [
+            "instagram-stories",
+            "instagram"
+          ],
+          "android": [
+            "com.instagram.android"
+          ]
         }
       ],
       [
@@ -145,6 +175,12 @@
         {
           "iosGoogleMapsApiKey": "",
           "androidGoogleMapsApiKey": ""
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Postervia shows your calendar events inside its own calendar. They stay on this device and are never uploaded."
         }
       ]
     ],

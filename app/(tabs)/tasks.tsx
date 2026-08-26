@@ -1,3 +1,4 @@
+import { OdysseyCalendarSection } from '../../components/odyssey/OdysseyCalendarSection';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, BackHandler, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -344,6 +345,7 @@ export default function TasksScreen() {
         >
           {!selectedLine ? (
             <>
+              <OdysseyCalendarSection />
               <View style={styles.ctaCardShell}>
                 <Pressable
                   onPress={() => router.push('/lane-creator' as never)}

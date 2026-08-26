@@ -17,6 +17,7 @@ const devRoute = (p: string) => p as unknown as Href;
 const PAGES: { href: string; title: string; blurb: string }[] = [
   { href: '/dev/social-guide', title: 'Social walkthrough', blurb: 'Chapter steps, confirm card, long German, no-target state' },
   { href: '/dev/app-update', title: 'App update', blurb: "What's new, update available, forced update, long German" },
+  { href: '/dev/odyssey-calendar', title: 'Odyssey calendar', blurb: 'Marked month, day list, deadlines, device merge, plan-when sheet' },
   { href: '/dev/plaza-search', title: 'Plaza search', blurb: 'Search entry, history, filters, results, zero/error states' },
   { href: '/dev/product-guide', title: 'First-value guide', blurb: 'Spotlight walkthrough, publish confirm, and re-entry in all 6 states' },
   { href: '/dev/floating-input', title: 'Keyboard-safe input', blurb: 'Floating input sheet proxy in all 6 states with a live demo' },

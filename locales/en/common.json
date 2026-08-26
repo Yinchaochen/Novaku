@@ -1416,5 +1416,16 @@
     "title_too_long": "That title is too long — 160 characters at most.",
     "title_too_short": "The title needs at least 4 characters.",
     "token_invalid": "This reset link looks incomplete. Please request a new one."
+  },
+  "odyssey_calendar": {
+    "plan_title": "When do you plan to go?",
+    "plan_subtitle": "Pick a time and it lands on your calendar. Skipping is fine too — the task is saved either way.",
+    "plan_skip": "No date yet",
+    "plan_confirm": "Set this time",
+    "empty_day": "Nothing planned this day",
+    "empty_month": "Save an event or add one to your tasks and it shows up here",
+    "deadline_chip": "Deadline",
+    "device_connect": "Show phone calendar events (stays on this device, never uploaded)",
+    "device_connected": "Phone calendar connected"
   }
 }

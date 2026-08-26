@@ -1398,5 +1398,16 @@
     "title_too_long": "Der Titel ist zu lang – höchstens 160 Zeichen.",
     "title_too_short": "Der Titel braucht mindestens 4 Zeichen.",
     "token_invalid": "Dieser Link sieht unvollständig aus. Bitte fordere einen neuen an."
+  },
+  "odyssey_calendar": {
+    "plan_title": "Wann willst du hin?",
+    "plan_subtitle": "Wähl eine Zeit, dann steht es in deinem Kalender. Überspringen geht auch, die Aufgabe wird trotzdem gespeichert.",
+    "plan_skip": "Noch ohne Termin",
+    "plan_confirm": "Zeit übernehmen",
+    "empty_day": "An diesem Tag ist nichts geplant",
+    "empty_month": "Speichere ein Event oder nimm eins in deine Aufgaben auf, dann erscheint es hier",
+    "deadline_chip": "Frist",
+    "device_connect": "Termine aus dem Handy-Kalender anzeigen (bleibt auf dem Gerät, wird nie hochgeladen)",
+    "device_connected": "Handy-Kalender verbunden"
   }
 }

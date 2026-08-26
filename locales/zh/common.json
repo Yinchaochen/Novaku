@@ -1416,5 +1416,16 @@
     "title_too_long": "标题太长了，最多 160 个字。",
     "title_too_short": "标题至少 4 个字。",
     "token_invalid": "这个重置链接看起来不完整，请重新申请一个。"
+  },
+  "odyssey_calendar": {
+    "plan_title": "打算什么时候去?",
+    "plan_subtitle": "选个时间,它会出现在你的任务日历上。跳过也可以,任务照样保存。",
+    "plan_skip": "先不定时间",
+    "plan_confirm": "就这个时间",
+    "empty_day": "这一天还没有安排",
+    "empty_month": "收藏活动或把活动加入任务,就会出现在这里",
+    "deadline_chip": "截止",
+    "device_connect": "显示手机日历的日程(仅在本机显示,不会上传)",
+    "device_connected": "已连接手机日历"
   }
 }

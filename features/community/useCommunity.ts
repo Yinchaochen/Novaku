@@ -1525,8 +1525,15 @@ export function useMarkCommunityHelpful() {
 export function useAddActionToOdysseys() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (actionId: string) => {
-      const res = await api.post(`/community/actions/${actionId}/add-to-odyssey`);
+    // Accepts the bare actionId (every pre-D-083 caller) or an object with
+    // the planned visit time from the "when do you go?" sheet.
+    mutationFn: async (input: string | { actionId: string; plannedAt?: Date | null }) => {
+      const actionId = typeof input === 'string' ? input : input.actionId;
+      const plannedAt = typeof input === 'string' ? null : (input.plannedAt ?? null);
+      const res = await api.post(
+        `/community/actions/${actionId}/add-to-odyssey`,
+        plannedAt ? { planned_at: plannedAt.toISOString() } : {},
+      );
       return res.data.data as { odyssey: PersonalOdyssey; task?: PersonalOdyssey; created: boolean };
     },
     onSuccess: () => {
@@ -1534,6 +1541,7 @@ export function useAddActionToOdysseys() {
       qc.invalidateQueries({ queryKey: ['community', 'feed'] });
       qc.invalidateQueries({ queryKey: ['community', 'me', 'posts'] });
       qc.invalidateQueries({ queryKey: ['community', 'personal-odysseys'] });
+      qc.invalidateQueries({ queryKey: ['odyssey', 'calendar'] });
     },
   });
 }

@@ -1406,6 +1406,17 @@ export type Translations = {
     event_reminder: string;
     sent_friend_request: string;
   };
+  odyssey_calendar: {
+    plan_title: string;
+    plan_subtitle: string;
+    plan_skip: string;
+    plan_confirm: string;
+    empty_day: string;
+    empty_month: string;
+    deadline_chip: string;
+    device_connect: string;
+    device_connected: string;
+  };
   common: {
     loading: string;
     error: string;
