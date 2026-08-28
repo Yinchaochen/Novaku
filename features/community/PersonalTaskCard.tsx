@@ -1,3 +1,4 @@
+import { openExternalUrl } from '../../lib/links';
 import { Linking, Pressable, Text, View } from 'react-native';
 
 import { StackedButton } from '../../components/StackedButton';
@@ -96,7 +97,7 @@ function LocationQuestCard({ task, t }: { task: PersonalOdyssey; t: ReturnType<t
             className="mb-3 flex-row items-center gap-2 rounded-full px-3 py-2"
             style={{ backgroundColor: 'rgba(176, 122, 30, 0.12)', alignSelf: 'flex-start' }}
             onPress={() => {
-              if (task.source_url) void Linking.openURL(task.source_url);
+              void openExternalUrl(task.source_url);
             }}
             disabled={!task.source_url}
           >
@@ -152,7 +153,7 @@ function LocationQuestCard({ task, t }: { task: PersonalOdyssey; t: ReturnType<t
               onPress={() => {
                 const target = normalizeMapUrl(mapUrl, displayPlaceName ?? placeName);
                 if (target) {
-                  void Linking.openURL(target);
+                  void openExternalUrl(target);
                 }
               }}
               disabled={!mapUrl}

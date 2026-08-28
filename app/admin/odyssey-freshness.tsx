@@ -1,3 +1,4 @@
+import { openExternalUrl } from '../../lib/links';
 import { router } from 'expo-router';
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Text, View } from 'react-native';
 
@@ -104,7 +105,7 @@ export default function AdminOdysseyFreshnessScreen() {
               ) : null}
 
               {item.source_url ? (
-                <Pressable onPress={() => void Linking.openURL(item.source_url!)}>
+                <Pressable onPress={() => void openExternalUrl(item.source_url)}>
                   <Text className="mt-2 text-[12px] font-semibold" style={{ color: '#FF9F6E' }}>
                     {t.admin.freshness_source_label}: {item.source_url}
                   </Text>

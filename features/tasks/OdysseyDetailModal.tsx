@@ -1,3 +1,4 @@
+import { openExternalUrl } from '../../lib/links';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -363,7 +364,7 @@ export function OdysseyDetailModal({ visible, node, state, onClose, onTaskComple
                 {sourceHost && node.source_url ? (
                   <View style={{ marginTop: 12 }}>
                     <FeedbackPressable
-                      onPress={() => void Linking.openURL(node.source_url!)}
+                      onPress={() => void openExternalUrl(node.source_url)}
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',

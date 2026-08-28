@@ -1,3 +1,4 @@
+import { openExternalUrl } from '../../lib/links';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, Text, TextInput, View } from 'react-native';
 
@@ -115,7 +116,7 @@ export function DocumentChatSection({ doc }: { doc: DocumentRecord }) {
                           </Text>
                           <View className="mt-2 gap-2">
                             {message.sources.map((source) => (
-                              <Pressable key={`${message.id}-${source.url}`} onPress={() => Linking.openURL(source.url)}>
+                              <Pressable key={`${message.id}-${source.url}`} onPress={() => openExternalUrl(source.url)}>
                                 <Text className="text-xs font-semibold text-primary underline">
                                   {source.title}
                                 </Text>

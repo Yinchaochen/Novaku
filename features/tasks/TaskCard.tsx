@@ -1,3 +1,4 @@
+import { openExternalUrl } from '../../lib/links';
 import { Ionicons } from '@expo/vector-icons';
 import { Alert, Linking, Pressable, Text, View } from 'react-native';
 
@@ -235,7 +236,7 @@ export function OdysseyCard({ node, state, onRefresh, onTaskComplete, onPressDet
                   paddingVertical: 6,
                 }}
                 onPress={() => {
-                  void Linking.openURL(node.source_url!);
+                  void openExternalUrl(node.source_url);
                 }}
               >
                 <Text style={{ color: tone.chipText, fontSize: 11.5, fontWeight: '700' }}>

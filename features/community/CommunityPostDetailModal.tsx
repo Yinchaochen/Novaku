@@ -1,4 +1,5 @@
 ﻿import { PlanWhenSheet } from '../../components/odyssey/PlanWhenSheet';
+import { openExternalUrl } from '../../lib/links';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
@@ -556,7 +557,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
         metadata_json: { source_host: resolvedHost, entry_point: entryPoint },
       },
     ]);
-    void Linking.openURL(finalUrl);
+    void openExternalUrl(finalUrl);
   };
 
   const captureShareCard = async () => (await storyShotRef.current?.capture?.()) ?? null;

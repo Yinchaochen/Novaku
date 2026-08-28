@@ -81,12 +81,33 @@ export function firstUrl(text: string | null | undefined): string | null {
   return null;
 }
 
-export async function openExternalUrl(href: string): Promise<void> {
+/**
+ * Schemes this product ever needs to hand to the OS. Anything else is
+ * refused rather than sanitised (SEC-APP-URL-01): most URLs reaching here
+ * come from server data -- a post's source_url, a task's link, a citation in
+ * an AI answer -- and a value we cannot recognise is not one we should be
+ * launching. The old `else` branch passed any scheme straight through.
+ */
+const OS_SCHEMES = ['mailto:', 'tel:'];
+
+export function isSafeExternalUrl(href: string | null | undefined): boolean {
+  if (!href) return false;
+  const trimmed = href.trim();
+  if (/^https?:\/\//i.test(trimmed)) return true;
+  return OS_SCHEMES.some((scheme) => trimmed.toLowerCase().startsWith(scheme));
+}
+
+export async function openExternalUrl(href: string | null | undefined): Promise<void> {
+  if (!isSafeExternalUrl(href)) {
+    return;
+  }
+  const trimmed = href!.trim();
   try {
-    if (/^https?:\/\//i.test(href)) {
-      await WebBrowser.openBrowserAsync(href);
+    if (/^https?:\/\//i.test(trimmed)) {
+      // In-app browser: the page never gets the app's context.
+      await WebBrowser.openBrowserAsync(trimmed);
     } else {
-      await Linking.openURL(href);
+      await Linking.openURL(trimmed);
     }
   } catch {
     // Best-effort: there is no user-facing surface for a failed open.
