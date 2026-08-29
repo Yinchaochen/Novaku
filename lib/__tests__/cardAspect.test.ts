@@ -3,39 +3,80 @@ import {
   MAX_DETAIL_ASPECT,
   MIN_CARD_ASPECT,
   MIN_DETAIL_ASPECT,
+  cardAspectFor,
+  cardMediaFit,
   clampAspect,
   detailMediaHeight,
 } from '../cardAspect';
 
 // Event posters are wide and full of words. Cropping one into the card's
 // portrait box cut the text in half and the reader had to open the post to
-// find out what it said — the bug these pin.
+// find out what it said. That promise is still kept — but by `contain` now
+// rather than by a wide slot, because the width of the slot was what made the
+// feed's density unpredictable (2026-08-29 density work).
 
 describe('clampAspect', () => {
-  it('keeps a wide event poster wide instead of cropping it to portrait', () => {
-    // A 2:1 Luma cover kept its shape rather than being cut to ~0.7.
-    expect(clampAspect(1200, 600)).toBeCloseTo(1.9, 5);
-    expect(clampAspect(1000, 700)).toBeCloseTo(1000 / 700, 5);
-  });
-
-  it('passes ordinary photos through untouched', () => {
-    expect(clampAspect(1024, 681)).toBeCloseTo(1024 / 681, 5);
-    expect(clampAspect(800, 800)).toBeCloseTo(1, 5);
-  });
-
-  it('clamps a banner so it cannot become a sliver', () => {
-    // 5:1 would be ~34px tall in a 170px column.
-    expect(clampAspect(2000, 400)).toBeCloseTo(1.9, 5);
+  it('passes an ordinary portrait photo through untouched', () => {
+    expect(clampAspect(800, 1000)).toBeCloseTo(0.8, 5);
+    expect(clampAspect(900, 1000)).toBeCloseTo(0.9, 5);
   });
 
   it('clamps a very tall image so it cannot push the next card off-screen', () => {
-    expect(clampAspect(600, 1600)).toBeCloseTo(0.72, 5);
+    expect(clampAspect(600, 1600)).toBeCloseTo(MIN_CARD_ASPECT, 5);
+  });
+
+  it('clamps anything wider than square down to the square slot', () => {
+    expect(clampAspect(2000, 400)).toBeCloseTo(MAX_CARD_ASPECT, 5);
+    expect(clampAspect(1200, 600)).toBeCloseTo(MAX_CARD_ASPECT, 5);
   });
 
   it('returns null for sizes it cannot use, so the card keeps its placeholder', () => {
     expect(clampAspect(0, 100)).toBeNull();
     expect(clampAspect(100, 0)).toBeNull();
     expect(clampAspect(Number.NaN, 100)).toBeNull();
+  });
+});
+
+describe('cardMediaFit', () => {
+  it('still refuses to cut an event poster in half — it letterboxes instead', () => {
+    // A 2:1 Luma cover. The slot stays tall so the feed keeps its rhythm, and
+    // the poster keeps every word it had.
+    const wide = cardMediaFit({ width: 1200, height: 600 }, 'post-1');
+    expect(wide.fit).toBe('contain');
+    expect(wide.aspect).toBeCloseTo(MAX_CARD_ASPECT, 5);
+
+    const banner = cardMediaFit({ width: 2000, height: 400 }, 'post-2');
+    expect(banner.fit).toBe('contain');
+  });
+
+  it('fills the slot with a photograph, where trimming costs nothing', () => {
+    const portrait = cardMediaFit({ width: 800, height: 1000 }, 'post-3');
+    expect(portrait.fit).toBe('cover');
+    expect(portrait.aspect).toBeCloseTo(0.8, 5);
+
+    const tower = cardMediaFit({ width: 600, height: 1600 }, 'post-4');
+    expect(tower.fit).toBe('cover');
+    expect(tower.aspect).toBeCloseTo(MIN_CARD_ASPECT, 5);
+  });
+
+  it('falls back to the stable per-post ratio when the size is unknown', () => {
+    // Every post created so far is in this branch — see the width/height gap
+    // reported alongside this change.
+    const guessed = cardMediaFit(undefined, 'abc');
+    expect(guessed.fit).toBe('cover');
+    expect(guessed.aspect).toBe(cardAspectFor(undefined, 'abc'));
+  });
+
+  it('keeps the pitch of the feed inside a narrow band', () => {
+    // The point of the whole exercise: card height must be predictable. Every
+    // reachable slot sits between these two, a 25% spread rather than the
+    // 164% the old 0.72-1.9 window allowed.
+    const ratios = ['a', 'b', 'c', 'd', 'e', 'f'].map((id) => cardAspectFor(undefined, id));
+    for (const r of ratios) {
+      expect(r).toBeGreaterThanOrEqual(MIN_CARD_ASPECT);
+      expect(r).toBeLessThanOrEqual(MAX_CARD_ASPECT);
+    }
+    expect(Math.max(...ratios) / Math.min(...ratios)).toBeLessThan(1.3);
   });
 });
 

@@ -783,7 +783,10 @@ export default function PlazaScreen() {
         // rather than as cards floating apart.
         contentContainerStyle={{
           paddingHorizontal: 6,
-          paddingTop: 46,
+          // 46 over-compensated the -32 tuck by 14dp of dead space above the
+          // first card. That is 14dp taken off every screen of feed, on a
+          // surface where a whole card costs about 300.
+          paddingTop: 34,
           paddingBottom: Math.max(insets.bottom + 180, 200),
         }}
         ListHeaderComponent={

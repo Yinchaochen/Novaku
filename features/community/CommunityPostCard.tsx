@@ -6,7 +6,7 @@ import { Alert, Pressable, Text, View } from 'react-native';
 
 import { colors, shadows } from '../../theme/tokens';
 import { useLanguage } from '../../context/LanguageContext';
-import { cardAspectFor } from '../../lib/cardAspect';
+import { cardMediaFit } from '../../lib/cardAspect';
 import { resolveMediaUrl } from '../../lib/media';
 import { useAuthStore } from '../../store/authStore';
 import { ActionSheet } from '../../components/ActionSheet';
@@ -140,7 +140,7 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
   // with images arriving at different moments the whole feed twitches while
   // you scroll. A slot is reserved now, from what we already know, and the
   // image is fitted into it.
-  const imageAspect = cardAspectFor(post.media_items[0], post.id);
+  const media = cardMediaFit(post.media_items[0], post.id);
   const showOfficialChip = isOfficialAuthor(post.author);
   const hasEventCandidate = post.action_candidates.some(
     (candidate) => candidate.metadata_json?.['card_type'] === 'event'
@@ -188,11 +188,24 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
   return (
     <View
       style={{
-        marginBottom: 6,
+        // Xiaohongshu leaves 20px between stacked cards and 4-6px between the
+        // columns — tight across, generous down. We had it the other way
+        // round: an 8dp gutter and a 6dp gap, so cards nearly touched
+        // vertically while the shadow of each one bled into the next.
+        marginBottom: 10,
         borderRadius: 14,
         overflow: 'hidden',
         backgroundColor: '#FFFFFF',
         ...shadows.card,
+        // shadows.card paints ~38dp below a card (radius 24, offset 14) into
+        // what used to be a 6dp gap, so every pair of neighbours shared one
+        // smudge and the grid read as fogged rather than as cards. Kept as a
+        // card-local override: the token is right for the big surfaces it was
+        // drawn for, and wrong at this size and this spacing.
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.06,
+        elevation: 2,
       }}
     >
       {/* Long press replaces the per-card "..." button: the menu holds one
@@ -215,12 +228,13 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
               // clears first. D-078 reserved the slot's height; this keeps the
               // slot's *content* honest while it fills.
               recyclingKey={post.id}
-              // `cover` inside a slot the picture's own ratio chose: when the
-              // ratio is known nothing is cropped, and when it is not the slot
-              // is a stable guess rather than a moving target.
-              contentFit="cover"
+              // The slot is always portrait-ish so the feed has one rhythm;
+              // `contain` is what keeps that from becoming a lie about a wide
+              // poster, which is drawn whole inside the slot instead of being
+              // trimmed to it.
+              contentFit={media.fit}
               transition={120}
-              style={{ width: '100%', aspectRatio: imageAspect, backgroundColor: '#1F1B18' }}
+              style={{ width: '100%', aspectRatio: media.aspect, backgroundColor: '#1F1B18' }}
             />
             {showOfficialChip ? (
               // The chip used to sit beside the author's name. In a 148dp
@@ -304,16 +318,25 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
         ) : (
           <View
             style={{
-              // Sized to the words, not to a picture that is not there. A
-              // text post used to occupy a full image-height block, which made
-              // the two guide cards at the top of the feed the loudest thing
-              // on screen and pushed everything else below the fold.
-              minHeight: 96,
+              // A square, the same slot a picture would have had. It was 96dp
+              // — sized to the words — which made a text post the shortest
+              // card in the feed by a wide margin, and pitch that swings is
+              // what a reader feels as restlessness. Xiaohongshu does the same
+              // thing: their text posts are rendered INTO the cover slot and
+              // cost exactly what a photo post costs.
+              //
+              // Square rather than the full 0.86 slot: the panel earns its
+              // height with words, and five lines of guide fill a square
+              // without turning into an empty billboard.
+              aspectRatio: 1,
               backgroundColor: typeColor.bg,
               paddingHorizontal: 12,
               paddingTop: 12,
               paddingBottom: 12,
-              justifyContent: 'flex-end',
+              // Chip at the top, words at the bottom. Bottom-aligning both
+              // left the upper third of a square panel empty, which reads as a
+              // card that has not finished loading rather than as a design.
+              justifyContent: 'space-between',
             }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
@@ -338,7 +361,10 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
               originalText={post.body}
               translatedText={post.translated_body}
               sourceLanguage={post.body_source_language ?? post.source_language}
-              numberOfLines={3}
+              // Five, because the panel is a square now and three lines left
+              // most of it empty. More of the guide on the card is also the
+              // only compensation a text post gets for having no picture.
+              numberOfLines={5}
               showToggle={false}
               // Was 16/bold: the body then outweighed the title printed under
               // it, so a reader met the same post twice, louder first.

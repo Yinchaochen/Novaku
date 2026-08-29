@@ -151,6 +151,50 @@ const STATES: { label: string; posts: CommunityPost[] }[] = [
   },
 ];
 
+/**
+ * One screenful, at the real feed viewport.
+ *
+ * The question "how many posts does a screen hold" cannot be answered by a
+ * gallery that scrolls forever, and it is the question the whole density
+ * change turns on. So this draws the actual budget: a 393x873 phone, minus the
+ * yellow band, minus the tab bar, minus the list's own top padding — and then
+ * as many cards as fit. Count them.
+ */
+const DEVICE = { width: 393, height: 873, topInset: 41, bottomInset: 0 };
+const BAND_H = Math.max(DEVICE.topInset + 12, 34) + 34 + 8 + (6 * 2 + 16) + 12;
+const TAB_BAR_H = 64 + Math.max(DEVICE.bottomInset, 12);
+const LIST_PAD_TOP = 34 - 32;
+const FEED_H = DEVICE.height - BAND_H - TAB_BAR_H - LIST_PAD_TOP;
+
+function OneScreenful({ posts }: { posts: CommunityPost[] }) {
+  const columnWidth = (DEVICE.width - 12) / 2 - 6;
+  return (
+    <View style={{ width: DEVICE.width, alignSelf: 'center' }}>
+      <View style={{ height: BAND_H, backgroundColor: '#FFD17E', justifyContent: 'flex-end', padding: 12 }}>
+        <Text style={{ color: '#FFFFFF', fontWeight: '800' }}>band {BAND_H}dp</Text>
+      </View>
+      <View style={{ height: FEED_H, overflow: 'hidden', paddingTop: LIST_PAD_TOP }}>
+        <View style={{ flexDirection: 'row', gap: 6, paddingHorizontal: 6 }}>
+          {[0, 1].map((column) => (
+            <View key={column} style={{ width: columnWidth }}>
+              {posts
+                .filter((_, index) => index % 2 === column)
+                .map((post) => (
+                  <CommunityPostCard key={post.id} post={post} />
+                ))}
+            </View>
+          ))}
+        </View>
+      </View>
+      <View style={{ height: TAB_BAR_H, backgroundColor: '#FFFFFF', justifyContent: 'center', paddingLeft: 12 }}>
+        <Text style={{ color: colors.textMuted, fontSize: 11 }}>
+          tab bar {TAB_BAR_H}dp · feed {FEED_H}dp
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 /** The list's own geometry: contentContainer 6, item 3 either side. */
 function Columns({ posts, width }: { posts: CommunityPost[]; width: number }) {
   const columnWidth = (width - 12) / 2 - 6;
@@ -178,14 +222,22 @@ function Columns({ posts, width }: { posts: CommunityPost[]; width: number }) {
 
 export default function PlazaCardGallery() {
   const { width } = useWindowDimensions();
-  // 360, not the browser's width and not a modern phone's 390-430: the tight
-  // end of the range is the case that broke, and a gallery that only shows the
-  // comfortable width is how the byline bug survived review in the first place.
-  const [feedWidth] = useState(() => Math.min(width, 360));
+  // 393: the phone lisum films on, and the width the density work was measured
+  // against. The byline squeeze is checked at 360 by the dedicated state
+  // below, which pins a name against a badge and a four-digit count.
+  const [feedWidth] = useState(() => Math.min(width, 393));
 
   return (
     <Screen>
       <ScrollView contentContainerStyle={{ paddingBottom: 48 }}>
+        <SectionLabel>One screenful — count the complete cards</SectionLabel>
+        <OneScreenful
+          posts={[...POSTS, ...POSTS].map((post, index) => ({
+            ...post,
+            id: `screenful-${index}`,
+          })) as CommunityPost[]}
+        />
+
         <Text
           style={{
             fontSize: 12,

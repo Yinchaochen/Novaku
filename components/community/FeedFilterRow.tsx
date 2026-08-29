@@ -48,7 +48,7 @@ export function FeedFilterRow({
       // Negative margins undo the band's 22dp inset so the row can scroll edge
       // to edge, then the content inset puts the first chip back under the
       // title.
-      style={{ marginTop: 12, marginHorizontal: -22 }}
+      style={{ marginTop: 8, marginHorizontal: -22 }}
       contentContainerStyle={{ paddingHorizontal: 22, gap: 8 }}
     >
       {FEED_FILTERS.map((filter) => {
@@ -62,7 +62,9 @@ export function FeedFilterRow({
             onPress={() => onChange(filter.key)}
             style={{
               paddingHorizontal: 14,
-              paddingVertical: 7,
+              // The row is permanent chrome on a screen whose scarcest
+              // resource is vertical space; 7 bought nothing 6 does not.
+              paddingVertical: 6,
               borderRadius: 999,
               // Both states are brown-on-light rather than white-on-yellow.
               // White text over a 22%-white pill on #FFD17E measures about

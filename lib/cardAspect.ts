@@ -6,13 +6,27 @@
  * and mostly words — it cut the text in half, and the only way to find out
  * what the poster said was to open the post.
  *
- * Sizing to the image instead keeps posters readable. The bounds exist because
- * an unbounded ratio is its own problem: a 5:1 banner becomes a sliver, and a
- * very tall image pushes the next card off the screen. Anything outside them
- * is still cropped — that is the honest trade, not an oversight.
+ * The bounds are now a narrow portrait window rather than the wide band they
+ * were, because the width of that band was setting the feed's density. Frames
+ * from a recording of the Plaza next to Xiaohongshu (2026-08-29) measured it:
+ * every one of their covers renders at 3:4, their cards vary by 7%, and a
+ * screen holds ~2.15 of them per column. Ours ranged from a 0.72 portrait
+ * (pitch 314dp) to a 1.9 banner (pitch 187dp) — the same feed showing anywhere
+ * from 3.7 to 5.9 posts per screen depending on what the ranker handed you.
+ * lisum filmed the dense end and called it 很难受.
+ *
+ * A poster wider than the window is NOT cropped harder to fit it. It keeps its
+ * shape and is drawn inside the taller slot with `contain`, which is what
+ * Xiaohongshu does with the wide screenshots in their own feed. The card is
+ * tall either way; only the picture's own proportions decide whether the room
+ * is filled or given back as margin.
  */
-export const MIN_CARD_ASPECT = 0.72;
-export const MAX_CARD_ASPECT = 1.9;
+
+/** Tallest a picture may be drawn: 168dp wide -> 210dp tall. */
+export const MIN_CARD_ASPECT = 0.8;
+
+/** Shortest: a square. Anything wider is letterboxed rather than cropped. */
+export const MAX_CARD_ASPECT = 1.0;
 
 /** Usable width/height for a card image, or null when the size is unusable. */
 export function clampAspect(width: number, height: number): number | null {
@@ -77,7 +91,45 @@ export function cardAspectFor(
     return known;
   }
   // Three ratios rather than one: a masonry column of identical cards reads
-  // as a table. Portrait-leaning, because most feed photos are.
+  // as a table. They sit close together now — the old 0.78/1.2 spread was a
+  // 75dp swing in card height, and a feed whose pitch is unpredictable is the
+  // thing that reads as restless. Xiaohongshu's own cards vary by 7%.
   const seed = postId.charCodeAt(0) % 3;
-  return seed === 0 ? 0.95 : seed === 1 ? 0.78 : 1.2;
+  return seed === 0 ? 0.82 : seed === 1 ? 0.86 : 0.92;
+}
+
+/** How a card should draw its picture: the slot to reserve, and how to fill it. */
+export interface CardMediaFit {
+  /** width / height of the slot reserved before layout. */
+  aspect: number;
+  /** `contain` letterboxes a picture too wide for the slot instead of cropping it. */
+  fit: 'cover' | 'contain';
+}
+
+/**
+ * The slot a card reserves for its picture, and whether the picture fills it.
+ *
+ * Splitting these apart is what lets the feed have one rhythm without lying
+ * about any individual image. Every card gets a portrait-ish slot, so the
+ * pitch is predictable; a picture that does not fit that shape is placed
+ * inside it whole rather than trimmed to it.
+ */
+export function cardMediaFit(
+  media: { width?: number | null; height?: number | null } | undefined,
+  postId: string,
+): CardMediaFit {
+  if (!media?.width || !media?.height) {
+    return { aspect: cardAspectFor(media, postId), fit: 'cover' };
+  }
+  const natural = media.width / media.height;
+  if (!Number.isFinite(natural) || natural <= 0) {
+    return { aspect: cardAspectFor(undefined, postId), fit: 'cover' };
+  }
+  if (natural > MAX_CARD_ASPECT) {
+    // The event-poster case. Keep the tall slot, keep the poster whole.
+    return { aspect: MAX_CARD_ASPECT, fit: 'contain' };
+  }
+  // Taller than the window is cropped, and that is fine: trimming the top and
+  // bottom of a tall photograph loses nothing a reader was looking for.
+  return { aspect: Math.max(MIN_CARD_ASPECT, natural), fit: 'cover' };
 }
