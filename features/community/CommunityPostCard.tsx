@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 
-import { colors, shadows } from '../../theme/tokens';
+import { colors } from '../../theme/tokens';
 import { useLanguage } from '../../context/LanguageContext';
 import { cardMediaFit } from '../../lib/cardAspect';
 import { resolveMediaUrl } from '../../lib/media';
@@ -40,19 +40,27 @@ interface Props {
 /**
  * Warm-palette type color: replaces all cold blue/purple/red with peach,
  * cream, sage and lavender tones.
+ *
+ * Deepened, and made opaque, when the card lost its white plate (D-088). These
+ * tints were mixed to sit on white; against the app's cream page `guide` was
+ * 14 units away from the background and `warning` 16, which is to say the
+ * panel and the page were the same surface and a text post had no cover at
+ * all. The two translucent ones composited against cream rather than white on
+ * top of that, so they drifted further still. Now they are ~60 units clear of
+ * the darkest point of the page, and the body text keeps a 10:1 contrast.
  */
 function getTypeColor(postType: CommunityPost['post_type']) {
   switch (postType) {
     case 'guide':
-      return { bg: '#FFF1D9', fg: '#B07A1E' };
+      return { bg: '#FBE0AE', fg: '#8A5A08' };
     case 'warning':
-      return { bg: 'rgba(244, 124, 124, 0.16)', fg: colors.danger };
+      return { bg: '#FBD3CE', fg: colors.danger };
     case 'question':
-      return { bg: '#EFE9FF', fg: '#6B5CD9' };
+      return { bg: '#E3DAFF', fg: '#5546C4' };
     case 'recommendation':
-      return { bg: '#FFE8DA', fg: colors.brandCoral };
+      return { bg: '#FFD6BC', fg: '#C4482F' };
     default:
-      return { bg: 'rgba(143, 188, 122, 0.18)', fg: '#5C8A48' };
+      return { bg: '#D7E9CB', fg: '#456B34' };
   }
 }
 
@@ -188,30 +196,35 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
   return (
     <View
       style={{
+        // No plate, no shadow — the picture sits on the page and the words sit
+        // under it (D-088, lisum's call). Measured on Xiaohongshu: the gap
+        // between two cards and the background behind a card's own text are
+        // the same white, so a post is bounded by its picture and by nothing
+        // else. Ours was a white rectangle plus a shadow on a cream page: two
+        // closed contours per post, twelve outlines on a screen of six.
+        //
+        // This costs zero height. What it buys is the twenty dp of width that
+        // the plate's own padding was taking off every byline, and one edge
+        // per card instead of three.
+        //
         // Xiaohongshu leaves 20px between stacked cards and 4-6px between the
         // columns — tight across, generous down. We had it the other way
-        // round: an 8dp gutter and a 6dp gap, so cards nearly touched
-        // vertically while the shadow of each one bled into the next.
+        // round: an 8dp gutter and a 6dp gap.
         marginBottom: 10,
-        borderRadius: 14,
-        overflow: 'hidden',
-        backgroundColor: '#FFFFFF',
-        ...shadows.card,
-        // shadows.card paints ~38dp below a card (radius 24, offset 14) into
-        // what used to be a 6dp gap, so every pair of neighbours shared one
-        // smudge and the grid read as fogged rather than as cards. Kept as a
-        // card-local override: the token is right for the big surfaces it was
-        // drawn for, and wrong at this size and this spacing.
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.06,
-        elevation: 2,
       }}
     >
       {/* Long press replaces the per-card "..." button: the menu holds one
           rarely-used action, and in this column its 35dp cost was paid by
           the author's name on every single card. */}
-      <Pressable onPress={openDetail} onLongPress={openCardActions}>
+      <Pressable
+        onPress={openDetail}
+        onLongPress={openCardActions}
+        // The card's one and only outline. 12 rather than Xiaohongshu's ~4:
+        // their product is square-cornered throughout and ours is not, and
+        // dropping the plate is meant to remove an edge, not to restyle the
+        // brand.
+        style={{ borderRadius: 12, overflow: 'hidden' }}
+      >
         {post.media_items[0] ? (
           <View>
             <Image
@@ -374,7 +387,11 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
         )}
       </Pressable>
 
-      <View style={{ paddingHorizontal: 10, paddingVertical: 8 }}>
+      {/* Aligned to the picture's edge, not inset from a plate that is no
+          longer there. The 10dp of side padding existed to keep words off the
+          white rectangle's corner; without it the byline row — the thing that
+          was squeezing the author's name out — gets 20dp back. */}
+      <View style={{ paddingHorizontal: 2, paddingTop: 10, paddingBottom: 0 }}>
         <Pressable onPress={openDetail} onLongPress={openCardActions}>
           {titleHighlight ? (
             <HighlightedCardTitle
@@ -436,7 +453,7 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
             />
             <Text
               numberOfLines={1}
-              style={{ marginLeft: 8, flexShrink: 1, fontSize: 11.5, color: colors.textMuted }}
+              style={{ marginLeft: 8, flexShrink: 1, fontSize: 11.5, color: colors.textMutedOnCream }}
             >
               {post.author.display_name}
             </Text>
@@ -451,13 +468,13 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
             <Ionicons
               name={post.viewer_marked_helpful ? 'heart' : 'heart-outline'}
               size={17}
-              color={post.viewer_marked_helpful ? colors.brandCoral : colors.textMuted}
+              color={post.viewer_marked_helpful ? colors.brandCoral : colors.textMutedOnCream}
             />
             {/* A wall of "0" is a report on how empty the room is. The heart
                 still says the action is available; the number arrives when
                 there is one. */}
             {post.helpful_count > 0 ? (
-              <Text style={{ marginLeft: 4, fontSize: 11.5, color: colors.textMuted }}>
+              <Text style={{ marginLeft: 4, fontSize: 11.5, color: colors.textMutedOnCream }}>
                 {post.helpful_count}
               </Text>
             ) : null}

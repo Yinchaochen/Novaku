@@ -30,6 +30,11 @@ export const colors = {
   textMain: '#241A16',
   textBrown: '#3B2A22',
   textMuted: '#81746D',
+  // The same role as textMuted, for text that sits on the page rather than on
+  // a white card. textMuted measures 4.51:1 on white and 3.93:1 against the
+  // bottom of the app's cream gradient — it was passing only because a card
+  // was underneath it. Feed cards lost that card (D-088).
+  textMutedOnCream: '#6F625B',
   textSubtle: '#A89A92',
 
   // Accents

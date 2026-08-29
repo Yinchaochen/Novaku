@@ -173,7 +173,16 @@ function OneScreenful({ posts }: { posts: CommunityPost[] }) {
       <View style={{ height: BAND_H, backgroundColor: '#FFD17E', justifyContent: 'flex-end', padding: 12 }}>
         <Text style={{ color: '#FFFFFF', fontWeight: '800' }}>band {BAND_H}dp</Text>
       </View>
-      <View style={{ height: FEED_H, overflow: 'hidden', paddingTop: LIST_PAD_TOP }}>
+      <View
+        style={{
+          height: FEED_H,
+          overflow: 'hidden',
+          paddingTop: LIST_PAD_TOP,
+          // The real page, because the cards no longer bring their own
+          // background and this is now the surface the words sit on.
+          backgroundColor: '#FDF3E8',
+        }}
+      >
         <View style={{ flexDirection: 'row', gap: 6, paddingHorizontal: 6 }}>
           {[0, 1].map((column) => (
             <View key={column} style={{ width: columnWidth }}>
