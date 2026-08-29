@@ -13,6 +13,15 @@ interface Props {
   textStyle?: TextStyle;
   numberOfLines?: number;
   linkify?: boolean;
+  /**
+   * Whether to print the "Translated from X · Show original" line.
+   *
+   * Feed cards pass false. The line costs two of the ~40 characters a card
+   * title gets, sits in the most valuable strip of the card, and a card that
+   * carries both a title and a body printed it twice. The toggle still exists
+   * where a reader actually reads — the post detail.
+   */
+  showToggle?: boolean;
 }
 
 export function TranslatedText({
@@ -23,6 +32,7 @@ export function TranslatedText({
   textStyle,
   numberOfLines,
   linkify = false,
+  showToggle = true,
 }: Props) {
   const { t } = useLanguage();
   const [showOriginal, setShowOriginal] = useState(false);
@@ -49,7 +59,7 @@ export function TranslatedText({
           {displayText}
         </Text>
       )}
-      {canToggle ? (
+      {canToggle && showToggle ? (
         <Text
           className="mt-1 text-[11px] font-semibold text-primary"
           onPress={() => setShowOriginal((value) => !value)}

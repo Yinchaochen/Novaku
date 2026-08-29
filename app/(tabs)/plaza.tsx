@@ -17,6 +17,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 const LocationPickerLazy = lazy(() => import('../../components/LocationPicker'));
 import {
   ActivityIndicator,
+  Animated,
   BackHandler,
   KeyboardAvoidingView,
   Modal,
@@ -42,6 +43,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { captureSentryMessage } from '../../lib/sentry';
 import { colors, shadows } from '../../theme/tokens';
 import { compressImageForUpload } from '../../lib/imageCompression';
+import { nextComposeButtonState } from '../../lib/composeButtonVisibility';
 import { mapWithConcurrency } from '../../lib/mapWithConcurrency';
 import { resolveMediaUrl } from '../../lib/media';
 import { useGuideAutoAdvance, useProductGuide } from '../../features/guide/useProductGuide';
@@ -56,6 +58,7 @@ import {
   processAndUploadVideo,
 } from '../../features/community/videoPicker';
 import { CommunityPostCard } from '../../features/community/CommunityPostCard';
+import { FeedFilterRow } from '../../components/community/FeedFilterRow';
 import { CommunityPostDetailModal } from '../../features/community/CommunityPostDetailModal';
 import {
   CommunityPost,
@@ -63,6 +66,7 @@ import {
   CommunityPostMedia,
   getCommunitySessionId,
   useCommunityFeed,
+  type CommunityFeedFilter,
   useCreateCommunityPost,
   useRefreshCommunityFeed,
   useTrackCommunityEvents,
@@ -176,7 +180,10 @@ export default function PlazaScreen() {
   const user = useAuthStore((state) => state.user);
   const insets = useSafeAreaInsets();
   const [editingPost, setEditingPost] = useState<CommunityPost | null>(null);
-  const feedQuery = useCommunityFeed();
+  // Which kind of post the reader asked for, or null for everything. Sent to
+  // the backend rather than applied here — see communityFeedQueryKey.
+  const [feedFilter, setFeedFilter] = useState<CommunityFeedFilter>(null);
+  const feedQuery = useCommunityFeed(feedFilter);
   const pages = feedQuery?.data?.pages;
   const data = dedupeFeedItems(
     pages?.flatMap((page) =>
@@ -191,7 +198,7 @@ export default function PlazaScreen() {
   const isFetchingNextPage = feedQuery?.isFetchingNextPage ?? false;
   const hasNextPage = feedQuery?.hasNextPage ?? false;
   const refetch = feedQuery?.refetch ?? noopRefetch;
-  const refreshFeed = useRefreshCommunityFeed();
+  const refreshFeed = useRefreshCommunityFeed(feedFilter);
   const fetchNextPage = feedQuery?.fetchNextPage ?? (() => Promise.resolve(undefined));
   // Single cursor-paginated snapshot is the only feed source now; "caught up" =
   // the cursor returned no next page (no separate refill mechanism to track).
@@ -222,6 +229,30 @@ export default function PlazaScreen() {
   const [locationPickerVisible, setLocationPickerVisible] = useState(false);
   const [aiSummaryEnabled, setAiSummaryEnabled] = useState(true);
   const guide = useProductGuide();
+
+  // The Post button gets out of the reader's way on the way down and comes
+  // back on the way up. The rule itself lives in lib/composeButtonVisibility
+  // where it can be tested; this is the animation around it.
+  const postButtonOffset = useRef(new Animated.Value(0)).current;
+  const postButtonHidden = useRef(false);
+  const lastScrollY = useRef(0);
+  const guideActive = guide.step !== null;
+  const handleFeedScroll = (event: { nativeEvent: { contentOffset: { y: number } } }) => {
+    const decision = nextComposeButtonState({
+      y: event.nativeEvent.contentOffset.y,
+      lastY: lastScrollY.current,
+      hidden: postButtonHidden.current,
+      guideActive,
+    });
+    lastScrollY.current = decision.lastY;
+    if (postButtonHidden.current === decision.hidden) return;
+    postButtonHidden.current = decision.hidden;
+    Animated.timing(postButtonOffset, {
+      toValue: decision.hidden ? 1 : 0,
+      duration: 180,
+      useNativeDriver: true,
+    }).start();
+  };
   const composeEntryTargetRef = useGuideTarget('compose_entry');
   const photoTargetRef = useGuideTarget('photo');
   const titleTargetRef = useGuideTarget('title');
@@ -644,8 +675,12 @@ export default function PlazaScreen() {
       <View
         style={{
           backgroundColor: '#FFD17E',
-          paddingTop: Math.max(insets.top + 14, 36),
-          paddingBottom: 22,
+          paddingTop: Math.max(insets.top + 12, 34),
+          // Was 22. The band is ~100dp of screen that never scrolls away, and
+          // it held a word and three icons; the space it keeps now goes to the
+          // filter row under the title, which is a way to browse rather than a
+          // decoration.
+          paddingBottom: 12,
           paddingHorizontal: 22,
           borderBottomLeftRadius: 32,
           borderBottomRightRadius: 32,
@@ -703,6 +738,8 @@ export default function PlazaScreen() {
             <LangPill />
           </View>
         </View>
+
+        <FeedFilterRow value={feedFilter} onChange={setFeedFilter} />
       </View>
 
       {plazaBanner ? (
@@ -806,6 +843,8 @@ export default function PlazaScreen() {
           }
         }}
         onEndReachedThreshold={0.6}
+        onScroll={handleFeedScroll}
+        scrollEventThrottle={32}
         ListEmptyComponent={
           isLoading ? (
             <View className="items-center py-12">
@@ -855,7 +894,7 @@ export default function PlazaScreen() {
           (2026-05-10): explicit height 60, icon 26, fontSize 22 ExtraBold.
           The old paddingV-only sizing read as a small tag; explicit height
           + bigger glyphs match the original big-pill design intent. */}
-      <View
+      <Animated.View
         pointerEvents="box-none"
         style={{
           position: 'absolute',
@@ -864,6 +903,17 @@ export default function PlazaScreen() {
           bottom: Math.max(insets.bottom + 96, 116),
           alignItems: 'center',
           zIndex: 50,
+          opacity: postButtonOffset.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
+          transform: [
+            {
+              translateY: postButtonOffset.interpolate({
+                inputRange: [0, 1],
+                // Past its own height plus the tab bar, so nothing of it is
+                // left peeking over the bar while it is meant to be gone.
+                outputRange: [0, POST_BUTTON_HEIGHT + 60],
+              }),
+            },
+          ],
         }}
       >
         <View
@@ -911,7 +961,7 @@ export default function PlazaScreen() {
             style={StyleSheet.absoluteFill}
           />
         </View>
-      </View>
+      </Animated.View>
 
       {/* Spotlight for the compose-entry step; the scrim never eats touches.
           Continue on this step performs the real forward action for the user:

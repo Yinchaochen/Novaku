@@ -347,9 +347,12 @@ type CommunityFeedUser = {
   intent_tags?: string[] | null;
 };
 
+export type CommunityFeedFilter = CommunityPost['post_type'] | null;
+
 export function communityFeedQueryKey(
   user: CommunityFeedUser | null | undefined,
   langCode: string,
+  postType: CommunityFeedFilter = null,
 ) {
   return [
     'community',
@@ -359,6 +362,10 @@ export function communityFeedQueryKey(
     user?.identity,
     user?.intent_tags?.join('|') ?? '',
     langCode,
+    // Part of the key, not a client-side filter over the loaded pages: the
+    // feed is paginated and loops, so filtering what happens to be in memory
+    // would show a nearly empty screen and call it the whole category.
+    postType ?? 'all',
   ] as const;
 }
 
@@ -368,10 +375,10 @@ export function communityFeedQueryKey(
 // survive into the next page load, or every scroll would drop the stable head.
 let pullToRefreshPending = false;
 
-export function useCommunityFeed() {
+export function useCommunityFeed(postType: CommunityFeedFilter = null) {
   const { langCode } = useLanguage();
   const user = useAuthStore((state) => state.user);
-  const queryKey = communityFeedQueryKey(user, langCode);
+  const queryKey = communityFeedQueryKey(user, langCode, postType);
   // Reopening the app after a real absence asks the backend for a new feed
   // session, which is what makes the D-062 variety visible at all.
   useFeedForegroundRefresh(queryKey, Boolean(user));
@@ -387,6 +394,7 @@ export function useCommunityFeed() {
           // reads it as "the reader asked for something else" and stops
           // holding the top of the feed in place (D-079).
           refresh: pageParam == null && pullToRefreshPending ? true : undefined,
+          post_type: postType ?? undefined,
         },
       });
       if (pageParam == null) {
@@ -430,10 +438,10 @@ export function useCommunityFeed() {
  * a genuinely new session, which is what a pull gesture means. Same reasoning
  * — and the same helper — as the foreground path.
  */
-export function useRefreshCommunityFeed() {
+export function useRefreshCommunityFeed(postType: CommunityFeedFilter = null) {
   const { langCode } = useLanguage();
   const user = useAuthStore((state) => state.user);
-  const queryKey = communityFeedQueryKey(user, langCode);
+  const queryKey = communityFeedQueryKey(user, langCode, postType);
   const queryClient = useQueryClient();
   const key = queryKey.join('|');
   // queryKey is a fresh array every render, so the joined string is its identity.

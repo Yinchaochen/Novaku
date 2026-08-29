@@ -410,6 +410,7 @@
     "search_rate_limited": "Du suchst sehr schnell — mach kurz Pause und versuch es dann wieder.",
     "search_end_of_results": "Das war alles",
     "search_loading": "Suche läuft…",
+    "filter_all": "Alle",
     "type_guide": "Guide",
     "type_warning": "Warnung",
     "type_recommendation": "Empfehlung",
@@ -1277,7 +1278,9 @@
     "admin_organisers_hint": "Organisatoren einladen und ihre Konten übergeben.",
     "section_labs": "Labs",
     "labs_entry": "Labs",
-    "labs_entry_hint": "Experimentelle und auslaufende Tools."
+    "labs_entry_hint": "Experimentelle und auslaufende Tools.",
+    "admin_moderation": "Inhaltsmoderation",
+    "admin_moderation_hint": "Meldungen von Nutzerinnen und automatisch markierte Inhalte bearbeiten."
   },
   "report": {
     "sheet_title": "Inhalt melden",

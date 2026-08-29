@@ -410,6 +410,7 @@
     "search_rate_limited": "You're searching very fast — take a short break and try again.",
     "search_end_of_results": "That's everything",
     "search_loading": "Searching…",
+    "filter_all": "All",
     "type_guide": "Guide",
     "type_warning": "Warning",
     "type_recommendation": "Recommendation",

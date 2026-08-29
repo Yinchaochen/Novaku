@@ -406,6 +406,7 @@ export type Translations = {
     personal_task_badge: string;
     type_experience: string;
     type_question: string;
+    filter_all: string;
     type_guide: string;
     type_warning: string;
     type_recommendation: string;

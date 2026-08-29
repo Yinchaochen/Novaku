@@ -56,13 +56,25 @@ function getTypeColor(postType: CommunityPost['post_type']) {
   }
 }
 
-function Avatar({ name, avatarUrl }: { name: string; avatarUrl?: string | null }) {
+function Avatar({
+  name,
+  avatarUrl,
+  recyclingKey,
+}: {
+  name: string;
+  avatarUrl?: string | null;
+  recyclingKey: string;
+}) {
   const resolvedAvatarUrl = resolveMediaUrl(avatarUrl);
 
   if (resolvedAvatarUrl) {
     return (
       <Image
         source={resolvedAvatarUrl}
+        // See the cover image below: a recycled cell keeps the previous
+        // avatar on screen until this one loads unless the key says the row
+        // now belongs to somebody else.
+        recyclingKey={recyclingKey}
         contentFit="cover"
         style={{ width: 22, height: 22, borderRadius: 11 }}
       />
@@ -129,6 +141,7 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
   // you scroll. A slot is reserved now, from what we already know, and the
   // image is fitted into it.
   const imageAspect = cardAspectFor(post.media_items[0], post.id);
+  const showOfficialChip = isOfficialAuthor(post.author);
   const hasEventCandidate = post.action_candidates.some(
     (candidate) => candidate.metadata_json?.['card_type'] === 'event'
   );
@@ -182,7 +195,10 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
         ...shadows.card,
       }}
     >
-      <Pressable onPress={openDetail}>
+      {/* Long press replaces the per-card "..." button: the menu holds one
+          rarely-used action, and in this column its 35dp cost was paid by
+          the author's name on every single card. */}
+      <Pressable onPress={openDetail} onLongPress={openCardActions}>
         {post.media_items[0] ? (
           <View>
             <Image
@@ -190,6 +206,15 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
                 resolveMediaUrl(post.media_items[0].thumb_url ?? post.media_items[0].media_url) ??
                 post.media_items[0].media_url
               }
+              // FlashList rebinds one card view to a different post instead of
+              // mounting a new one, and expo-image's default on a changed
+              // source is to hold the old picture until the new one decodes —
+              // correct for a URL swap on the same card, wrong here, where it
+              // showed post B wearing post A's photo until the network caught
+              // up. The key tells the view the slot changed hands, so it
+              // clears first. D-078 reserved the slot's height; this keeps the
+              // slot's *content* honest while it fills.
+              recyclingKey={post.id}
               // `cover` inside a slot the picture's own ratio chose: when the
               // ratio is known nothing is cropped, and when it is not the slot
               // is a stable guess rather than a moving target.
@@ -197,6 +222,19 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
               transition={120}
               style={{ width: '100%', aspectRatio: imageAspect, backgroundColor: '#1F1B18' }}
             />
+            {showOfficialChip ? (
+              // The chip used to sit beside the author's name. In a 148dp
+              // column it never fit: it does not shrink, so the name — which
+              // does — collapsed to nothing and every seeded card read
+              // ".. Editor" with no author at all. Moving it onto the picture
+              // gives the name the row back and makes the disclosure larger,
+              // not smaller, which is the direction D-065 cares about.
+              // Bottom-left: top-left is the moderation chip, bottom-right the
+              // video duration.
+              <View pointerEvents="none" style={{ position: 'absolute', left: 8, bottom: 8 }}>
+                <OfficialChip />
+              </View>
+            ) : null}
             {isVideoMedia(post.media_items[0]) ? (
               <>
                 {/* D-033 video affordance: centered play glyph + duration. */}
@@ -278,25 +316,30 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
               justifyContent: 'flex-end',
             }}
           >
-            <View
-              style={{
-                alignSelf: 'flex-start',
-                marginBottom: 8,
-                backgroundColor: 'rgba(255,255,255,0.85)',
-                borderRadius: 999,
-                paddingHorizontal: 10,
-                paddingVertical: 4,
-              }}
-            >
-              <Text style={{ color: typeColor.fg, fontSize: 10.5, fontWeight: '700', letterSpacing: 0.6 }}>
-                {t.plaza[`type_${post.post_type}`]}
-              </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <View
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.85)',
+                  borderRadius: 999,
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                }}
+              >
+                <Text style={{ color: typeColor.fg, fontSize: 10.5, fontWeight: '700', letterSpacing: 0.6 }}>
+                  {t.plaza[`type_${post.post_type}`]}
+                </Text>
+              </View>
+              {/* A text post has no picture to carry the chip, so it rides
+                  beside the type label instead — still on the card face, still
+                  a word, never absent. */}
+              {showOfficialChip ? <OfficialChip /> : null}
             </View>
             <TranslatedText
               originalText={post.body}
               translatedText={post.translated_body}
               sourceLanguage={post.body_source_language ?? post.source_language}
               numberOfLines={3}
+              showToggle={false}
               // Was 16/bold: the body then outweighed the title printed under
               // it, so a reader met the same post twice, louder first.
               textStyle={{ color: colors.textBrown, fontSize: 13, fontWeight: '400', lineHeight: 18 }}
@@ -306,7 +349,7 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
       </Pressable>
 
       <View style={{ paddingHorizontal: 10, paddingVertical: 8 }}>
-        <Pressable onPress={openDetail}>
+        <Pressable onPress={openDetail} onLongPress={openCardActions}>
           {titleHighlight ? (
             <HighlightedCardTitle
               text={post.translated_title ?? post.title}
@@ -318,6 +361,7 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
               translatedText={post.translated_title}
               sourceLanguage={post.title_source_language ?? post.source_language}
               numberOfLines={2}
+              showToggle={false}
               textStyle={{
                 fontSize: 14.5,
                 fontWeight: '700',
@@ -346,13 +390,24 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
           ) : null}
         </Pressable>
 
+        {/* Three fixed-width things plus a name do not fit in a 148dp column:
+            the avatar, the Editor chip, the heart with its count and the "..."
+            menu together ask for more than the column has, and the name is the
+            only one that shrinks — so it was the one that vanished. The chip
+            moved to the picture, the menu moved to a long press on the card,
+            and a count of zero is not printed. What is left is what the name
+            needs. */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Pressable
             style={{ marginRight: 8, flex: 1, flexDirection: 'row', alignItems: 'center' }}
             onPress={openAuthorProfile}
             hitSlop={4}
           >
-            <Avatar name={post.author.display_name} avatarUrl={post.author.avatar_url} />
+            <Avatar
+              name={post.author.display_name}
+              avatarUrl={post.author.avatar_url}
+              recyclingKey={post.author.id}
+            />
             <Text
               numberOfLines={1}
               style={{ marginLeft: 8, flexShrink: 1, fontSize: 11.5, color: colors.textMuted }}
@@ -360,7 +415,6 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
               {post.author.display_name}
             </Text>
             {post.author.is_verified ? <VerifiedBadge size={12} /> : null}
-            {isOfficialAuthor(post.author) ? <OfficialChip /> : null}
           </Pressable>
 
           <Pressable
@@ -373,20 +427,15 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
               size={17}
               color={post.viewer_marked_helpful ? colors.brandCoral : colors.textMuted}
             />
-            <Text style={{ marginLeft: 4, fontSize: 11.5, color: colors.textMuted }}>
-              {post.helpful_count}
-            </Text>
+            {/* A wall of "0" is a report on how empty the room is. The heart
+                still says the action is available; the number arrives when
+                there is one. */}
+            {post.helpful_count > 0 ? (
+              <Text style={{ marginLeft: 4, fontSize: 11.5, color: colors.textMuted }}>
+                {post.helpful_count}
+              </Text>
+            ) : null}
           </Pressable>
-
-          {!isOwnPost ? (
-            <Pressable
-              onPress={openCardActions}
-              hitSlop={10}
-              style={{ marginLeft: 6, paddingVertical: 6, paddingHorizontal: 6 }}
-            >
-              <Ionicons name="ellipsis-horizontal" size={17} color={colors.textMuted} />
-            </Pressable>
-          ) : null}
         </View>
       </View>
 

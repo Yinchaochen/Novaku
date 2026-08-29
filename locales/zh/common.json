@@ -410,6 +410,7 @@
     "search_rate_limited": "搜索太频繁了，稍作休息再试。",
     "search_end_of_results": "已经看完啦",
     "search_loading": "搜索中…",
+    "filter_all": "全部",
     "type_guide": "攻略",
     "type_warning": "避坑",
     "type_recommendation": "推荐",
