@@ -249,7 +249,9 @@ export interface CommunityPostCreateInput {
   ai_summary_enabled?: boolean;
   media_items?: Array<
     Pick<CommunityPostMedia, 'media_url' | 'mime_type'> &
-      Partial<Pick<CommunityPostMedia, 'thumb_url' | 'duration_seconds'>>
+      Partial<
+        Pick<CommunityPostMedia, 'thumb_url' | 'duration_seconds' | 'width' | 'height'>
+      >
   >;
   // D-033 video posts: client-extracted sample frames for async moderation.
   moderation_frame_urls?: string[];

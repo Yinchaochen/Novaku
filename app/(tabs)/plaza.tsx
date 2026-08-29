@@ -539,6 +539,12 @@ export default function PlazaScreen() {
             thumb_url: item.thumb_url ?? undefined,
             mime_type: item.mime_type ?? undefined,
             duration_seconds: item.duration_seconds ?? undefined,
+            // /media/upload measured these from the bytes and handed them
+            // back; the composer was dropping them on the floor, so every
+            // post reached the database with no picture size and every card
+            // guessed its shape from a hash (D-078's reason for existing).
+            width: item.width ?? undefined,
+            height: item.height ?? undefined,
           })),
       moderation_frame_urls: videoDraft ? videoDraft.frameUrls : undefined,
     };
