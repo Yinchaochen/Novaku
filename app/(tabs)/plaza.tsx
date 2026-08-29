@@ -697,7 +697,7 @@ export default function PlazaScreen() {
               letterSpacing: -0.3,
             }}
           >
-            {t.plaza.title}
+            {t.plaza.header_title}
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             {/* Permanent walkthrough entry (D-050): re-runnable any time. */}

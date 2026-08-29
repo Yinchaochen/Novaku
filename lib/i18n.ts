@@ -326,6 +326,9 @@ export type Translations = {
     detail_open_source: string;
   };
   plaza: {
+    // The screen header shows the product name, not the tab name:
+    // people were calling the app "Plaza".
+    header_title: string;
     title: string;
     detail_title: string;
     publish_note: string;
