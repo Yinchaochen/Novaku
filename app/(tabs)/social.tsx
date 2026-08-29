@@ -700,7 +700,10 @@ export default function SocialScreen() {
   const directConversations = useMemo<ConversationItem[]>(() => {
     return friends.map((friendship) => {
       const bc = backendConvMap[`direct:${friendship.user.id}`];
-      const cityLabel = formatDisplayLocation(friendship.user.city) ?? friendship.user.city;
+      const cityLabel =
+        formatDisplayLocation(friendship.user.city_label ?? friendship.user.city) ??
+        friendship.user.city_label ??
+        friendship.user.city;
       const preview = bc?.last_message
         ? lastMessagePreview(bc.last_message)
         : (cityLabel ?? '');
@@ -1632,7 +1635,9 @@ export default function SocialScreen() {
                           <View className="ml-3 flex-1 pr-2">
                             <Text className="text-[16px] font-semibold text-slate-900">{request.user.display_name}</Text>
                             <Text className="mt-1 text-[13px] text-slate-500">
-                              {formatDisplayLocation(request.user.city) ?? request.user.city}
+                              {formatDisplayLocation(request.user.city_label ?? request.user.city) ??
+                                request.user.city_label ??
+                                request.user.city}
                             </Text>
                           </View>
                           <View className="flex-row items-center">
@@ -1680,7 +1685,7 @@ export default function SocialScreen() {
                       <View className="ml-3 flex-1 pr-2">
                         <Text className="text-[16px] font-semibold text-slate-900">{item.display_name}</Text>
                         <Text className="mt-1 text-[13px] text-slate-500">
-                          {formatDisplayLocation(item.city) ?? item.city}
+                          {formatDisplayLocation(item.city_label ?? item.city) ?? item.city_label ?? item.city}
                         </Text>
                       </View>
                       {item.relationship_state === 'none' ? (

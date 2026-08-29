@@ -10,6 +10,8 @@ export interface SocialUserSummary {
   display_name: string;
   avatar_url?: string | null;
   city: string | null;
+  /** Same city as `city`, spelled for the viewer's language (D-085). Display this. */
+  city_label?: string | null;
   identity: string;
   /** Account badge (D-063) — not the same as a source's verification_status. */
   is_verified?: boolean;

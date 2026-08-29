@@ -563,7 +563,8 @@ export default function ProfileScreen() {
     resolveMediaUrl(user?.profile_background_url) ?? user?.profile_background_url ?? null;
   const savedAvatarUri = resolveMediaUrl(user?.avatar_url) ?? null;
   const viewerAvatarUri = avatarPreview?.uri ?? savedAvatarUri;
-  const displayBaseCity = formatDisplayLocation(user?.city) ?? user?.city ?? null;
+  const displayBaseCity =
+    formatDisplayLocation(user?.city_label ?? user?.city) ?? user?.city_label ?? user?.city ?? null;
   const displayBaseCityOrPrompt = displayBaseCity ?? t.onboarding.city_prompt;
   const displayOriginCity = formatDisplayLocation(user?.origin_city) ?? user?.origin_city ?? null;
   const identityLabel = user ? t.auth[`identity_${user.identity}`] : '';

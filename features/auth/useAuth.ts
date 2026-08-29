@@ -48,6 +48,8 @@ export interface AuthUser {
   identity: UserIdentity;
   city: string | null;
   origin_city: string | null;
+  /** Same city as `city`, spelled for the viewer's language (D-085). Display this. */
+  city_label?: string | null;
   arrival_stage: OnboardingArrivalStage | null;
   intent_tags: OnboardingIntentTag[];
   onboarding_completed: boolean;

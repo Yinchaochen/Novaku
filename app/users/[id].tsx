@@ -131,7 +131,11 @@ export default function UserProfileScreen() {
   const [reportSheetVisible, setReportSheetVisible] = useState(false);
 
   const profileData = profile.data;
-  const displayCity = formatDisplayLocation(profileData?.city) ?? profileData?.city ?? null;
+  const displayCity =
+    formatDisplayLocation(profileData?.city_label ?? profileData?.city) ??
+    profileData?.city_label ??
+    profileData?.city ??
+    null;
   const displayOriginCity =
     formatDisplayLocation(profileData?.origin_city) ?? profileData?.origin_city ?? null;
 

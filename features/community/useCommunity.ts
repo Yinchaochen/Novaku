@@ -1265,6 +1265,8 @@ export interface UserProfile {
   avatar_url: string | null;
   city: string | null;
   origin_city: string | null;
+  /** Same city as `city`, spelled for the viewer's language (D-085). Display this. */
+  city_label?: string | null;
   identity: string;
   intent_tags: string[];
   bio: string | null;
