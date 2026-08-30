@@ -19,6 +19,7 @@ import {
   useUnmarkCommunityHelpful,
 } from './useCommunity';
 import { OfficialChip, isOfficialAuthor } from '../../components/OfficialChip';
+import { PostCover } from '../../components/community/PostCover';
 import { VerifiedBadge } from '../../components/VerifiedBadge';
 
 function formatDuration(totalSeconds?: number | null): string {
@@ -36,33 +37,6 @@ interface Props {
 // A card without a picture is a coloured panel, and varying its height is what
 // keeps a masonry column from looking like a table. Cards WITH a picture
 // reserve a ratio instead — see cardAspectFor.
-
-/**
- * Warm-palette type color: replaces all cold blue/purple/red with peach,
- * cream, sage and lavender tones.
- *
- * Deepened, and made opaque, when the card lost its white plate (D-088). These
- * tints were mixed to sit on white; against the app's cream page `guide` was
- * 14 units away from the background and `warning` 16, which is to say the
- * panel and the page were the same surface and a text post had no cover at
- * all. The two translucent ones composited against cream rather than white on
- * top of that, so they drifted further still. Now they are ~60 units clear of
- * the darkest point of the page, and the body text keeps a 10:1 contrast.
- */
-function getTypeColor(postType: CommunityPost['post_type']) {
-  switch (postType) {
-    case 'guide':
-      return { bg: '#FBE0AE', fg: '#8A5A08' };
-    case 'warning':
-      return { bg: '#FBD3CE', fg: colors.danger };
-    case 'question':
-      return { bg: '#E3DAFF', fg: '#5546C4' };
-    case 'recommendation':
-      return { bg: '#FFD6BC', fg: '#C4482F' };
-    default:
-      return { bg: '#D7E9CB', fg: '#456B34' };
-  }
-}
 
 function Avatar({
   name,
@@ -141,7 +115,6 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
   const hidePost = useHidePost();
   const viewerId = useAuthStore((s) => s.user?.id ?? null);
   const isOwnPost = viewerId != null && post.author.id === viewerId;
-  const typeColor = getTypeColor(post.post_type);
   // Decided before the first render and never revised. Sizing from onLoad was
   // correct about the picture and wrong about the list: a card that changes
   // height after layout shoves every card below it in a masonry column, and
@@ -178,6 +151,11 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
   };
 
   const [cardActionsVisible, setCardActionsVisible] = useState(false);
+  // Only the cover's internal grid needs this — its height is pinned by
+  // aspectRatio either way, so measuring the width can never reflow the card
+  // and D-078's rule is untouched. The seed is the real column width on a
+  // 393dp phone, so the first frame is already close.
+  const [coverWidth, setCoverWidth] = useState(184.5);
 
   // Card-level "..." menu: per-user hide so the post stops showing on this user's feed.
   // Own posts skip this entry — you can't hide yourself from yourself.
@@ -247,7 +225,18 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
               // trimmed to it.
               contentFit={media.fit}
               transition={120}
-              style={{ width: '100%', aspectRatio: media.aspect, backgroundColor: '#1F1B18' }}
+              style={{
+                width: '100%',
+                aspectRatio: media.aspect,
+                // Near-black is right for a picture that will cover the slot —
+                // it is the dark moment before the image arrives, not a
+                // surface anyone sees afterwards. A `contain` picture never
+                // covers the slot, so that colour would become permanent
+                // letterbox bars around every wide event poster. Matting a
+                // poster on warm paper is the point; matting it in black is
+                // an accident.
+                backgroundColor: media.fit === 'contain' ? colors.bgWarmDeep : '#1F1B18',
+              }}
             />
             {showOfficialChip ? (
               // The chip used to sit beside the author's name. In a 148dp
@@ -329,60 +318,21 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
             ) : null}
           </View>
         ) : (
-          <View
-            style={{
-              // A square, the same slot a picture would have had. It was 96dp
-              // — sized to the words — which made a text post the shortest
-              // card in the feed by a wide margin, and pitch that swings is
-              // what a reader feels as restlessness. Xiaohongshu does the same
-              // thing: their text posts are rendered INTO the cover slot and
-              // cost exactly what a photo post costs.
-              //
-              // Square rather than the full 0.86 slot: the panel earns its
-              // height with words, and five lines of guide fill a square
-              // without turning into an empty billboard.
-              aspectRatio: 1,
-              backgroundColor: typeColor.bg,
-              paddingHorizontal: 12,
-              paddingTop: 12,
-              paddingBottom: 12,
-              // Chip at the top, words at the bottom. Bottom-aligning both
-              // left the upper third of a square panel empty, which reads as a
-              // card that has not finished loading rather than as a design.
-              justifyContent: 'space-between',
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-              <View
-                style={{
-                  backgroundColor: 'rgba(255,255,255,0.85)',
-                  borderRadius: 999,
-                  paddingHorizontal: 10,
-                  paddingVertical: 4,
-                }}
-              >
-                <Text style={{ color: typeColor.fg, fontSize: 10.5, fontWeight: '700', letterSpacing: 0.6 }}>
-                  {t.plaza[`type_${post.post_type}`]}
-                </Text>
+          // A designed cover, not a tinted box with the body poured into it.
+          // The square is the same slot a picture would have had, so a text
+          // post costs exactly what a photo post costs and the feed keeps one
+          // rhythm — which is what Xiaohongshu does, and why their text notes
+          // do not read as posts that failed to have an image.
+          <View onLayout={(event) => setCoverWidth(event.nativeEvent.layout.width)}>
+            <PostCover post={post} width={coverWidth} />
+            {showOfficialChip ? (
+              // Bottom-left, exactly where it sits on a photo cover. The chip
+              // used to ride beside the type pill, which only existed because
+              // a text post had nowhere else to put it.
+              <View pointerEvents="none" style={{ position: 'absolute', left: 8, bottom: 8 }}>
+                <OfficialChip />
               </View>
-              {/* A text post has no picture to carry the chip, so it rides
-                  beside the type label instead — still on the card face, still
-                  a word, never absent. */}
-              {showOfficialChip ? <OfficialChip /> : null}
-            </View>
-            <TranslatedText
-              originalText={post.body}
-              translatedText={post.translated_body}
-              sourceLanguage={post.body_source_language ?? post.source_language}
-              // Five, because the panel is a square now and three lines left
-              // most of it empty. More of the guide on the card is also the
-              // only compensation a text post gets for having no picture.
-              numberOfLines={5}
-              showToggle={false}
-              // Was 16/bold: the body then outweighed the title printed under
-              // it, so a reader met the same post twice, louder first.
-              textStyle={{ color: colors.textBrown, fontSize: 13, fontWeight: '400', lineHeight: 18 }}
-            />
+            ) : null}
           </View>
         )}
       </Pressable>
