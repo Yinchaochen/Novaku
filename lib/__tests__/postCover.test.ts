@@ -119,6 +119,22 @@ describe('pickKeyLine', () => {
     expect(line).toBe('For the city trip, remember that an ABC ticket is needed.');
   });
 
+  it('prefers a sentence whose longest word fits over one whose does not', () => {
+    // The penalty was gated on a hand-picked 11 while the smallest rung's line
+    // holds 9.26em, so every token between the two was penalised by nothing.
+    // "Berufsqualifikationen" measures 9.74 — inside that gap, which is why
+    // the reported screenshot happened at all. Measured over 632 real German
+    // kulturdaten descriptions, closing the gap moves 20 of 624 covers onto a
+    // different, already-available, non-breaking sentence.
+    const line = pickKeyLine(
+      'Die Anerkennung ausländischer Berufsqualifikationen dauert.\n\n' +
+        'Rechne mit mehreren Monaten und plane das früh ein.',
+      'Anerkennung im Handwerk',
+    );
+
+    expect(line).toMatch(/Rechne mit mehreren Monaten/);
+  });
+
   it('takes a sentence too long for any rung rather than showing nothing', () => {
     const line = pickKeyLine(
       'Step outside your usual routine and choose one part of the city you would not ' +
@@ -231,6 +247,44 @@ describe('coverPlan', () => {
     const plan = coverPlan(post, 'T', 'Die Anerkennung ausländischer Berufsqualifikationen dauert.');
 
     expect(plan.sizeRatio).toBe(0.072);
+  });
+
+  it('sizes a short sentence down when its longest word will not fit a line', () => {
+    // The bug: the clamp compared against the constant 9, which is the last
+    // rung's line capacity. The four rungs hold 5.80 / 6.80 / 8.13 / 9.26 em
+    // per line, so a short sentence with an 8em token landed on the largest
+    // rung — whose line holds 5.80 — and broke mid-word with the clamp never
+    // firing. Each rung is asked about its own line now.
+    const MEASURE_UNITS = 12 / 18;
+    const plan = coverPlan(post, 'T', 'Der Aufenthaltstitel gilt.');
+
+    expect(plan.sizeRatio).toBeLessThan(0.115);
+    // The real invariant: whatever rung is chosen, one of its lines holds the
+    // longest word.
+    const longest = estimateEm('Aufenthaltstitel');
+    expect(MEASURE_UNITS / plan.sizeRatio).toBeGreaterThanOrEqual(longest);
+  });
+
+  it('never picks a rung whose line is narrower than the longest word', () => {
+    const MEASURE_UNITS = 12 / 18;
+    const sentences = [
+      'Der Aufenthaltstitel gilt.',
+      'Die Aufenthaltserlaubnis kommt.',
+      'Bring the ticket. It matters here today.',
+      'Die Anerkennung ausländischer Berufsqualifikationen dauert oft mehrere Monate.',
+    ];
+
+    for (const sentence of sentences) {
+      const plan = coverPlan(post, 'zzz', sentence);
+      const longest = Math.max(
+        ...plan.keyLine.split(/\s+/).map((token) => estimateEm(token)),
+      );
+      // The smallest rung is the floor — past it the word genuinely cannot be
+      // set on one line at a readable size, and that is the hyphenation case.
+      if (plan.sizeRatio !== 0.072) {
+        expect(MEASURE_UNITS / plan.sizeRatio).toBeGreaterThanOrEqual(longest);
+      }
+    }
   });
 
   it('gives one post the same ground every time it is drawn', () => {

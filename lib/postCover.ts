@@ -306,7 +306,13 @@ export function pickKeyLine(body: string, title: string): string {
     if (em >= 16 && em <= 40) score += 2;
     const digits = (sentence.match(/\d/g) ?? []).length / Math.max(1, sentence.length);
     if (digits > 0.22) score -= 3;
-    if (longestTokenEm(sentence) > 11) score -= 4;
+    // A sentence whose longest word cannot fit even the smallest rung's line
+    // will be broken mid-word by every renderer we target, so prefer any
+    // rival. The bound is the rung's own line, not a number that looks about
+    // right: 11 left a gap from 9.26 to 11 in which the penalty never fired,
+    // and "Berufsqualifikationen" measures 9.74 — the screenshot that started
+    // this investigation was sitting inside the gap, not outside the rule.
+    if (longestTokenEm(sentence) > MAX_TOKEN_EM) score -= 4;
     // The opening sentence is the one most likely to paraphrase the title even
     // when it clears the overlap test outright.
     if (index === 0) score -= 2;
@@ -369,10 +375,32 @@ const RUNGS = [
   // through: they looked reasonable and had no relationship to the geometry
   // they were supposed to describe.
   capacityEm: (MEASURE_UNITS / rung.sizeRatio) * rung.maxLines * PACKING,
+  // What one line of this rung holds. A token wider than this cannot wrap and
+  // gets broken mid-word by every renderer we target.
+  lineEm: MEASURE_UNITS / rung.sizeRatio,
 }));
 
 /** Past the last rung's capacity a cover clips, which is the honest failure. */
 const MAX_EM = RUNGS[RUNGS.length - 1].capacityEm;
+
+/**
+ * Past this a word cannot wrap at any rung, so no size choice can save it and
+ * the renderer will break it mid-word with no hyphen.
+ *
+ * That break is where this stops. Hyphenating it properly needs a dictionary:
+ * iOS exposes no hyphenation control on Text at all, Android's uses the
+ * *device* locale rather than the text's — a German post on a Turkish phone
+ * would get Turkish patterns — and react-native-web drops the prop silently,
+ * so the fix would be invisible in the gallery the project reviews UI in.
+ * Injecting soft hyphens by hand is worse still: a hyphen is an assertion
+ * about where a word divides, and in German a wrong one changes what the word
+ * appears to say, to readers whose German is weak and who are trying to look
+ * the word up. A break with no hyphen reads as the layout engine losing, which
+ * is true. The ordering the code follows is: choose a sentence that does not
+ * need hyphenating, then break it without a hyphen, and never hyphenate it
+ * wrongly.
+ */
+const MAX_TOKEN_EM = RUNGS[RUNGS.length - 1].lineEm;
 
 export function coverPlan(
   post: { id: string; post_type: string; title: string; body: string },
@@ -382,12 +410,24 @@ export function coverPlan(
   const palette = coverPalette(post.post_type);
   const keyLine = pickKeyLine(displayBody || post.body, displayTitle || post.title);
   const em = keyLine ? estimateEm(keyLine) : 0;
-  const rung = RUNGS.find((r) => em <= r.capacityEm) ?? RUNGS[RUNGS.length - 1];
 
-  // A long compound cannot be broken, so it sets the size on its own however
-  // short the sentence is. German is the reason this exists.
+  // Two constraints, not one. The sentence has to fit the block, and its
+  // longest word has to fit a line — a token wider than one line is broken
+  // mid-word by every renderer we target, with no hyphen, which reads as a
+  // typo. German is the reason the second constraint exists.
+  //
+  // This was a clamp against the constant 9, which is the *last* rung's line
+  // capacity applied to all four. The four lines hold 5.80 / 6.80 / 8.13 /
+  // 9.26 em, so "Der Aufenthaltstitel gilt." — a short sentence, and a token
+  // of about 8em — landed on the largest rung, whose line holds 5.80, and
+  // broke mid-word while the clamp watched. Each rung is asked about its own
+  // line now. Same mistake as the hand-picked boundaries above: one rung's
+  // number standing in for a property of all of them.
   const longest = keyLine ? longestTokenEm(keyLine) : 0;
-  const sizeRatio = longest > 9 ? Math.min(rung.sizeRatio, 0.072) : rung.sizeRatio;
+  const rung =
+    RUNGS.find((r) => em <= r.capacityEm && longest <= r.lineEm) ??
+    RUNGS[RUNGS.length - 1];
+  const sizeRatio = rung.sizeRatio;
 
   // Stable per post: the feed loops (feed_round), and a reader scrolling back
   // must meet the same object rather than a reshuffled one.
