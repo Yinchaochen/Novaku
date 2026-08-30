@@ -142,26 +142,64 @@ function normalise(text: string): string {
 }
 
 /**
+ * Bigram overlap runs lower than word overlap for the same amount of
+ * repetition: two Chinese sentences on one subject share a couple of
+ * two-character compounds where two English ones would share whole words. The
+ * divisor puts both measures on one scale so a single threshold governs both.
+ *
+ * 0.8 is set by the real case rather than picked. 「从机场进城」against
+ * 「进城最快的是机场快线」shares 机场 and 进城 — two of the title's four
+ * bigrams, a raw 0.50 — and that pair has to land above the 0.6 limit, because
+ * it is the same sentence twice.
+ */
+const CJK_OVERLAP_SCALE = 0.8;
+
+/** Overlapping character pairs — the unit of comparison when there are no words. */
+function bigrams(text: string): Set<string> {
+  const chars = Array.from(normalise(text).replace(/\s+/g, ''));
+  const out = new Set<string>();
+  for (let i = 0; i < chars.length - 1; i += 1) out.add(chars[i] + chars[i + 1]);
+  return out;
+}
+
+function shareOf(candidate: Set<string>, reference: Set<string>): number {
+  if (reference.size === 0 || candidate.size === 0) return 0;
+  let shared = 0;
+  candidate.forEach((item) => {
+    if (reference.has(item)) shared += 1;
+  });
+  return shared / reference.size;
+}
+
+/**
  * How much of the candidate the title already said.
  *
- * Distinct words of four letters or more, over the title's own word count.
- * The first version counted every occurrence of every word over three letters
- * and divided by whichever side was shorter, which meant a short title and a
- * long sentence sharing nothing but three instances of "the" scored 1.0 — and
- * the cover came out blank because its only candidate had been thrown away as
- * an echo. Function words are exactly what two sentences on one subject share
- * without either one repeating the other.
+ * Two measures, because the two scripts we serve most do not share a notion of
+ * a word.
+ *
+ * For spaced scripts: distinct words of four letters or more, over the title's
+ * own word count. An earlier version counted every occurrence of every word
+ * over three letters and divided by whichever side was shorter, so a short
+ * title and a long sentence sharing nothing but three instances of "the"
+ * scored a perfect 1.0 — and the cover rendered blank, its only candidate
+ * discarded as an echo. Function words are exactly what two sentences on one
+ * subject share without either repeating the other.
+ *
+ * For Chinese, Japanese and Korean: character bigrams. Splitting on whitespace
+ * turns a Chinese title into one long token that matches nothing, so the echo
+ * test simply never fired — the same blind spot the backend's topic spacing
+ * has (D-086). Bigrams need no dictionary and no segmenter: 「从机场进城」and
+ * 「进城最快的是机场快线」share 机场 and 进城, which is what makes them the same
+ * sentence twice. The threshold is higher than the word one because adjacent
+ * characters recur far more readily than whole words do.
  */
 function titleOverlap(candidate: string, title: string): number {
+  if (NO_SPACE_BREAK.test(title) || NO_SPACE_BREAK.test(candidate)) {
+    return shareOf(bigrams(candidate), bigrams(title)) / CJK_OVERLAP_SCALE;
+  }
   const titleWords = new Set(normalise(title).split(' ').filter((w) => w.length >= 4));
-  if (titleWords.size === 0) return 0;
   const words = new Set(normalise(candidate).split(' ').filter((w) => w.length >= 4));
-  if (words.size === 0) return 0;
-  let shared = 0;
-  words.forEach((w) => {
-    if (titleWords.has(w)) shared += 1;
-  });
-  return shared / titleWords.size;
+  return shareOf(words, titleWords);
 }
 
 /**

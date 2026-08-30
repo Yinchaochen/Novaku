@@ -129,6 +129,28 @@ describe('pickKeyLine', () => {
     expect(line.length).toBeGreaterThan(80);
   });
 
+  it('catches a Chinese title echo, which word-splitting could not see', () => {
+    // normalise() splits on whitespace, so a Chinese title is one long token
+    // that matches nothing and the echo test never fired at all. 从机场进城 and
+    // 进城最快的是机场快线 share 机场 and 进城 — the same sentence twice.
+    const line = pickKeyLine(
+      '进城最快的是机场快线。记得买一张 ABC 区的票，否则会被罚款。',
+      '从机场进城',
+    );
+
+    expect(line).not.toMatch(/进城最快/);
+    expect(line).toMatch(/罚款/);
+  });
+
+  it('does not call two different Chinese sentences an echo', () => {
+    const line = pickKeyLine(
+      '柏林的房租一年比一年贵。看房的时候记得带上收入证明和身份证件。',
+      '在柏林找工作的第一步',
+    );
+
+    expect(line).toBeTruthy();
+  });
+
   it('is deterministic', () => {
     const runs = new Set(Array.from({ length: 50 }, () => pickKeyLine(BER_BODY, BER_TITLE)));
 

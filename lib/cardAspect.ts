@@ -25,8 +25,31 @@
 /** Tallest a picture may be drawn: 168dp wide -> 210dp tall. */
 export const MIN_CARD_ASPECT = 0.8;
 
-/** Shortest: a square. Anything wider is letterboxed rather than cropped. */
+/** Shortest slot a card reserves: a square. */
 export const MAX_CARD_ASPECT = 1.0;
+
+/**
+ * Above this, a picture is matted rather than cropped.
+ *
+ * Not the same number as MAX_CARD_ASPECT, and the difference matters. The
+ * slot is always a square at most; the question here is what to do with a
+ * picture wider than one.
+ *
+ * The first version matted everything wider than the slot, on the reasoning
+ * that a wide picture is an event poster and cutting a poster in half is the
+ * bug the old bounds were written to prevent. Then the dimension backfill ran
+ * against the real seeded covers and measured them: 1.50, 1.50, 1.33 — every
+ * one an ordinary landscape photograph of a building. Matting all of those
+ * would have put paper bands around most of the feed to protect the minority
+ * of pictures that are posters.
+ *
+ * So the line sits where the loss changes character. A 3:2 photo cropped to a
+ * square loses a third of its width, which is what every feed does to every
+ * photo and nobody notices. A 16:9 banner loses 44%, and that is where the
+ * words in a poster start being cut in half. 1.55 is between the two: above
+ * 3:2, below 16:9.
+ */
+export const CONTAIN_ABOVE_ASPECT = 1.55;
 
 /** Usable width/height for a card image, or null when the size is unusable. */
 export function clampAspect(width: number, height: number): number | null {
@@ -125,11 +148,11 @@ export function cardMediaFit(
   if (!Number.isFinite(natural) || natural <= 0) {
     return { aspect: cardAspectFor(undefined, postId), fit: 'cover' };
   }
-  if (natural > MAX_CARD_ASPECT) {
+  if (natural > CONTAIN_ABOVE_ASPECT) {
     // The event-poster case. Keep the tall slot, keep the poster whole.
     return { aspect: MAX_CARD_ASPECT, fit: 'contain' };
   }
-  // Taller than the window is cropped, and that is fine: trimming the top and
-  // bottom of a tall photograph loses nothing a reader was looking for.
-  return { aspect: Math.max(MIN_CARD_ASPECT, natural), fit: 'cover' };
+  // Wider than the slot but not by much: crop it, like any feed does. Above
+  // and below, a photograph loses nothing a reader was looking for.
+  return { aspect: Math.max(MIN_CARD_ASPECT, Math.min(MAX_CARD_ASPECT, natural)), fit: 'cover' };
 }

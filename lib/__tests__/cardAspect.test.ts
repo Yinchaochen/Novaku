@@ -47,6 +47,23 @@ describe('cardMediaFit', () => {
 
     const banner = cardMediaFit({ width: 2000, height: 400 }, 'post-2');
     expect(banner.fit).toBe('contain');
+
+    // The generated event card is 1200x630 — 1.90, and the reason this branch
+    // has to keep existing.
+    expect(cardMediaFit({ width: 1200, height: 630 }, 'post-3').fit).toBe('contain');
+  });
+
+  it('crops an ordinary landscape photograph instead of matting it', () => {
+    // Measured off the real seeded covers by the dimension backfill: 1280x851,
+    // 1280x853, 1280x960 — 1.50, 1.50, 1.33. Every one an ordinary photograph
+    // of a building. An earlier version matted anything wider than the slot,
+    // which would have put paper bands around most of the feed to protect the
+    // minority of pictures that are actually posters.
+    for (const [width, height] of [[1280, 851], [1280, 853], [1280, 960], [1024, 681]]) {
+      const fit = cardMediaFit({ width, height }, 'photo');
+      expect(fit.fit).toBe('cover');
+      expect(fit.aspect).toBeLessThanOrEqual(MAX_CARD_ASPECT);
+    }
   });
 
   it('fills the slot with a photograph, where trimming costs nothing', () => {
