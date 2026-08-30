@@ -21,6 +21,16 @@ import type { CommunityPost } from '../../features/community/useCommunity';
  * Graaf canon divides a page into — which is what lets the margins be
  * canonical and land on whole units at the same time.
  *
+ * NOTHING HERE SETS fontFamily, AND NOTHING HERE MAY. Plus Jakarta Sans is the
+ * brand face and it carries 721 codepoints — Latin, Latin Extended, Vietnamese,
+ * and no more. I parsed the cmap of the shipped .ttf: U+0410 (Cyrillic А),
+ * U+0391 (Greek Α), U+67CF (柏), U+0627 (Arabic alef) and U+0E01 (Thai ko kai)
+ * are all absent. Attaching it here would look like a brand improvement and
+ * would silently replace the text of roughly 38 of the app's 106 locales with
+ * tofu. The system stack — PingFang SC on iOS, Noto Sans CJK on Android — has
+ * every script, which is the whole reason this cover can be multilingual at
+ * all. Weight and size carry the hierarchy instead.
+ *
  * Drawn on the client rather than rendered to an image on the server, and that
  * is not a convenience. A seeded guide is stored in one language and
  * translated per reader at request time, so a baked cover would be frozen in
