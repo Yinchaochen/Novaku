@@ -43,6 +43,14 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
 
+      # SDK-version drift gate. expo-calendar@57 (an unreleased-SDK build)
+      # entered via plain `npm install`, sailed through tsc/jest/web — none of
+      # them exercise native module registration — and killed release 1.4.2 at
+      # launch. `expo install --check` is the cheapest gate that catches a
+      # dependency compiled for a different expo-modules-core before EAS does.
+      - name: Expo SDK compatibility
+        run: npx expo install --check
+
       # Unit tests (jest-expo): pure logic + the MS-16 optimistic-send path
       # (outbox, network-health thresholds, image compression, mutation
       # defaults). --ci disables snapshot auto-write.
