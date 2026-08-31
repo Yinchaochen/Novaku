@@ -348,6 +348,7 @@ export type Translations = {
     comments_show: string;
     comments_hide: string;
     comments_empty: string;
+    related_posts_title: string;
     comment_placeholder: string;
     comment_submit: string;
     add_to_tasks: string;

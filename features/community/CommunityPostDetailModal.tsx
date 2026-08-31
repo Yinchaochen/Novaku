@@ -40,6 +40,7 @@ import { ReportSheet } from '../../components/ReportSheet';
 import { Toast, type ToastMessage } from '../../components/Toast';
 import { CommentComposerSheet, type CommentComposerInput } from './CommentComposerSheet';
 import { CommunityPostComments } from './CommunityPostComments';
+import { RelatedPostsSection } from './RelatedPostsSection';
 import { CommunityPostImageViewer } from './CommunityPostImageViewer';
 import { TranslatedText } from './TranslatedText';
 import {
@@ -213,6 +214,11 @@ function wrapMediaIndex(index: number, itemCount: number) {
 }
 
 export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onEditPost }: Props) {
+  // Tapping a related post swaps the displayed post in place — pushing a
+  // route would land underneath this native Modal (see openAuthorProfile).
+  // The stack lets hardware back walk the chain before closing the modal.
+  const [postStack, setPostStack] = useState<CommunityPost[]>([]);
+  const activeSeed = postStack.length > 0 ? postStack[postStack.length - 1] : seedPost;
   const { t, langCode } = useLanguage();
   const insets = useSafeAreaInsets();
   const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
@@ -231,8 +237,8 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
   const updateVisibility = useUpdatePostVisibility();
   const recordView = useRecordPostView();
   const addAction = useAddActionToOdysseys();
-  const createComment = useCreateCommunityComment(seedPost?.id ?? '');
-  const postDetail = useCommunityPost(seedPost?.id ?? null, visible && Boolean(seedPost?.id));
+  const createComment = useCreateCommunityComment(activeSeed?.id ?? '');
+  const postDetail = useCommunityPost(activeSeed?.id ?? null, visible && Boolean(activeSeed?.id));
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const [privacySheetVisible, setPrivacySheetVisible] = useState(false);
@@ -248,7 +254,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
   const [videoPlayerUrl, setVideoPlayerUrl] = useState<string | null>(null);
   const followUser = useFollowUser();
   const unfollowUser = useUnfollowUser();
-  const editComment = useEditComment(seedPost?.id ?? '');
+  const editComment = useEditComment(activeSeed?.id ?? '');
   const detailStartRef = useRef<number | null>(null);
   const detailKeyRef = useRef<string | null>(null);
   const hadDownstreamSignalRef = useRef(false);
@@ -258,7 +264,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
   const commentsSectionYRef = useRef(0);
   const scrollX = useRef(new Animated.Value(0)).current;
 
-  const post = postDetail.data ?? seedPost;
+  const post = postDetail.data ?? activeSeed;
   const postId = post?.id ?? null;
   const locationEntries = post ? getLocationEntries(post) : [];
   const primarySourceUrl = locationEntries[0]?.sourceUrl ?? post?.source_url ?? null;
@@ -268,6 +274,8 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
   const displayAuthorCity = formatDisplayLocation(post?.author.city);
   const displayHeaderCity = displayPostCity ?? displayAuthorCity;
   const detailKey = post ? `${post.id}:${post.feed_context?.feed_request_id ?? 'standalone'}` : null;
+  // Related-opened posts attribute their open/dwell to the rail, not the feed.
+  const originSurface = postStack.length > 0 ? ('plaza_related' as const) : ('plaza_detail' as const);
   const mediaItemCount = post?.media_items.length ?? 0;
   // Without the token (stale cache from an older API) the link still opens the
   // app / store landing — it just falls back to the generic chat preview (D-040).
@@ -293,15 +301,29 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
     if (!visible) {
       setActiveMediaIndex(0);
       setLightboxVisible(false);
+      setPostStack([]);
       scrollX.setValue(0);
       mediaScrollRef.current?.scrollTo({ x: 0, animated: false });
     }
   }, [scrollX, visible]);
 
+  // Host opened a different post while we were deep in a related chain.
+  const seedIdRef = useRef<string | null>(seedPost?.id ?? null);
+  useEffect(() => {
+    if (seedIdRef.current !== (seedPost?.id ?? null)) {
+      seedIdRef.current = seedPost?.id ?? null;
+      setPostStack([]);
+    }
+  }, [seedPost?.id]);
+
   useEffect(() => {
     setActiveMediaIndex(0);
     scrollX.setValue(0);
     mediaScrollRef.current?.scrollTo({ x: 0, animated: false });
+    // A swapped-in post must not inherit the previous post's scroll offset or
+    // measured media height — it would open mid-page with the wrong frame.
+    scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+    setMeasuredMediaHeight(null);
   }, [detailKey, scrollX]);
 
   const recordViewMutate = recordView.mutate;
@@ -322,7 +344,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
         {
           event_name: 'plaza_open_post',
           session_id: getCommunitySessionId(),
-          surface: 'plaza_detail',
+          surface: originSurface,
           post_id: postId,
           feed_context: post.feed_context ?? undefined,
           content_context: post.content_context ?? undefined,
@@ -340,7 +362,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
           {
             event_name: 'plaza_dwell',
             session_id: getCommunitySessionId(),
-            surface: 'plaza_detail',
+            surface: originSurface,
             post_id: postId,
             feed_context: post.feed_context ?? undefined,
             content_context: post.content_context ?? undefined,
@@ -353,7 +375,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
       detailKeyRef.current = null;
       hadDownstreamSignalRef.current = false;
     };
-  }, [detailKey, post, postId, trackCommunityEvents, visible]);
+  }, [detailKey, originSurface, post, postId, trackCommunityEvents, visible]);
 
   useEffect(() => {
     if (!visible) return;
@@ -380,11 +402,15 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
         setMoreActionsVisible(false);
         return true;
       }
+      if (postStack.length > 0) {
+        setPostStack((prev) => prev.slice(0, -1));
+        return true;
+      }
       onClose();
       return true;
     });
     return () => subscription.remove();
-  }, [composerVisible, lightboxVisible, moreActionsVisible, onClose, privacySheetVisible, reportSheetVisible, visible]);
+  }, [composerVisible, lightboxVisible, moreActionsVisible, onClose, postStack.length, privacySheetVisible, reportSheetVisible, visible]);
 
   if (!post) {
     return null;
@@ -740,7 +766,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
       <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: '#FFF8F1' }}>
         <View className="px-4 pb-3 pt-2" style={{ borderBottomWidth: 1, borderBottomColor: 'rgba(98,57,40,0.06)' }}>
           <View className="flex-row items-center">
-            <Pressable onPress={onClose} className="mr-3">
+            <Pressable onPress={() => (postStack.length > 0 ? setPostStack((prev) => prev.slice(0, -1)) : onClose())} className="mr-3">
               <Ionicons name="chevron-back" size={26} color="#111111" />
             </Pressable>
 
@@ -1126,6 +1152,12 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
                   onEditComment={handleEditComment}
                 />
               </View>
+
+              <RelatedPostsSection
+                postId={postId}
+                enabled={visible}
+                onOpenPost={(next) => setPostStack((prev) => [...prev, next])}
+              />
             </View>
           </ScrollView>
 

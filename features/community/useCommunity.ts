@@ -280,7 +280,7 @@ export interface CommunityRecommendationEventInput {
     | 'plaza_report_post'
     | 'plaza_report_comment';
   session_id: string;
-  surface: 'plaza_feed' | 'plaza_detail' | 'odyssey_from_plaza' | 'push';
+  surface: 'plaza_feed' | 'plaza_detail' | 'plaza_related' | 'plaza_search' | 'odyssey_from_plaza' | 'push';
   post_id?: string | null;
   comment_id?: string | null;
   odyssey_id?: string | null;
@@ -552,6 +552,26 @@ export function useCommunityPost(postId?: string | null, enabled = true) {
     },
     enabled: enabled && Boolean(postId),
     staleTime: 30_000,
+  });
+}
+
+export interface RelatedPostsOut {
+  items: CommunityPost[];
+  related_request_id: string;
+}
+
+// One bounded page of need-adjacent posts for the rail under the comments
+// (D-086). No cursor on purpose: six items, never an infinite scroll.
+export function useRelatedCommunityPosts(postId?: string | null, enabled = true) {
+  const { langCode } = useLanguage();
+  return useQuery({
+    queryKey: ['community', 'related', postId, langCode],
+    queryFn: async () => {
+      const res = await api.get(`/community/posts/${postId}/related`);
+      return res.data.data as RelatedPostsOut;
+    },
+    enabled: enabled && Boolean(postId),
+    staleTime: 60_000,
   });
 }
 

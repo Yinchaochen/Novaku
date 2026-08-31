@@ -32,6 +32,7 @@ import {
   useUserProfile,
   useUserSavedPosts,
 } from '../../features/community/useCommunity';
+import { splitColumns } from '../../features/community/splitColumns';
 import {
   useAcceptFriendRequest,
   useBlockUser,
@@ -86,24 +87,6 @@ function StatColumn({ value, label }: { value: number; label: string }) {
       <Text className="mt-0.5 text-[12px] text-neutral-500">{label}</Text>
     </View>
   );
-}
-
-function splitColumns(posts: CommunityPost[]) {
-  const left: CommunityPost[] = [];
-  const right: CommunityPost[] = [];
-  let leftWeight = 0;
-  let rightWeight = 0;
-  for (const post of posts) {
-    const weight = post.media_items.length > 0 ? 3 : 2;
-    if (leftWeight <= rightWeight) {
-      left.push(post);
-      leftWeight += weight;
-    } else {
-      right.push(post);
-      rightWeight += weight;
-    }
-  }
-  return { left, right };
 }
 
 export default function UserProfileScreen() {
