@@ -34,11 +34,12 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useLanguage } from '../context/LanguageContext';
 import { buildPlaceUrl } from '../lib/maps';
+import { mapsApiKey } from '../lib/mapsKey';
 import { captureSentryMessage } from '../lib/sentry';
 import { colors } from '../theme/tokens';
 import type { CommunitySelectedPlaceInput } from '../features/community/useCommunity';
 
-const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+const GOOGLE_MAPS_API_KEY = mapsApiKey();
 
 // IOS-LOGIN-113 diagnostic instrumentation. The 2026-05-27 iPhone syslog
 // dump showed CoreLocation firing + user touches + zero GMSServices logs,

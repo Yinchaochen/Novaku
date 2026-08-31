@@ -7,6 +7,15 @@ const WebEnvSchema = z.object({
     .startsWith('https://', { message: 'EXPO_PUBLIC_SENTRY_DSN must be an https:// DSN' })
     .optional(),
   EXPO_PUBLIC_GOOGLE_MAPS_API_KEY: z.string().min(1).optional(),
+  /**
+   * Per-platform Maps keys (SEC-APP-MAPSKEY-01). Optional: when absent the
+   * shared key above is used, so these can be introduced one platform at a
+   * time. Each exists so its key can carry the application restriction the
+   * shared one cannot.
+   */
+  EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_WEB: z.string().min(1).optional(),
+  EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_IOS: z.string().min(1).optional(),
+  EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_ANDROID: z.string().min(1).optional(),
   EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: z.string().optional(),
   EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: z.string().optional(),
   EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID: z.string().optional(),
@@ -21,6 +30,9 @@ function _parseWebEnv() {
     EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL,
     EXPO_PUBLIC_SENTRY_DSN: blankToUndefined(process.env.EXPO_PUBLIC_SENTRY_DSN),
     EXPO_PUBLIC_GOOGLE_MAPS_API_KEY: blankToUndefined(process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY),
+    EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_WEB: blankToUndefined(process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_WEB),
+    EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_IOS: blankToUndefined(process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_IOS),
+    EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_ANDROID: blankToUndefined(process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_ANDROID),
     EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
     EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
     EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
