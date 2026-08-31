@@ -43,6 +43,7 @@ import { CommunityPostComments } from './CommunityPostComments';
 import { RelatedPostsSection } from './RelatedPostsSection';
 import { CommunityPostImageViewer } from './CommunityPostImageViewer';
 import { TranslatedText } from './TranslatedText';
+import { getLocationEntries, getSourceHost } from './postLocation';
 import {
   CommunityComment,
   CommunityFeedPage,
@@ -75,14 +76,6 @@ interface Props {
   onEditPost?: (post: CommunityPost) => void;
 }
 
-function getSourceHost(sourceUrl: string | null | undefined) {
-  if (!sourceUrl) return null;
-  try {
-    return new URL(sourceUrl).hostname.replace(/^www\./, '');
-  } catch {
-    return sourceUrl;
-  }
-}
 
 function formatDate(value: string | null | undefined, langCode: string) {
   if (!value) return null;
@@ -126,87 +119,7 @@ function Avatar({
   );
 }
 
-function metadataString(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value : null;
-}
 
-function firstMetadataString(...values: unknown[]) {
-  for (const value of values) {
-    const normalized = metadataString(value);
-    if (normalized) {
-      return normalized;
-    }
-  }
-  return null;
-}
-
-function getLocationEntries(post: CommunityPost) {
-  const entries: Array<{
-    key: string;
-    label: string;
-    meta: string | null;
-    sourceUrl: string | null;
-    actionCandidateId: string | null;
-  }> = [];
-  const seen = new Set<string>();
-
-  for (const candidate of post.action_candidates) {
-    const cardType = typeof candidate.metadata_json?.['card_type'] === 'string' ? candidate.metadata_json.card_type : null;
-    if (
-      candidate.action_type !== 'visit_place' &&
-      candidate.action_type !== 'reserve_place' &&
-      cardType !== 'place_visit' &&
-      cardType !== 'booking'
-    ) {
-      continue;
-    }
-
-    const label = firstMetadataString(candidate.metadata_json?.['place_name'], candidate.entity_name);
-    const sourceUrl = candidate.source_url ?? post.source_url ?? null;
-    if (!label) {
-      continue;
-    }
-    const dedupeKey = sourceUrl ?? label;
-    if (seen.has(dedupeKey)) {
-      continue;
-    }
-    seen.add(dedupeKey);
-
-    entries.push({
-      key: dedupeKey,
-      label,
-      meta: firstMetadataString(
-        candidate.metadata_json?.['location_hint'],
-        post.city,
-        post.author.city,
-        getSourceHost(sourceUrl),
-      ),
-      sourceUrl,
-      actionCandidateId: candidate.id,
-    });
-  }
-
-  if (entries.length > 0) {
-    return entries;
-  }
-
-  if (post.source_url) {
-    const fallbackLabel = firstMetadataString(post.city, post.author.city);
-    if (fallbackLabel) {
-      return [
-        {
-          key: post.source_url,
-          label: fallbackLabel,
-          meta: getSourceHost(post.source_url),
-          sourceUrl: post.source_url,
-          actionCandidateId: null,
-        },
-      ];
-    }
-  }
-
-  return [];
-}
 
 function wrapMediaIndex(index: number, itemCount: number) {
   if (itemCount <= 0) return 0;
@@ -264,6 +177,19 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
   const commentsSectionYRef = useRef(0);
   const scrollX = useRef(new Animated.Value(0)).current;
 
+  // Everything from here to the last useEffect is derived state computed
+  // BETWEEN hooks, and that is what makes it dangerous out of proportion to
+  // its size. A TypeError anywhere in this block aborts the render after ~33
+  // hooks have run and before the remaining 7, so React's next render of the
+  // same fiber reports "Rendered more hooks than during the previous render"
+  // — and that message is what reaches the error boundary, the crash reporter
+  // and the user, while the actual TypeError is thrown away. A production
+  // crash on 2026-08-31 arrived looking exactly like a hooks-rules violation
+  // and was not one.
+  //
+  // So every read of `post` here is optional all the way down, even where the
+  // type says it cannot be missing: the cost of a guard is nothing, and the
+  // cost of being wrong is the whole Plaza screen replaced by a stack trace.
   const post = postDetail.data ?? activeSeed;
   const postId = post?.id ?? null;
   const locationEntries = post ? getLocationEntries(post) : [];
@@ -271,19 +197,19 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
   const sourceHost = getSourceHost(primarySourceUrl);
   const postDate = formatDate(post?.created_at, langCode);
   const displayPostCity = formatDisplayLocation(post?.city);
-  const displayAuthorCity = formatDisplayLocation(post?.author.city);
+  const displayAuthorCity = formatDisplayLocation(post?.author?.city);
   const displayHeaderCity = displayPostCity ?? displayAuthorCity;
   const detailKey = post ? `${post.id}:${post.feed_context?.feed_request_id ?? 'standalone'}` : null;
   // Related-opened posts attribute their open/dwell to the rail, not the feed.
   const originSurface = postStack.length > 0 ? ('plaza_related' as const) : ('plaza_detail' as const);
-  const mediaItemCount = post?.media_items.length ?? 0;
+  const mediaItemCount = post?.media_items?.length ?? 0;
   // Without the token (stale cache from an older API) the link still opens the
   // app / store landing — it just falls back to the generic chat preview (D-040).
   const postShareUrl = post
     ? `https://postervia.app/p/${post.id}${post.share_token ? `?s=${post.share_token}` : ''}`
     : '';
   const hasMediaPager = mediaItemCount > 1;
-  const canEditPost = Boolean(user?.id && post?.author.id === user.id);
+  const canEditPost = Boolean(user?.id && post?.author?.id === user.id);
 
   // Tap the avatar or name in the header -> that person's profile. The close
   // has to come first: this screen is a react-native Modal, which is its own
