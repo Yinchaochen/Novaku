@@ -1442,10 +1442,15 @@ export type Translations = {
   };
 };
 
+// The hand-maintained locales merge over English for the same reason the
+// generated ones do, further down. They were the exception, and that is
+// backwards: a file somebody edits by hand is the one that drifts. German was
+// short 16 admin.moderation_* keys, cast to complete by `as Translations`, and
+// the screen that reads them called .replace() on undefined.
 const translations: Record<string, Translations> = {
   en: enJson as Translations,
-  zh: zhJson as Translations,
-  de: deJson as Translations,
+  zh: deepMerge(enJson as Translations, zhJson),
+  de: deepMerge(enJson as Translations, deJson),
 };
 
 function deepMerge<T>(base: T, override: unknown): T {
