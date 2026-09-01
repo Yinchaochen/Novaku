@@ -165,6 +165,12 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
   const [moreActionsVisible, setMoreActionsVisible] = useState(false);
   const [shareSheetVisible, setShareSheetVisible] = useState(false);
   const [videoPlayerUrl, setVideoPlayerUrl] = useState<string | null>(null);
+  // Lives here, with the others, because everything below the `if (!post)`
+  // return is only reached on some renders. Declared down beside the sheet it
+  // feeds, it was the forty-first hook on renders that had a post and absent on
+  // renders that did not -- which is the crash, reported as a hooks-count
+  // mismatch and shipped twice while being read as a payload problem.
+  const [planTarget, setPlanTarget] = useState<string | null>(null);
   const followUser = useFollowUser();
   const unfollowUser = useUnfollowUser();
   const editComment = useEditComment(activeSeed?.id ?? '');
@@ -513,8 +519,6 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
   };
 
   const captureShareCard = async () => (await storyShotRef.current?.capture?.()) ?? null;
-
-  const [planTarget, setPlanTarget] = useState<string | null>(null);
 
   const handleAddLocationToTasks = (actionCandidateId: string) => {
     // D-083: ask when they plan to go before saving. Both sheet buttons end
