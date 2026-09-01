@@ -818,13 +818,6 @@ export default function SocialScreen() {
     conversationOrigin === 'social' && conversations.length === 1 && conversations[0]?.kind === 'self';
   const hasNoBuddyConversations = conversationOrigin === 'buddy_post' && conversations.length === 0;
 
-  if (!user) {
-    return (
-      <View className="flex-1 items-center justify-center bg-[#EEF3FF]">
-        <ActivityIndicator size="large" color="#FF9F6E" />
-      </View>
-    );
-  }
 
   const toggleFriendSelection = (friendId: string) => {
     setSelectedFriendIds((current) =>
@@ -1124,7 +1117,7 @@ export default function SocialScreen() {
 
   const handleCreateGroup = async () => {
     if (!groupName.trim() || selectedFriendIds.length === 0) return;
-    if (!user.city) {
+    if (!user?.city) {
       showToast(t.onboarding.city_prompt);
       return;
     }
@@ -1171,7 +1164,7 @@ export default function SocialScreen() {
     ) {
       return;
     }
-    const eventCity = selectedConversation?.group?.city ?? user.city;
+    const eventCity = selectedConversation?.group?.city ?? user?.city;
     if (!eventCity) {
       showToast(t.onboarding.city_prompt);
       return;
@@ -1192,7 +1185,7 @@ export default function SocialScreen() {
 
   const renderMessage = useCallback(
     ({ item, index }: { item: ChatMessage; index: number }) => {
-      const isMe = item.sender.id === user.id;
+      const isMe = item.sender.id === user?.id;
       const prevTs = index > 0 ? messages[index - 1]?.created_at : undefined;
       const showTimestamp =
         index === 0 ||
@@ -1210,7 +1203,7 @@ export default function SocialScreen() {
             message={item}
             isMe={isMe}
             userAvatar={userAvatar}
-            userDisplayName={user.display_name ?? ''}
+            userDisplayName={user?.display_name ?? ''}
             onImagePress={setLightboxUrl}
             onLongPress={handleMessageLongPress}
             editedLabel={t.chat.edited_label}
@@ -1232,8 +1225,23 @@ export default function SocialScreen() {
         </View>
       );
     },
-    [messages, langCode, user.id, userAvatar, user.display_name, handleMessageLongPress, t.chat.edited_label, t.chat.msg_deleted, t.chat.sending, t.chat.send_failed_retry, isMultiSelect, selectedMsgIds, favoritedIds, handleReplyBlockPress, sendMessage],
+    [messages, langCode, user?.id, userAvatar, user?.display_name, handleMessageLongPress, t.chat.edited_label, t.chat.msg_deleted, t.chat.sending, t.chat.send_failed_retry, isMultiSelect, selectedMsgIds, favoritedIds, handleReplyBlockPress, sendMessage],
   );
+
+  // Below every hook on purpose. This guard used to sit ~400 lines up, above
+  // eight of them, so a render with no user yet registered eight fewer hooks
+  // than the next one — "Rendered more hooks than during the previous render",
+  // the same crash the post detail shipped twice. It is reachable here on a
+  // cold start into this tab (a push notification or deep link) while
+  // hydrate() is still awaiting /auth/me: the first render has no user, the
+  // second one does, and it is the same mounted instance.
+  if (!user) {
+    return (
+      <View className="flex-1 items-center justify-center bg-[#EEF3FF]">
+        <ActivityIndicator size="large" color="#FF9F6E" />
+      </View>
+    );
+  }
 
   return (
     <Screen tabBar>
