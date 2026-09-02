@@ -23,7 +23,7 @@ function startOfDay(d: Date): Date {
 }
 
 /**
- * Optional event date/time on the Plaza composer (D-104). Empty by default —
+ * Optional event date/time on the Plaza composer (D-105). Empty by default —
  * an ordinary post carries no date. Once set, the value flows into
  * event_starts_at / event_ends_at and the Odyssey calendar shows it after the
  * reader saves or adds the post. Time is optional: leave the switch off for an

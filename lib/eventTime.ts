@@ -1,6 +1,6 @@
 /**
  * Pure date logic for the optional event clock a person attaches to a Plaza
- * post (D-104). Kept free of React Native imports so it unit-tests directly.
+ * post (D-105). Kept free of React Native imports so it unit-tests directly.
  *
  * Storage shape is two ISO strings (or nulls) matching the backend columns
  * `event_starts_at` / `event_ends_at`. Time is optional: an all-day event is a

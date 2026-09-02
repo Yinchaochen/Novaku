@@ -1,4 +1,4 @@
-﻿import {
+import {
   InfiniteData,
   QueryClient,
   QueryKey,
@@ -196,7 +196,7 @@ export interface CommunityPost {
   author: CommunityAuthor;
   media_items: CommunityPostMedia[];
   action_candidates: CommunityActionCandidate[];
-  /** Optional event clock a person attached (D-104). ISO strings; the card
+  /** Optional event clock a person attached (D-105). ISO strings; the card
    *  renders a date pill, and saving/adding-to-Odyssey puts it on the calendar. */
   event_starts_at?: string | null;
   event_ends_at?: string | null;
@@ -260,7 +260,7 @@ export interface CommunityPostCreateInput {
   // D-033 video posts: client-extracted sample frames for async moderation.
   moderation_frame_urls?: string[];
   visibility?: 'public' | 'private';
-  // Optional event clock (D-104). ISO strings, or null to clear on edit. A
+  // Optional event clock (D-105). ISO strings, or null to clear on edit. A
   // start with no end is a single time; a start-of-day with no time is all-day.
   event_starts_at?: string | null;
   event_ends_at?: string | null;

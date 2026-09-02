@@ -230,7 +230,7 @@ export default function PlazaScreen() {
   const [selectedPlaces, setSelectedPlaces] = useState<CommunitySelectedPlaceInput[]>([]);
   const [locationPickerVisible, setLocationPickerVisible] = useState(false);
   const [aiSummaryEnabled, setAiSummaryEnabled] = useState(true);
-  // Optional event clock on the post (D-104). Empty = an ordinary post.
+  // Optional event clock on the post (D-105). Empty = an ordinary post.
   const [eventTime, setEventTime] = useState<EventTimeValue>(EMPTY_EVENT_TIME);
   const guide = useProductGuide();
 
