@@ -561,7 +561,7 @@ export interface RelatedPostsOut {
 }
 
 // One bounded page of need-adjacent posts for the rail under the comments
-// (D-086). No cursor on purpose: six items, never an infinite scroll.
+// (D-097). No cursor on purpose: six items, never an infinite scroll.
 export function useRelatedCommunityPosts(postId?: string | null, enabled = true) {
   const { langCode } = useLanguage();
   return useQuery({

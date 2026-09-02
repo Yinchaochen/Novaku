@@ -17,7 +17,7 @@ type Props = {
   onOpenPost: (post: CommunityPost) => void;
 };
 
-// The rail under a post's comments (D-086): one bounded page of need-adjacent
+// The rail under a post's comments (D-097): one bounded page of need-adjacent
 // posts. Empty, loading and error all render nothing — a section header with
 // no content under it is a promise the data could not keep.
 export function RelatedPostsSection({ postId, enabled, onOpenPost }: Props) {

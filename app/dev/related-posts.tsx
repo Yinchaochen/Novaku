@@ -11,7 +11,7 @@ import { colors, spacing, typography } from '../../theme/tokens';
 import seeded from './_seededPosts.json';
 
 /**
- * The related-posts rail under a post's comments (D-086), state by state.
+ * The related-posts rail under a post's comments (D-097), state by state.
  *
  * The live section fetches its page and hides itself when there is nothing to
  * show, so the empty and loading states are deliberately invisible in the app.
