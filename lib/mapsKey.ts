@@ -3,18 +3,24 @@ import { Platform } from 'react-native';
 /**
  * Which Google Maps key this platform should use (SEC-APP-MAPSKEY-01).
  *
- * One key serves iOS, Android and Web today, and that is precisely why it
- * cannot be restricted: a Websites restriction blocks the two native
- * platforms (their requests carry no Referer), an Android restriction blocks
- * web and iOS, and so on. So the key sits on the public internet — baked into
- * the web bundle and both app binaries — with no application restriction at
- * all, and only its API list and daily quota bound the damage.
+ * One key serves iOS, Android and Web today, and it carries no application
+ * restriction at all — only its API list and daily quota bound the damage.
  *
- * The fix is one key per platform, each restricted to that platform. This
- * resolver is the code half. It falls back to the shared key whenever a
- * platform-specific one is absent, so the change ships before the keys exist
- * and each platform switches over the moment its own key is configured —
- * no flag day, no window where maps are broken.
+ * Until D-107 that was unavoidable: the location picker called Places over
+ * REST from this same key, and React Native's fetch sends none of the headers
+ * an application restriction checks against (no Referer for a Websites rule,
+ * no X-Android-Package / X-Android-Cert for an Android one), so any
+ * restriction that protected the key also broke the picker. Places now runs
+ * on the backend, and nothing in this bundle calls a Maps HTTP API any more:
+ * the key is read at build time to configure the native Maps SDKs, and that
+ * is all. Native SDK requests DO carry the package/signature and bundle-id
+ * proofs — so each platform's key can now be locked to its own app.
+ *
+ * The remaining work is one key per platform, each restricted to that
+ * platform. This resolver is the code half. It falls back to the shared key
+ * whenever a platform-specific one is absent, so each platform switches over
+ * the moment its own key is configured — no flag day, no window where maps
+ * are broken.
  */
 
 export interface MapsKeyEnv {

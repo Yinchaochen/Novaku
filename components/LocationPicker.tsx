@@ -33,6 +33,11 @@ import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useLanguage } from '../context/LanguageContext';
+import {
+  usePlaceAutocomplete,
+  useFetchPlaceDetails,
+  type PlacePrediction,
+} from '../features/places/usePlaces';
 import { buildPlaceUrl } from '../lib/maps';
 import { mapsApiKey } from '../lib/mapsKey';
 import { captureSentryMessage } from '../lib/sentry';
@@ -73,21 +78,11 @@ const DEFAULT_REGION: Region = {
 
 const ZOOMED_DELTA = 0.01;
 
-// Places API (New) endpoints. The old react-native-google-places-autocomplete
-// lib called the *legacy* Places API (places-backend.googleapis.com), which
-// Google froze to new projects in 2025-03 — our 2026 project (novaku-dev)
-// can't enable it, so autocomplete silently returned nothing. We hit
-// places.googleapis.com (Places API New) directly instead.
-const PLACES_AUTOCOMPLETE_URL = 'https://places.googleapis.com/v1/places:autocomplete';
-const PLACES_DETAILS_URL = 'https://places.googleapis.com/v1/places';
-// Bias search only after we know the user's area or they move the map.
-const PLACES_BIAS_RADIUS_M = 50000;
-
-interface Prediction {
-  placeId: string;
-  mainText: string;
-  secondaryText: string;
-}
+// D-107: Places runs on our backend now. The app used to call
+// places.googleapis.com directly, which forced the key to ship in the bundle
+// *and* to stay unrestricted — React Native's fetch cannot send the
+// package/signature headers an Android app restriction checks. The key that
+// remains in the app is the native Maps SDK one, which can be locked down.
 
 // Autocomplete + the follow-up Details lookup bill as one "session" when they
 // share a token; mint one per search, retire it after a pick.
@@ -136,7 +131,7 @@ export function LocationPicker({
     platform: Platform.OS,
   });
 
-  const { t, langCode } = useLanguage();
+  const { t } = useLanguage();
   const mapRef = useRef<MapView | null>(null);
   const [selected, setSelected] = useState<SelectedDraft | null>(null);
   const [locatingMe, setLocatingMe] = useState(false);
@@ -164,25 +159,49 @@ export function LocationPicker({
       : DEFAULT_REGION;
 
   const [query, setQuery] = useState('');
-  const [predictions, setPredictions] = useState<Prediction[]>([]);
-  const [searching, setSearching] = useState(false);
-  // A blank dropdown used to mean four different things — query too short, no
-  // matches, API rejected the key, network down — so a broken search looked
-  // exactly like a correct "nothing found" and the user just kept retyping.
-  const [outcome, setOutcome] = useState<'idle' | 'results' | 'empty' | 'error'>('idle');
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const sessionTokenRef = useRef<string>(newSessionToken());
+  const [sessionToken, setSessionToken] = useState<string>(newSessionToken);
+  // Suppresses the dropdown after a pick, so choosing a suggestion does not
+  // immediately re-search for the name it just wrote into the box.
+  const [picked, setPicked] = useState(false);
   // Tracks the map's live centre so autocomplete biases to wherever the user
   // is looking; seeded from initialRegion, updated on every pan/zoom settle.
   const regionRef = useRef<Region>(initialRegion);
   const hasLocationBiasRef = useRef(initialLatitude != null && initialLongitude != null);
 
-  // Cancel any pending debounced search on unmount.
+  const search = usePlaceAutocomplete(query, {
+    sessionToken,
+    near: hasLocationBiasRef.current
+      ? { lat: regionRef.current.latitude, lon: regionRef.current.longitude }
+      : null,
+    enabled: !picked,
+  });
+  const detailsFetch = useFetchPlaceDetails();
+  const predictions = search.data ?? [];
+  const searching = search.isFetching;
+
+  // A blank dropdown used to mean four different things — query too short, no
+  // matches, the API refusing us, network down — so a broken search looked
+  // exactly like a correct "nothing found" and the user just kept retyping.
+  const outcome: 'idle' | 'results' | 'empty' | 'error' =
+    picked || query.trim().length < 2
+      ? 'idle'
+      : search.isError
+        ? 'error'
+        : search.isFetching || search.data === undefined
+          ? 'idle'
+          : predictions.length > 0
+            ? 'results'
+            : 'empty';
+
   useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
+    if (!search.isError) return;
+    // Without this a dead key is invisible from the outside — the picker just
+    // stops finding places and nobody is told, on either end.
+    captureSentryMessage('LocationPicker.autocomplete_failed', {
+      reason: search.error instanceof Error ? search.error.message : 'unknown',
+      platform: Platform.OS,
+    });
+  }, [search.isError, search.error]);
 
   const animateTo = (lat: number, lng: number) => {
     mapRef.current?.animateToRegion(
@@ -201,110 +220,36 @@ export function LocationPicker({
     animateTo(place.latitude, place.longitude);
   };
 
-  const runAutocomplete = async (input: string) => {
-    setSearching(true);
-    try {
-      const res = await fetch(PLACES_AUTOCOMPLETE_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Goog-Api-Key': GOOGLE_MAPS_API_KEY,
-        },
-        body: JSON.stringify({
-          input,
-          languageCode: langCode,
-          sessionToken: sessionTokenRef.current,
-          ...(hasLocationBiasRef.current
-            ? {
-                locationBias: {
-                  circle: {
-                    center: {
-                      latitude: regionRef.current.latitude,
-                      longitude: regionRef.current.longitude,
-                    },
-                    radius: PLACES_BIAS_RADIUS_M,
-                  },
-                },
-              }
-            : {}),
-        }),
-      });
-      // Places answers a rejected key with 400/403 and a JSON error body, which
-      // has no `suggestions` — parsing it straight through turned every outage
-      // into a silent empty list.
-      if (!res.ok) throw new Error(`places_autocomplete_http_${res.status}`);
-      const json = await res.json();
-      const list: Prediction[] = (json.suggestions ?? [])
-        .map((s: { placePrediction?: any }) => s.placePrediction)
-        .filter(Boolean)
-        .map((p: any) => ({
-          placeId: p.placeId as string,
-          mainText: p.structuredFormat?.mainText?.text ?? p.text?.text ?? '',
-          secondaryText: p.structuredFormat?.secondaryText?.text ?? '',
-        }));
-      setPredictions(list);
-      setOutcome(list.length > 0 ? 'results' : 'empty');
-    } catch (err) {
-      // Network/API failure: clear rather than show stale suggestions.
-      setPredictions([]);
-      setOutcome('error');
-      // Without this a dead key is invisible from the outside — the picker
-      // just stops finding places and nobody is told, on either end.
-      captureSentryMessage('LocationPicker.autocomplete_failed', {
-        reason: err instanceof Error ? err.message : 'unknown',
-        keyPresent: GOOGLE_MAPS_API_KEY.length > 0,
-        platform: Platform.OS,
-      });
-    } finally {
-      setSearching(false);
-    }
-  };
-
   const handleQueryChange = (text: string) => {
     setQuery(text);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    const trimmed = text.trim();
-    if (trimmed.length < 2) {
-      setPredictions([]);
-      setOutcome('idle');
-      return;
-    }
-    debounceRef.current = setTimeout(() => runAutocomplete(trimmed), 250);
+    setPicked(false);
   };
 
-  const handlePredictionPick = async (prediction: Prediction) => {
+  const handlePredictionPick = async (prediction: PlacePrediction) => {
     Keyboard.dismiss();
-    setPredictions([]);
-    setOutcome('idle');
-    setQuery(prediction.mainText);
+    setPicked(true);
+    setQuery(prediction.main_text);
     try {
-      const res = await fetch(
-        `${PLACES_DETAILS_URL}/${prediction.placeId}?languageCode=${encodeURIComponent(langCode)}&sessionToken=${sessionTokenRef.current}`,
-        {
-          headers: {
-            'X-Goog-Api-Key': GOOGLE_MAPS_API_KEY,
-            'X-Goog-FieldMask': 'id,location,displayName,formattedAddress,rating,userRatingCount,currentOpeningHours.openNow',
-          },
-        },
-      );
-      const json = await res.json();
-      const loc = json.location as { latitude: number; longitude: number } | undefined;
-      if (!loc) return;
+      const detail = await detailsFetch.mutateAsync({
+        placeId: prediction.place_id,
+        sessionToken,
+      });
       handlePlacePick({
-        name: json.displayName?.text || prediction.mainText,
-        subtitle: json.formattedAddress || prediction.secondaryText,
-        latitude: loc.latitude,
-        longitude: loc.longitude,
-        placeId: json.id || prediction.placeId,
-        rating: typeof json.rating === 'number' ? json.rating : null,
-        ratingCount: typeof json.userRatingCount === 'number' ? json.userRatingCount : null,
-        openNow: json.currentOpeningHours?.openNow ?? null,
+        name: detail.name || prediction.main_text,
+        subtitle: detail.address || prediction.secondary_text,
+        latitude: detail.latitude,
+        longitude: detail.longitude,
+        placeId: detail.place_id || prediction.place_id,
+        rating: detail.rating ?? null,
+        ratingCount: detail.rating_count ?? null,
+        openNow: detail.open_now ?? null,
       });
     } catch {
       // Details lookup failed; box stays usable for a retry.
     } finally {
-      // Session closes after a Details call — mint a fresh token for next time.
-      sessionTokenRef.current = newSessionToken();
+      // The session closes with the Details call — mint a fresh token so the
+      // next search is billed as its own session.
+      setSessionToken(newSessionToken());
     }
   };
 
@@ -391,27 +336,18 @@ export function LocationPicker({
       return;
     }
     try {
-      const res = await fetch(
-        `${PLACES_DETAILS_URL}/${placeId}?languageCode=${encodeURIComponent(langCode)}`,
-        {
-        headers: {
-          'X-Goog-Api-Key': GOOGLE_MAPS_API_KEY,
-          'X-Goog-FieldMask':
-            'id,location,displayName,formattedAddress,rating,userRatingCount,currentOpeningHours.openNow',
-        },
-        },
-      );
-      const json = await res.json();
-      const loc = json.location as { latitude: number; longitude: number } | undefined;
+      // No session token: a POI tap is a standalone Details lookup, not the
+      // tail of an autocomplete session.
+      const detail = await detailsFetch.mutateAsync({ placeId, sessionToken: '' });
       const draft: SelectedDraft = {
-        name: json.displayName?.text || name || '',
-        subtitle: json.formattedAddress || '',
-        latitude: loc?.latitude ?? coordinate.latitude,
-        longitude: loc?.longitude ?? coordinate.longitude,
-        placeId: json.id || placeId,
-        rating: typeof json.rating === 'number' ? json.rating : null,
-        ratingCount: typeof json.userRatingCount === 'number' ? json.userRatingCount : null,
-        openNow: json.currentOpeningHours?.openNow ?? null,
+        name: detail.name || name || '',
+        subtitle: detail.address || '',
+        latitude: detail.latitude ?? coordinate.latitude,
+        longitude: detail.longitude ?? coordinate.longitude,
+        placeId: detail.place_id || placeId,
+        rating: detail.rating ?? null,
+        ratingCount: detail.rating_count ?? null,
+        openNow: detail.open_now ?? null,
       };
       poiCacheRef.current.set(placeId, draft);
       setSelected(draft);
@@ -517,8 +453,7 @@ export function LocationPicker({
               <Pressable
                 onPress={() => {
                   setQuery('');
-                  setPredictions([]);
-                  setOutcome('idle');
+                  setPicked(false);
                 }}
                 hitSlop={8}
                 style={{ marginRight: 14 }}
@@ -532,7 +467,7 @@ export function LocationPicker({
             <View style={styles.autocompleteList}>
               {predictions.map((p, i) => (
                 <Pressable
-                  key={p.placeId}
+                  key={p.place_id}
                   onPress={() => handlePredictionPick(p)}
                   style={[
                     styles.autocompleteRow,
@@ -540,11 +475,11 @@ export function LocationPicker({
                   ]}
                 >
                   <Text style={styles.predictionMain} numberOfLines={1}>
-                    {p.mainText}
+                    {p.main_text}
                   </Text>
-                  {p.secondaryText ? (
+                  {p.secondary_text ? (
                     <Text style={styles.predictionSecondary} numberOfLines={1}>
-                      {p.secondaryText}
+                      {p.secondary_text}
                     </Text>
                   ) : null}
                 </Pressable>
