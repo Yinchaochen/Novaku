@@ -7,6 +7,7 @@ import { Alert, Pressable, Text, View } from 'react-native';
 import { colors } from '../../theme/tokens';
 import { useLanguage } from '../../context/LanguageContext';
 import { cardMediaFit } from '../../lib/cardAspect';
+import { formatEventTime } from '../../lib/eventTime';
 import { resolveMediaUrl } from '../../lib/media';
 import { useAuthStore } from '../../store/authStore';
 import { ActionSheet } from '../../components/ActionSheet';
@@ -109,7 +110,7 @@ function HighlightedCardTitle({ text, query }: { text: string; query: string }) 
 }
 
 export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
-  const { t } = useLanguage();
+  const { t, langCode } = useLanguage();
   const helpful = useMarkCommunityHelpful();
   const unhelpful = useUnmarkCommunityHelpful();
   const hidePost = useHidePost();
@@ -365,7 +366,25 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
             />
           )}
 
-          {hasEventCandidate ? (
+          {post.event_starts_at ? (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                alignSelf: 'flex-start',
+                marginBottom: 8,
+                backgroundColor: '#FFE8DA',
+                borderRadius: 999,
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+              }}
+            >
+              <Ionicons name="calendar-outline" size={11} color={colors.brandCoral} />
+              <Text style={{ marginLeft: 4, fontSize: 10.5, fontWeight: '700', color: colors.brandCoral }}>
+                {formatEventTime(post.event_starts_at, post.event_ends_at ?? null, langCode)}
+              </Text>
+            </View>
+          ) : hasEventCandidate ? (
             <View
               style={{
                 alignSelf: 'flex-start',

@@ -463,6 +463,9 @@ export type Translations = {
     task_card_booking_optional: string;
     feed_caught_up: string;
     feed_no_local_content: string;
+    event_add: string;
+    event_title: string;
+    event_include_time: string;
     delete_confirm_title: string;
     delete_confirm_body: string;
     delete_confirm_action: string;
@@ -1430,6 +1433,8 @@ export type Translations = {
     network_degraded_banner: string;
     retry: string;
     save: string;
+    edit: string;
+    clear: string;
     cancel: string;
     confirm: string;
     back: string;

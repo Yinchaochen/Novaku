@@ -49,6 +49,8 @@ import { resolveMediaUrl } from '../../lib/media';
 import { useGuideAutoAdvance, useProductGuide } from '../../features/guide/useProductGuide';
 import { useGuideTarget } from '../../features/guide/guideTargets';
 import { GuideSpotlight } from '../../components/guide/GuideSpotlight';
+import { EventDateTimeField } from '../../components/datetime/EventDateTimeField';
+import { EMPTY_EVENT_TIME, EventTimeValue } from '../../lib/eventTime';
 import { KeyboardSafeTextInput } from '../../components/KeyboardSafeTextInput';
 import { isTooShortForAiSummary } from '../../features/community/aiSummary';
 import {
@@ -228,6 +230,8 @@ export default function PlazaScreen() {
   const [selectedPlaces, setSelectedPlaces] = useState<CommunitySelectedPlaceInput[]>([]);
   const [locationPickerVisible, setLocationPickerVisible] = useState(false);
   const [aiSummaryEnabled, setAiSummaryEnabled] = useState(true);
+  // Optional event clock on the post (D-104). Empty = an ordinary post.
+  const [eventTime, setEventTime] = useState<EventTimeValue>(EMPTY_EVENT_TIME);
   const guide = useProductGuide();
 
   // The Post button gets out of the reader's way on the way down and comes
@@ -406,6 +410,7 @@ export default function PlazaScreen() {
     setEditingPost(null);
     setComposerMessage(null);
     setAiSummaryEnabled(true);
+    setEventTime(EMPTY_EVENT_TIME);
   };
 
   const closeComposer = () => {
@@ -451,6 +456,8 @@ export default function PlazaScreen() {
     setLocationPickerVisible(false);
     setComposerMessage(null);
     setAiSummaryEnabled(post.ai_summary_enabled ?? true);
+    // Prefill the event clock, or editing the title would silently clear it.
+    setEventTime({ start: post.event_starts_at ?? null, end: post.event_ends_at ?? null });
     reset({
       post_type: post.post_type,
       title: post.title,
@@ -523,6 +530,8 @@ export default function PlazaScreen() {
       selected_places: selectedPlaces,
       save_places_as_odysseys: false,
       ai_summary_enabled: aiSummaryEnabled,
+      event_starts_at: eventTime.start,
+      event_ends_at: eventTime.end,
       city: editingPost?.city ?? user?.city,
       identity_scope: editingPost?.identity_scope ?? user?.identity ?? 'all',
       media_items: videoDraft
@@ -1300,6 +1309,14 @@ export default function PlazaScreen() {
                   )}
                 </View>
 
+              </View>
+
+              <View className="border-t border-neutral-100 py-4">
+                <View className="mb-2 flex-row items-center">
+                  <Ionicons name="calendar-outline" size={20} color="#242424" />
+                  <Text className="ml-3 text-[16px] text-[#242424]">{t.plaza.event_title}</Text>
+                </View>
+                <EventDateTimeField value={eventTime} onChange={setEventTime} />
               </View>
 
               <View className="min-h-[58px] flex-row items-center justify-between border-t border-neutral-100">

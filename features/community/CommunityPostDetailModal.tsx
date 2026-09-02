@@ -28,6 +28,7 @@ import ViewShot from 'react-native-view-shot';
 import { useLanguage } from '../../context/LanguageContext';
 import { detailMediaHeight } from '../../lib/cardAspect';
 import { formatDisplayLocation } from '../../lib/displayLocation';
+import { formatEventTime } from '../../lib/eventTime';
 import { normalizeMapUrl } from '../../lib/maps';
 import { resolveMediaUrl } from '../../lib/media';
 import { useAuthStore } from '../../store/authStore';
@@ -959,6 +960,18 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
                 sourceLanguage={post.title_source_language ?? post.source_language}
                 textClassName="text-[21px] font-bold leading-8 text-black"
               />
+
+              {post.event_starts_at ? (
+                <View
+                  className="mt-3 flex-row items-center self-start rounded-full px-3 py-1.5"
+                  style={{ backgroundColor: '#FFE8DA' }}
+                >
+                  <Ionicons name="calendar-outline" size={14} color="#F47C7C" />
+                  <Text className="ml-2 text-[13px] font-bold" style={{ color: '#C81E3A' }}>
+                    {formatEventTime(post.event_starts_at, post.event_ends_at ?? null, langCode)}
+                  </Text>
+                </View>
+              ) : null}
 
               <TranslatedText
                 originalText={post.body}
