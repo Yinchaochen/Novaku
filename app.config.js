@@ -22,6 +22,15 @@ module.exports = ({ config }) => {
     process.env.GOOGLE_MAPS_API_KEY || // legacy name, still honoured
     '';
 
+  // Per-platform keys, so each can carry the application restriction only its
+  // own platform can satisfy (Android: package + SHA-1; iOS: bundle id). This
+  // is the half that matters now: since D-107 no JS in the bundle calls a Maps
+  // HTTP API, so lib/mapsKey.ts resolves a key nothing spends — the native SDK
+  // configuration below is the only consumer left. Each falls back to the
+  // shared key, so a platform switches over the moment its own key exists.
+  const androidMapsKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_ANDROID || mapsKey;
+  const iosMapsKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_IOS || mapsKey;
+
   // Inject the runtime key into the `react-native-maps` plugin block declared
   // in app.json (which has empty-string placeholders so the static config is
   // valid without secrets in git).
@@ -31,8 +40,8 @@ module.exports = ({ config }) => {
         'react-native-maps',
         {
           ...(plugin[1] || {}),
-          iosGoogleMapsApiKey: mapsKey,
-          androidGoogleMapsApiKey: mapsKey,
+          iosGoogleMapsApiKey: iosMapsKey,
+          androidGoogleMapsApiKey: androidMapsKey,
         },
       ];
     }
