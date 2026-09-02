@@ -378,6 +378,7 @@ export type Translations = {
     location_picker_closed: string;
     location_picker_search_placeholder: string;
     location_picker_empty: string;
+    location_picker_error: string;
     composer_visibility_row: string;
     composer_visibility_public: string;
     composer_widgets_row: string;

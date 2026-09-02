@@ -166,6 +166,10 @@ export function LocationPicker({
   const [query, setQuery] = useState('');
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [searching, setSearching] = useState(false);
+  // A blank dropdown used to mean four different things — query too short, no
+  // matches, API rejected the key, network down — so a broken search looked
+  // exactly like a correct "nothing found" and the user just kept retyping.
+  const [outcome, setOutcome] = useState<'idle' | 'results' | 'empty' | 'error'>('idle');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionTokenRef = useRef<string>(newSessionToken());
   // Tracks the map's live centre so autocomplete biases to wherever the user
@@ -225,6 +229,10 @@ export function LocationPicker({
             : {}),
         }),
       });
+      // Places answers a rejected key with 400/403 and a JSON error body, which
+      // has no `suggestions` — parsing it straight through turned every outage
+      // into a silent empty list.
+      if (!res.ok) throw new Error(`places_autocomplete_http_${res.status}`);
       const json = await res.json();
       const list: Prediction[] = (json.suggestions ?? [])
         .map((s: { placePrediction?: any }) => s.placePrediction)
@@ -235,9 +243,18 @@ export function LocationPicker({
           secondaryText: p.structuredFormat?.secondaryText?.text ?? '',
         }));
       setPredictions(list);
-    } catch {
+      setOutcome(list.length > 0 ? 'results' : 'empty');
+    } catch (err) {
       // Network/API failure: clear rather than show stale suggestions.
       setPredictions([]);
+      setOutcome('error');
+      // Without this a dead key is invisible from the outside — the picker
+      // just stops finding places and nobody is told, on either end.
+      captureSentryMessage('LocationPicker.autocomplete_failed', {
+        reason: err instanceof Error ? err.message : 'unknown',
+        keyPresent: GOOGLE_MAPS_API_KEY.length > 0,
+        platform: Platform.OS,
+      });
     } finally {
       setSearching(false);
     }
@@ -249,6 +266,7 @@ export function LocationPicker({
     const trimmed = text.trim();
     if (trimmed.length < 2) {
       setPredictions([]);
+      setOutcome('idle');
       return;
     }
     debounceRef.current = setTimeout(() => runAutocomplete(trimmed), 250);
@@ -257,6 +275,7 @@ export function LocationPicker({
   const handlePredictionPick = async (prediction: Prediction) => {
     Keyboard.dismiss();
     setPredictions([]);
+    setOutcome('idle');
     setQuery(prediction.mainText);
     try {
       const res = await fetch(
@@ -499,6 +518,7 @@ export function LocationPicker({
                 onPress={() => {
                   setQuery('');
                   setPredictions([]);
+                  setOutcome('idle');
                 }}
                 hitSlop={8}
                 style={{ marginRight: 14 }}
@@ -529,6 +549,14 @@ export function LocationPicker({
                   ) : null}
                 </Pressable>
               ))}
+            </View>
+          ) : outcome === 'empty' || outcome === 'error' ? (
+            <View style={styles.autocompleteList}>
+              <View style={styles.autocompleteRow}>
+                <Text style={styles.statusText} testID="location-picker.status">
+                  {outcome === 'error' ? t.plaza.location_picker_error : t.plaza.location_picker_empty}
+                </Text>
+              </View>
             </View>
           ) : null}
         </View>
@@ -689,6 +717,11 @@ const styles = StyleSheet.create({
   predictionSecondary: {
     marginTop: 2,
     fontSize: 13,
+    color: '#7B7B7B',
+  },
+  statusText: {
+    fontSize: 14,
+    lineHeight: 20,
     color: '#7B7B7B',
   },
   footerLayer: {

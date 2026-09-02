@@ -356,6 +356,7 @@
     "location_picker_closed": "Closed",
     "location_picker_search_placeholder": "Search places...",
     "location_picker_empty": "No matching places yet. Try a more specific name.",
+    "location_picker_error": "Place search is unavailable right now. Try again in a moment.",
     "composer_visibility_row": "Visibility",
     "composer_visibility_public": "Public",
     "composer_widgets_row": "Source link",

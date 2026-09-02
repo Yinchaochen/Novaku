@@ -356,6 +356,7 @@
     "location_picker_closed": "Geschlossen",
     "location_picker_search_placeholder": "Orte suchen...",
     "location_picker_empty": "Noch keine passenden Orte gefunden. Versuche einen genaueren Namen.",
+    "location_picker_error": "Die Ortssuche geht gerade nicht. Versuch es gleich noch mal.",
     "composer_visibility_row": "Sichtbarkeit",
     "composer_visibility_public": "Öffentlich",
     "composer_widgets_row": "Quellenlink",

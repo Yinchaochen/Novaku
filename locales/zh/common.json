@@ -356,6 +356,7 @@
     "location_picker_closed": "休息中",
     "location_picker_search_placeholder": "搜索地点...",
     "location_picker_empty": "暂时没有匹配地点，试试更具体的名字。",
+    "location_picker_error": "地点搜索暂时用不了，稍后再试一次。",
     "composer_visibility_row": "可见范围",
     "composer_visibility_public": "公开",
     "composer_widgets_row": "来源链接",
