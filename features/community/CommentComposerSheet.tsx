@@ -87,7 +87,9 @@ export function CommentComposerSheet({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        // Android stays undefined — see FloatingInputSheet, which copied this
+        // shell along with the oscillation "height" causes here.
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <Pressable
           className="flex-1 justify-end"

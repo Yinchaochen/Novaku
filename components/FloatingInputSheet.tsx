@@ -67,7 +67,16 @@ export function FloatingInputSheet({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        // Android must stay undefined (GOTCHAS "写代码时碰到的细节差异" table).
+        // behavior="height" makes this view set its own height from its
+        // measured frame, inside a transparent Modal, under edge-to-edge —
+        // where the frame it measures and the metrics it measures against
+        // come from different windows and never agree. Each pass writes a
+        // height that provokes the next one, so with justifyContent
+        // flex-end the sheet oscillates between two positions ~50px apart,
+        // every frame, with nobody touching the screen. Android resizes the
+        // window for the keyboard on its own; this view has nothing to add.
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <Pressable
           accessibilityLabel={t.common.cancel}

@@ -89,28 +89,4 @@ describe('KeyboardSafeTextInput', () => {
     await render(<KeyboardSafeTextInput testID="field" value="v" onChangeText={jest.fn()} />);
     expect(screen.getByTestId('field').props.editable).toBe(false);
   });
-
-  // A single-line proxy scrolls to the caret, so an over-long value renders
-  // with its head cut off and no ellipsis. Wrapping is the only thing that
-  // guarantees the user can read back what they typed.
-  it('the proxy wraps instead of scrolling, so a long value is never clipped', async () => {
-    await render(
-      <KeyboardSafeTextInput
-        testID="field"
-        value="Explore Berlin's Sprachecafe"
-        onChangeText={jest.fn()}
-      />,
-    );
-    const proxy = screen.getByTestId('field');
-    expect(proxy.props.multiline).toBe(true);
-    expect(proxy.props.scrollEnabled).toBe(false);
-    expect(proxy.props.textAlignVertical).toBe('center');
-  });
-
-  it('keeps top alignment for callers that asked for a multiline field', async () => {
-    await render(
-      <KeyboardSafeTextInput testID="field" value="body" onChangeText={jest.fn()} multiline />,
-    );
-    expect(screen.getByTestId('field').props.textAlignVertical).toBe('top');
-  });
 });

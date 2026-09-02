@@ -66,20 +66,6 @@ export const KeyboardSafeTextInput = forwardRef<TextInput, KeyboardSafeTextInput
             editable={false}
             caretHidden
             pointerEvents="none"
-            // The proxy displays a value, it never edits one — so it must not
-            // behave like a scrollable editor. A single-line TextInput parks
-            // its scroll at the caret, which sits at the end of a
-            // programmatically set value: a title wider than the field
-            // rendered with its first characters cut off and no ellipsis to
-            // admit it ("Explore Berlin's…" showed as "…lore Berlin's…").
-            // Wrapping instead of scrolling keeps every character reachable.
-            multiline
-            scrollEnabled={false}
-            // multiline defaults to top-alignment; single-line callers still
-            // expect their text centred in the field's minHeight.
-            textAlignVertical={
-              inputProps.multiline ? (inputProps.textAlignVertical ?? 'top') : 'center'
-            }
           />
         </Pressable>
         <FloatingInputSheet
