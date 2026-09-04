@@ -97,7 +97,7 @@ export default function BuddyTabScreen() {
         }}
       >
         <View className="flex-row items-center justify-between">
-          <Text className="text-[22px] font-extrabold text-[#3B2A22]">{t.buddy.tab_title}</Text>
+          <Text className="text-[22px] font-extrabold text-[#3B2A22]">{t.app_name}</Text>
           <View className="flex-row gap-2">
             {/* Permanent walkthrough entry: re-runnable any time. */}
             <Pressable

@@ -611,7 +611,6 @@ export type Translations = {
       saved_toast: string;
       open_whatsapp: string;
     };
-    tab_title: string;
     create_menu_open: string;
     create_menu_close: string;
     compose_button: string;

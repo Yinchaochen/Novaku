@@ -285,7 +285,7 @@ export default function TasksScreen() {
               letterSpacing: -0.3,
             }}
           >
-            {t.tasks.title}
+            {t.app_name}
           </Text>
           <LangPill />
         </View>
