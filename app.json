@@ -78,6 +78,10 @@
       [
         "expo-build-properties",
         {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "extraProguardRules": "# D-111: Credential Manager resolves its Play Services provider by class name; R8 must keep it or Android Google sign-in (D-051) silently finds no provider\n-if class androidx.credentials.CredentialManager\n-keep class androidx.credentials.playservices.** { *; }"
+          },
           "ios": {
             "buildReactNativeFromSource": true,
             "extraPods": [
