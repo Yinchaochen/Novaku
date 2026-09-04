@@ -75,6 +75,7 @@
     },
     "plugins": [
       "./plugins/withAndroidBuildTuning",
+      "./plugins/withLargeScreenOrientation",
       [
         "expo-build-properties",
         {
