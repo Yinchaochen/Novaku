@@ -1,12 +1,15 @@
 import { create } from 'zustand';
 
-// One-shot handoff from Plaza search's zero-result CTA into the Plaza composer:
-// the search screen sets an intent and navigates back; the Plaza tab consumes
-// it exactly once, opens the composer, and prefills the question title.
-export interface PlazaComposeIntent {
-  title: string;
-  postType: 'question';
-}
+import type { CommunityPost } from '../features/community/useCommunity';
+
+// One-shot handoff into the Plaza composer, which lives on the Plaza tab and
+// nowhere else. Plaza search's zero-result CTA asks a question; the post
+// detail screen, opened from Profile / a user page / search / a shared link,
+// asks to edit. The sender sets an intent and navigates to the tab; the tab
+// consumes it exactly once and opens the composer accordingly.
+export type PlazaComposeIntent =
+  | { kind: 'ask'; title: string; postType: 'question' }
+  | { kind: 'edit'; post: CommunityPost };
 
 interface PlazaComposeIntentState {
   intent: PlazaComposeIntent | null;

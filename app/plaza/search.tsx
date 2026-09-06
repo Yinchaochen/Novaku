@@ -147,7 +147,7 @@ export default function PlazaSearchScreen() {
 
   const goAsk = () => {
     const title = (params?.q ?? normalizeHistoryQuery(rawQuery)).slice(0, 160);
-    usePlazaComposeIntentStore.getState().setIntent({ title, postType: 'question' });
+    usePlazaComposeIntentStore.getState().setIntent({ kind: 'ask', title, postType: 'question' });
     router.navigate('/(tabs)/plaza');
   };
 

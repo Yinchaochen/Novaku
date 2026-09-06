@@ -423,8 +423,9 @@ export default function PlazaScreen() {
     setComposerVisible(true);
   };
 
-  // Zero-result search CTA handoff (PLAZA-SEARCH-001): consume the one-shot
-  // intent, open the composer as a question, and prefill the searched title.
+  // One-shot composer handoffs: the zero-result search CTA asks a question
+  // (PLAZA-SEARCH-001); the post detail screen asks to edit when it was opened
+  // somewhere without a composer (Profile, a user page, search, a shared link).
   const pendingComposeIntent = usePlazaComposeIntentStore((state) => state.intent);
   useEffect(() => {
     if (!pendingComposeIntent) {
@@ -432,6 +433,10 @@ export default function PlazaScreen() {
     }
     const intent = usePlazaComposeIntentStore.getState().consume();
     if (!intent) {
+      return;
+    }
+    if (intent.kind === 'edit') {
+      openComposerForEdit(intent.post);
       return;
     }
     openComposerForCreate();

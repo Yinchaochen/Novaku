@@ -32,6 +32,7 @@ import { formatEventTime } from '../../lib/eventTime';
 import { normalizeMapUrl } from '../../lib/maps';
 import { resolveMediaUrl } from '../../lib/media';
 import { useAuthStore } from '../../store/authStore';
+import { usePlazaComposeIntentStore } from '../../store/plazaComposeIntentStore';
 import { useBlockUser } from '../../features/social/useSocial';
 import { ActionSheet, type ActionSheetAction } from '../../components/ActionSheet';
 import { StoryShareCard } from '../../components/StoryShareCard';
@@ -372,7 +373,16 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
   };
 
   const handleEditPost = () => {
-    onEditPost?.(post);
+    if (onEditPost) {
+      onEditPost(post);
+      return;
+    }
+    // Opened from Profile, a user page, search or a shared link: no composer
+    // here, it lives on the Plaza tab. Hand the post over and go there; close
+    // first for the same reason as openAuthorProfile.
+    usePlazaComposeIntentStore.getState().setIntent({ kind: 'edit', post });
+    onClose();
+    router.navigate('/(tabs)/plaza');
   };
 
   const handleDeletePost = () => {
