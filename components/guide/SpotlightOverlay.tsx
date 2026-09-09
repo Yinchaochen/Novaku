@@ -2,7 +2,7 @@ import { ReactNode, useEffect, useRef, useState } from 'react';
 import { Keyboard, Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GuideStepCard, SpotlightRing, SpotlightScrim } from './spotlightParts';
+import { GuideStepCard, Spotlight } from './spotlightParts';
 import { useLanguage } from '../../context/LanguageContext';
 import { GuideTargetRect, measureNode, toOverlayRect } from '../../features/guide/guideTargets';
 
@@ -199,8 +199,7 @@ export function SpotlightOverlay({
       testID={testID}
     >
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        <SpotlightScrim hole={hole} />
-        {hole ? <SpotlightRing hole={hole} radius={ringRadius} /> : null}
+        <Spotlight hole={hole} radius={ringRadius} />
       </View>
       <GuideStepCard
         testID={cardTestID}

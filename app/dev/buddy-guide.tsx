@@ -8,8 +8,7 @@ import { useBuddyGuide } from '../../features/guide/useBuddyGuide';
 import {
   GuidePublishConfirmCard,
   GuideStepCard,
-  SpotlightRing,
-  SpotlightScrim,
+  Spotlight,
 } from '../../components/guide/spotlightParts';
 import { PageHeader } from '../../components/PageHeader';
 import { Screen } from '../../components/Screen';
@@ -66,8 +65,7 @@ function SpotlightStage({
         <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 15 }}>{targetLabel}</Text>
       </View>
       <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} pointerEvents="none">
-        <SpotlightScrim hole={hole} />
-        <SpotlightRing hole={hole} radius={16} />
+        <Spotlight hole={hole} radius={16} />
       </View>
       <GuideStepCard
         stepNumber={stepNumber}
@@ -231,7 +229,7 @@ export default function BuddyGuideGallery() {
         </SurfaceCard>
         <View style={{ height: 300, borderRadius: 24, overflow: 'hidden', backgroundColor: '#FFF8F1' }}>
           <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} pointerEvents="none">
-            <SpotlightScrim hole={null} />
+            <Spotlight hole={null} radius={16} />
           </View>
           <GuideStepCard
             stepNumber={1}

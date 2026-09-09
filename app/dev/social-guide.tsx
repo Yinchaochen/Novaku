@@ -4,8 +4,7 @@ import { SocialGuideAnchor } from '../../components/guide/SocialGuideAnchor';
 import {
   GuidePublishConfirmCard,
   GuideStepCard,
-  SpotlightRing,
-  SpotlightScrim,
+  Spotlight,
 } from '../../components/guide/spotlightParts';
 import { SocialGuideSpotlight } from '../../components/guide/SocialGuideSpotlight';
 import { PageHeader } from '../../components/PageHeader';
@@ -72,8 +71,7 @@ function SpotlightStage({
         </View>
       ) : null}
       <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} pointerEvents="none">
-        <SpotlightScrim hole={hole} />
-        {hole ? <SpotlightRing hole={hole} radius="pill" /> : null}
+        <Spotlight hole={hole} radius="pill" />
       </View>
       <GuideStepCard
         stepNumber={stepNumber}

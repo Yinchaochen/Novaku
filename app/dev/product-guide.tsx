@@ -3,8 +3,7 @@ import { Text, View } from 'react-native';
 import {
   GuidePublishConfirmCard,
   GuideStepCard,
-  SpotlightRing,
-  SpotlightScrim,
+  Spotlight,
 } from '../../components/guide/spotlightParts';
 import { PageHeader } from '../../components/PageHeader';
 import { Screen } from '../../components/Screen';
@@ -68,8 +67,7 @@ function SpotlightStage({
         <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 16 }}>{targetLabel}</Text>
       </View>
       <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} pointerEvents="none">
-        <SpotlightScrim hole={hole} />
-        <SpotlightRing hole={hole} radius="pill" />
+        <Spotlight hole={hole} radius="pill" />
       </View>
       <GuideStepCard
         stepNumber={stepNumber}

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Easing, Platform, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Platform, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { FeedbackPressable } from '../FeedbackPressable';
 import { GuideTargetRect } from '../../features/guide/guideTargets';
@@ -15,38 +15,15 @@ const SCRIM_COLOR = 'rgba(36, 26, 22, 0.60)';
 
 export interface GuideHole extends GuideTargetRect {}
 
-// Four opaque rects around the hole: the target itself stays bright and — the
-// scrim never receiving touches — fully tappable.
-export function SpotlightScrim({ hole }: { hole: GuideHole | null }) {
-  if (!hole) {
-    return <View style={[StyleSheet.absoluteFill, { backgroundColor: SCRIM_COLOR }]} />;
-  }
-  const left = Math.max(hole.x, 0);
-  const top = Math.max(hole.y, 0);
-  return (
-    <>
-      <View style={{ position: 'absolute', left: 0, right: 0, top: 0, height: top, backgroundColor: SCRIM_COLOR }} />
-      <View style={{ position: 'absolute', left: 0, width: left, top, height: hole.height, backgroundColor: SCRIM_COLOR }} />
-      <View
-        style={{
-          position: 'absolute',
-          left: left + hole.width,
-          right: 0,
-          top,
-          height: hole.height,
-          backgroundColor: SCRIM_COLOR,
-        }}
-      />
-      <View
-        style={{ position: 'absolute', left: 0, right: 0, top: top + hole.height, bottom: 0, backgroundColor: SCRIM_COLOR }}
-      />
-    </>
-  );
-}
-
-// Coral ring + soft white halo around the hole, with a gentle breathing pulse.
-export function SpotlightRing({ hole, radius }: { hole: GuideHole; radius: number | 'pill' }) {
+// One scrim with a rounded hole, and the coral ring with its white halo around
+// it. Hole and ring share a single breathing value, so the hole grows and
+// shrinks with the ring instead of sitting still as a sharp-cornered rectangle
+// behind it. The scrim is a transparent view whose border is the scrim colour:
+// the border reaches past every screen edge and its inner edge is the hole. A
+// masked view would need a native library this app does not ship.
+export function Spotlight({ hole, radius }: { hole: GuideHole | null; radius: number | 'pill' }) {
   const pulse = useRef(new Animated.Value(0)).current;
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -69,45 +46,72 @@ export function SpotlightRing({ hole, radius }: { hole: GuideHole; radius: numbe
     return () => loop.stop();
   }, [pulse]);
 
+  if (!hole) {
+    return <View testID="spotlight.scrim" style={[StyleSheet.absoluteFill, { backgroundColor: SCRIM_COLOR }]} />;
+  }
+
   const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.03] });
-  const ringRadius = radius === 'pill' ? hole.height / 2 : radius;
+  const holeRadius = radius === 'pill' ? hole.height / 2 : radius;
+  // Wide enough to cover the screen from wherever the hole sits; the pulse only
+  // ever scales up from 1. `overflow: hidden` keeps iOS on CoreAnimation borders
+  // (layer.borderWidth + cornerRadius) rather than rasterising a border image
+  // the size of this reach.
+  const reach = Math.max(windowWidth, windowHeight);
 
   return (
-    <Animated.View
-      style={{
-        position: 'absolute',
-        left: hole.x,
-        top: hole.y,
-        width: hole.width,
-        height: hole.height,
-        transform: [{ scale }],
-      }}
-    >
-      <View
+    <>
+      <Animated.View
+        testID="spotlight.scrim"
         style={{
           position: 'absolute',
-          left: -8,
-          top: -8,
-          right: -8,
-          bottom: -8,
-          borderWidth: 3,
-          borderColor: 'rgba(255, 255, 255, 0.92)',
-          borderRadius: ringRadius + 8,
+          left: hole.x - reach,
+          top: hole.y - reach,
+          width: hole.width + reach * 2,
+          height: hole.height + reach * 2,
+          borderWidth: reach,
+          borderColor: SCRIM_COLOR,
+          borderRadius: holeRadius + reach,
+          overflow: 'hidden',
+          transform: [{ scale }],
         }}
       />
-      <View
+      <Animated.View
+        testID="spotlight.ring"
         style={{
           position: 'absolute',
-          left: -3,
-          top: -3,
-          right: -3,
-          bottom: -3,
-          borderWidth: 3,
-          borderColor: colors.brandCoral,
-          borderRadius: ringRadius + 3,
+          left: hole.x,
+          top: hole.y,
+          width: hole.width,
+          height: hole.height,
+          transform: [{ scale }],
         }}
-      />
-    </Animated.View>
+      >
+        <View
+          style={{
+            position: 'absolute',
+            left: -8,
+            top: -8,
+            right: -8,
+            bottom: -8,
+            borderWidth: 3,
+            borderColor: 'rgba(255, 255, 255, 0.92)',
+            borderRadius: holeRadius + 8,
+          }}
+        />
+        <View
+          style={{
+            position: 'absolute',
+            left: -3,
+            top: -3,
+            right: -3,
+            bottom: -3,
+            borderWidth: 3,
+            borderColor: colors.brandCoral,
+            borderRadius: holeRadius + 3,
+          }}
+        />
+      </Animated.View>
+    </>
   );
 }
 
