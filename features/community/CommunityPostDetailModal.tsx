@@ -46,6 +46,7 @@ import { RelatedPostsSection } from './RelatedPostsSection';
 import { CommunityPostImageViewer } from './CommunityPostImageViewer';
 import { TranslatedText } from './TranslatedText';
 import { withSeedFeedContext } from './postDetailSeed';
+import { useDetailDwellTracking } from './useDetailDwellTracking';
 import { getLocationEntries, getSourceHost } from './postLocation';
 import {
   CommunityComment,
@@ -177,9 +178,6 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
   const followUser = useFollowUser();
   const unfollowUser = useUnfollowUser();
   const editComment = useEditComment(activeSeed?.id ?? '');
-  const detailStartRef = useRef<number | null>(null);
-  const detailKeyRef = useRef<string | null>(null);
-  const hadDownstreamSignalRef = useRef(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const storyShotRef = useRef<ViewShot>(null);
   const mediaScrollRef = useRef<ScrollView>(null);
@@ -267,51 +265,16 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
     recordViewMutate(postId);
   }, [visible, postId, recordViewMutate]);
 
-  useEffect(() => {
-    if (!visible || !post || !postId || !detailKey) {
-      return;
-    }
-    if (detailKeyRef.current !== detailKey) {
-      detailKeyRef.current = detailKey;
-      detailStartRef.current = Date.now();
-      hadDownstreamSignalRef.current = false;
-      trackCommunityEvents([
-        {
-          event_name: 'plaza_open_post',
-          session_id: getCommunitySessionId(),
-          surface: originSurface,
-          post_id: postId,
-          feed_context: post.feed_context ?? undefined,
-          content_context: post.content_context ?? undefined,
-        },
-      ]);
-    }
 
-    return () => {
-      if (!detailStartRef.current) {
-        return;
-      }
-      const dwellMs = Math.max(Date.now() - detailStartRef.current, 0);
-      if (dwellMs > 0) {
-        trackCommunityEvents([
-          {
-            event_name: 'plaza_dwell',
-            session_id: getCommunitySessionId(),
-            surface: originSurface,
-            post_id: postId,
-            feed_context: post.feed_context ?? undefined,
-            content_context: post.content_context ?? undefined,
-            dwell_ms: dwellMs,
-            had_downstream_signal_in_session: hadDownstreamSignalRef.current,
-          },
-        ]);
-      }
-      detailStartRef.current = null;
-      detailKeyRef.current = null;
-      hadDownstreamSignalRef.current = false;
-    };
-  }, [detailKey, originSurface, post, postId, trackCommunityEvents, visible]);
-
+  const { markDownstreamSignal } = useDetailDwellTracking({
+    visible,
+    detailKey,
+    postId,
+    surface: originSurface,
+    feedContext: post?.feed_context,
+    contentContext: post?.content_context,
+    track: trackCommunityEvents,
+  });
   useEffect(() => {
     if (!visible) return;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -545,7 +508,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
     setPlanTarget(null);
     addAction.mutate({ actionId: actionCandidateId, plannedAt }, {
       onSuccess: () => {
-        hadDownstreamSignalRef.current = true;
+        markDownstreamSignal();
         showToast(t.plaza.add_to_odyssey_success, 2000);
       },
       onError: (err) => {
@@ -616,7 +579,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
     // a flaky connection shouldn't hold the composer hostage. onError below
     // rolls the placeholder back and surfaces the failure.
     const isReply = Boolean(input.parent_comment_id);
-    hadDownstreamSignalRef.current = true;
+    markDownstreamSignal();
     setComposerVisible(false);
     setReplyTo(null);
     showToast(
@@ -1142,7 +1105,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
                   if (post.viewer_marked_helpful) {
                     unhelpful.mutate(post.id);
                   } else {
-                    hadDownstreamSignalRef.current = true;
+                    markDownstreamSignal();
                     helpful.mutate(post.id);
                   }
                 }}
@@ -1273,7 +1236,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
               if (post.viewer_marked_helpful) {
                 unhelpful.mutate(post.id);
               } else {
-                hadDownstreamSignalRef.current = true;
+                markDownstreamSignal();
                 helpful.mutate(post.id);
               }
             },
