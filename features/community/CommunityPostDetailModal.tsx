@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { InfiniteData, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -26,7 +26,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import ViewShot from 'react-native-view-shot';
 
 import { useLanguage } from '../../context/LanguageContext';
-import { detailMediaHeight } from '../../lib/cardAspect';
+import { detailMediaHeight, detailMediaHeightFor } from '../../lib/cardAspect';
 import { formatDisplayLocation } from '../../lib/displayLocation';
 import { formatEventTime } from '../../lib/eventTime';
 import { normalizeMapUrl } from '../../lib/maps';
@@ -45,6 +45,7 @@ import { CommunityPostComments } from './CommunityPostComments';
 import { RelatedPostsSection } from './RelatedPostsSection';
 import { CommunityPostImageViewer } from './CommunityPostImageViewer';
 import { TranslatedText } from './TranslatedText';
+import { withSeedFeedContext } from './postDetailSeed';
 import { getLocationEntries, getSourceHost } from './postLocation';
 import {
   CommunityComment,
@@ -198,7 +199,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
   // So every read of `post` here is optional all the way down, even where the
   // type says it cannot be missing: the cost of a guard is nothing, and the
   // cost of being wrong is the whole Plaza screen replaced by a stack trace.
-  const post = postDetail.data ?? activeSeed;
+  const post = useMemo(() => withSeedFeedContext(postDetail.data, activeSeed), [postDetail.data, activeSeed]);
   const postId = post?.id ?? null;
   const locationEntries = post ? getLocationEntries(post) : [];
   const primarySourceUrl = locationEntries[0]?.sourceUrl ?? post?.source_url ?? null;
@@ -350,7 +351,10 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
     return null;
   }
 
-  const mediaHeight = measuredMediaHeight ?? Math.min(Math.round(viewportWidth * 1.02), 440);
+  const mediaHeight =
+    measuredMediaHeight ??
+    detailMediaHeightFor(post.media_items?.[0], viewportWidth, viewportHeight) ??
+    Math.min(Math.round(viewportWidth * 1.02), 440);
   const dotSlot = 14;
   const inactiveDotSize = 6;
   const activeDotSize = 8;

@@ -7,6 +7,7 @@ import {
   cardMediaFit,
   clampAspect,
   detailMediaHeight,
+  detailMediaHeightFor,
 } from '../cardAspect';
 
 // Event posters are wide and full of words. Cropping one into the card's
@@ -129,5 +130,23 @@ describe('detailMediaHeight', () => {
     expect(detailMediaHeight(0, 100, W, H)).toBeNull();
     expect(detailMediaHeight(100, 100, 0, H)).toBeNull();
     expect(detailMediaHeight(NaN, 100, W, H)).toBeNull();
+  });
+});
+
+describe('detailMediaHeightFor', () => {
+  const W = 400;
+  const H = 800;
+
+  it('sizes the frame from stored dimensions before the picture loads', () => {
+    expect(detailMediaHeightFor({ width: 2000, height: 1000 }, W, H)).toBe(detailMediaHeight(2000, 1000, W, H));
+  });
+
+  it('has nothing to say for rows without dimensions', () => {
+    expect(detailMediaHeightFor({ width: null, height: null }, W, H)).toBeNull();
+    expect(detailMediaHeightFor(undefined, W, H)).toBeNull();
+  });
+
+  it('leaves video to the fixed frame, which covers rather than contains', () => {
+    expect(detailMediaHeightFor({ width: 1920, height: 1080, mime_type: 'video/mp4' }, W, H)).toBeNull();
   });
 });

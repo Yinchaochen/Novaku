@@ -89,6 +89,17 @@ export function detailMediaHeight(
   return Math.min(Math.round(viewportWidth / aspect), Math.round(viewportHeight * 0.62));
 }
 
+// The same height straight from the media's stored dimensions, so the frame is
+// right on the first frame and onLoad only has to confirm it (D-078, detail side).
+export function detailMediaHeightFor(
+  media: { width?: number | null; height?: number | null; mime_type?: string | null } | undefined,
+  viewportWidth: number,
+  viewportHeight: number,
+): number | null {
+  if (!media || (media.mime_type ?? '').startsWith('video/')) return null;
+  return detailMediaHeight(media.width ?? 0, media.height ?? 0, viewportWidth, viewportHeight);
+}
+
 /**
  * The aspect ratio a feed card reserves for its picture, decided before the
  * first render (D-078).
