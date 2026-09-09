@@ -134,7 +134,8 @@
     {
       "name": "Plaza post card",
       "path": "features/community/CommunityPostCard.tsx",
-      "status": "extracted feature recipe, consumed by app/(tabs)/plaza.tsx"
+      "status": "extracted feature recipe, consumed by app/(tabs)/plaza.tsx; rendered at column width by /dev/plaza-card and down one column by /dev/seeded-posts",
+      "invariant": "The picture slot's aspect is reserved from the media's stored width/height before layout (lib/cardAspect.ts cardAspectFor, D-078). Never measure the image with onLoad and resize after layout: a card that grows after layout shoves every card below it and the masonry column twitches."
     },
     {
       "name": "Community post image viewer",
@@ -156,6 +157,65 @@
       "name": "Network health banner",
       "path": "components/NetworkHealthBanner.tsx",
       "status": "shared recipe"
+    },
+    {
+      "name": "Walkthrough spotlight",
+      "path": "components/guide/SpotlightOverlay.tsx",
+      "status": "registry-agnostic container behind all three tours (Plaza via GuideSpotlight, Buddy, Social); rendered by /dev/product-guide, /dev/buddy-guide and /dev/social-guide",
+      "invariant": "One Spotlight (components/guide/spotlightParts.tsx) per overlay: the hole is the inner edge of a transparent view's screen-wide border, rounded to the ring's radius, and hole and ring scale on one breathing value (D-120). The scrim never takes touches; the step card never gates its visibility on onLayout; the scrim view keeps overflow hidden so iOS draws the border with CoreAnimation instead of rasterising a screen-sized image."
+    },
+    {
+      "name": "Plaza feed filters",
+      "path": "components/community/FeedFilterRow.tsx",
+      "status": "shared recipe on the Plaza band (D-086), rendered by /dev/plaza-filters",
+      "invariant": "Lives inside the yellow band, not above the list: a filter that scrolls away cannot be undone without scrolling back."
+    },
+    {
+      "name": "Plaza text-post cover",
+      "path": "components/community/PostCover.tsx",
+      "status": "shared recipe (D-089), rendered by /dev/plaza-cover; consumed by CommunityPostCard for posts without a picture",
+      "invariant": "Height is pinned by the card's reserved aspect, so the cover's own layout can never reflow the column."
+    },
+    {
+      "name": "Related posts rail",
+      "path": "features/community/RelatedPostsSection.tsx",
+      "status": "feature recipe under a post's comments (D-097), rendered by /dev/related-posts",
+      "invariant": "Empty, loading and error all render nothing: a section header with no content under it is a promise the data could not keep."
+    },
+    {
+      "name": "Odyssey calendar",
+      "path": "components/odyssey/OdysseyCalendarSection.tsx",
+      "status": "shared recipe at the top of the Odyssey tab (D-083), rendered by /dev/odyssey-calendar"
+    },
+    {
+      "name": "Plan-when sheet",
+      "path": "components/odyssey/PlanWhenSheet.tsx",
+      "status": "shared recipe after add-to-odyssey (D-083), rendered by /dev/odyssey-calendar",
+      "invariant": "Never blocks the save: both buttons complete the add, they only differ in whether a date rides along."
+    },
+    {
+      "name": "Event date and time field",
+      "path": "components/datetime/EventDateTimeField.tsx",
+      "status": "composer recipe (D-105); no dev gallery yet, the six-state walk is still open",
+      "invariant": "Empty by default, time optional; the three shapes (no date, all-day, timed span) must all stay legal and end must never precede start."
+    },
+    {
+      "name": "Official chip",
+      "path": "components/OfficialChip.tsx",
+      "status": "byline role on accounts Postervia publishes under (D-065), rendered by /dev/official-chip",
+      "invariant": "Reads 'Editor', never 'Official'; every string goes through the real i18n keys so a missing translation shows up in the gallery."
+    },
+    {
+      "name": "Verified badge",
+      "path": "components/VerifiedBadge.tsx",
+      "status": "account badge drawn from the brand mark (D-063)",
+      "invariant": "The star carries no built-in 'verified' meaning, so the accessibility label does the saying."
+    },
+    {
+      "name": "Buddy form field",
+      "path": "components/buddy/BuddyFormField.tsx",
+      "status": "labelled input with hint, used across the Buddy composer; rendered by /dev/buddy-guide",
+      "invariant": "The hint explains what belongs in the box without the tour, so the walkthrough is never the only explanation."
     }
   ],
   "forbidden_patterns": [
@@ -184,6 +244,14 @@
     {
       "pattern": "UI declared done without rendering long German, empty, loading, own, and other states",
       "use_instead": "app/dev gallery route plus Expo Web render check"
+    },
+    {
+      "pattern": "Sizing an image frame by measuring the loaded picture and resizing after layout (feed twitch 2026-08-24, detail bounce 2026-09-07)",
+      "use_instead": "lib/cardAspect.ts from the media's stored width/height: cardAspectFor for feed cards, detailMediaHeightFor for the detail frame (D-078, D-119)"
+    },
+    {
+      "pattern": "A spotlight scrim cut from rectangles, or a highlight ring animated apart from its hole",
+      "use_instead": "components/guide/spotlightParts.tsx Spotlight inside SpotlightOverlay (D-120)"
     }
   ],
   "verification_surfaces": {
@@ -191,7 +259,51 @@
     "routes": [
       {
         "path": "/dev/product-guide",
-        "covers": ["GuideSpotlight", "spotlight scrim + ring", "step card", "publish confirm", "long German", "empty", "loading", "settings re-entry"]
+        "covers": ["GuideSpotlight", "Spotlight: rounded hole + ring on one pulse (D-120)", "step card", "publish confirm", "long German", "empty", "loading", "settings re-entry"]
+      },
+      {
+        "path": "/dev/buddy-guide",
+        "covers": ["SpotlightOverlay live with real anchors", "BuddyFormField wish form", "normal", "long German", "empty (no target)", "loading", "self (guided Post asks first)", "other (feed chapter seen)"]
+      },
+      {
+        "path": "/dev/social-guide",
+        "covers": ["SpotlightOverlay live with real anchors", "Friends/Buddy step", "long German", "no target (centred card)", "confirm card", "last step"]
+      },
+      {
+        "path": "/dev/app-update",
+        "covers": ["UpdateSheets", "what's new", "update available", "update required", "long German", "no highlights"]
+      },
+      {
+        "path": "/dev/odyssey-calendar",
+        "covers": ["OdysseyCalendarSection", "PlanWhenSheet", "event + deadline + device entry", "long German titles", "empty month", "loading", "selected day empty with month marked", "plan-when sheet"]
+      },
+      {
+        "path": "/dev/plaza-search",
+        "covers": ["initial with recent searches", "Discover board (hidden when empty)", "initial without history", "filters row only after results", "loading", "results with official hit", "zero result with ask CTA", "error"]
+      },
+      {
+        "path": "/dev/plaza-card",
+        "covers": ["CommunityPostCard at real column width", "normal", "long German byline", "translated", "read state"]
+      },
+      {
+        "path": "/dev/plaza-cover",
+        "covers": ["PostCover for every text cover", "question", "warning", "recommendation", "long German", "Chinese"]
+      },
+      {
+        "path": "/dev/plaza-filters",
+        "covers": ["FeedFilterRow on the yellow band", "live tap", "default (nothing chosen)", "a filter deep in the row chosen", "Guide chosen"]
+      },
+      {
+        "path": "/dev/related-posts",
+        "covers": ["RelatedPostsSection", "normal", "long German", "empty (renders nothing)", "loading (renders nothing)"]
+      },
+      {
+        "path": "/dev/seeded-posts",
+        "covers": ["real D-065 seeded posts through CommunityPostCard", "one full-width column"]
+      },
+      {
+        "path": "/dev/official-chip",
+        "covers": ["OfficialChip beside an official author", "human author (chip absent)", "long German name + chip wrapping", "missing account_kind renders as human", "chip beside VerifiedBadge", "real feed card"]
       },
       {
         "path": "/dev/floating-input",
