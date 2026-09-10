@@ -324,6 +324,7 @@ export type Translations = {
     detail_no_sources: string;
     detail_last_verified: string;
     detail_open_source: string;
+    detail_source_mig: string;
   };
   plaza: {
     // The screen header shows the product name, not the tab name:

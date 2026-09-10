@@ -303,7 +303,8 @@
     "detail_no_description": "No description for this task yet.",
     "detail_no_sources": "No official source has been linked for this task yet.",
     "detail_last_verified": "Last verified",
-    "detail_open_source": "Open"
+    "detail_open_source": "Open",
+    "detail_source_mig": "More on this at “Make it in Germany”"
   },
   "plaza": {
     "header_title": "Postervia",

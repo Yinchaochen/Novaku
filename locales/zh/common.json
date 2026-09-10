@@ -303,7 +303,8 @@
     "detail_no_description": "这个任务暂时还没有详细说明。",
     "detail_no_sources": "这个任务暂未关联官方来源。",
     "detail_last_verified": "上次核对",
-    "detail_open_source": "打开"
+    "detail_open_source": "打开",
+    "detail_source_mig": "更多内容见「Make it in Germany」"
   },
   "plaza": {
     "header_title": "Postervia",

@@ -303,7 +303,8 @@
     "detail_no_description": "Für diese Aufgabe gibt es noch keine Beschreibung.",
     "detail_no_sources": "Noch keine offizielle Quelle verknüpft.",
     "detail_last_verified": "Zuletzt geprüft",
-    "detail_open_source": "Öffnen"
+    "detail_open_source": "Öffnen",
+    "detail_source_mig": "Mehr dazu auf „Make it in Germany“"
   },
   "plaza": {
     "header_title": "Postervia",

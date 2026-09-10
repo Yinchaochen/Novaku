@@ -1,3 +1,4 @@
+import { sourceHost as getSourceHost, sourceLabel } from '../../lib/attribution';
 import { openExternalUrl } from '../../lib/links';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
@@ -51,14 +52,7 @@ function isHighRiskSlug(slug: string | null | undefined): boolean {
   return HIGH_RISK_SLUG_PATTERNS.some((p) => lower.includes(p));
 }
 
-function getSourceHost(sourceUrl: string | null | undefined) {
-  if (!sourceUrl) return null;
-  try {
-    return new URL(sourceUrl).hostname.replace(/^www\./, '');
-  } catch {
-    return sourceUrl;
-  }
-}
+
 
 function formatVerificationDate(value: string | null | undefined, langCode: string) {
   if (!value) return null;
@@ -378,13 +372,17 @@ export function OdysseyDetailModal({ visible, node, state, onClose, onTaskComple
                       }}
                       pressedStyle={{ transform: [{ scale: 0.99 }] }}
                     >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, marginRight: 10 }}>
                         <Ionicons name="globe-outline" size={16} color={colors.brandCoral} />
-                        <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textMain }} numberOfLines={1}>
-                          {sourceHost}
+                        {/* The label used to be a hostname; the agreed Make it in
+                            Germany wording is a sentence, and in German it reaches
+                            the open-link exactly. flex + shrink let it wrap instead
+                            of pushing into it. */}
+                        <Text style={{ flexShrink: 1, fontSize: 14, fontWeight: '700', color: colors.textMain }} numberOfLines={2}>
+                          {sourceLabel(node.source_url, t.tasks.detail_source_mig)}
                         </Text>
                       </View>
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: colors.brandCoral }}>
+                      <Text style={{ flexShrink: 0, fontSize: 12, fontWeight: '700', color: colors.brandCoral }}>
                         {t.tasks.detail_open_source}
                       </Text>
                     </FeedbackPressable>
