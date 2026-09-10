@@ -7,7 +7,7 @@ import { OdysseyDetailModal } from '../../features/tasks/OdysseyDetailModal';
 import { colors } from '../../theme/tokens';
 
 /**
- * Dev gallery: how a task names its source (D-118).
+ * Dev gallery: how a task names its source (D-121).
  *
  * Make it in Germany asked for "Mehr dazu auf ‚Make it in Germany'" with a
  * direct link, rather than a formal "Quelle:". That is a sentence where the
