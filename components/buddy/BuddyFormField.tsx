@@ -1,6 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { KeyboardSafeTextInput } from '../KeyboardSafeTextInput';
 import { colors, radius, spacing, typography } from '../../theme/tokens';
 
 // Labelled input used across the Buddy composer. The optional hint is what
@@ -30,7 +29,7 @@ export function BuddyFormField({
     <View style={styles.fieldWrap}>
       <Text style={styles.fieldLabel}>{label}</Text>
       {hint ? <Text style={styles.fieldHint}>{hint}</Text> : null}
-      <KeyboardSafeTextInput
+      <TextInput
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}

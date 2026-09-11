@@ -94,8 +94,8 @@ The dev gallery is the verification surface:
 - `/dev/plaza-card`, `/dev/plaza-cover`, `/dev/plaza-filters`,
   `/dev/plaza-search`, `/dev/related-posts`, `/dev/seeded-posts`,
   `/dev/official-chip`, `/dev/video-post`
-- `/dev/odyssey-calendar`, `/dev/app-update`, `/dev/floating-input`,
-  `/dev/city-location`, `/dev/buddy-wish`
+- `/dev/odyssey-calendar`, `/dev/app-update`, `/dev/city-location`,
+  `/dev/buddy-wish`
 - `/dev/auth-oauth`
 - `/dev/screen-preview`
 - `/dev/ui-system`

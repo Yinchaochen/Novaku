@@ -2,16 +2,18 @@ import { readFileSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
 
 // GOTCHAS "写代码时碰到的细节差异" table: KeyboardAvoidingView takes
-// behavior="padding" on iOS and undefined on Android, because Android already
-// resizes the window for the keyboard.
+// behavior="padding" on iOS and undefined on Android.
 //
-// FloatingInputSheet shipped with behavior="height" on Android instead. Inside
-// a transparent Modal under edge-to-edge, that view sizes itself from a frame
-// it measures in one window against metrics from another, so each layout pass
-// writes a height that provokes the next one. With justifyContent flex-end the
-// sheet visibly oscillated between two positions every frame, while the user
-// sat still — caught on a screen recording, not by any test, because nothing
-// here asserted the rule the docs already stated.
+// The reason stated here used to be "Android already resizes the window for
+// the keyboard". Under edge-to-edge (SDK 54) it does not, and a Modal has its
+// own window on top of that — D-127 caught a sheet spending 52% of a typing
+// session underneath the keyboard. Android screens subtract the keyboard
+// themselves via hooks/useKeyboardHeight; the rule below is unchanged, because
+// the behaviors this view offers Android are still the wrong instrument:
+// "height" sizes itself from a frame it measures in one window against metrics
+// from another, so each layout pass writes a height that provokes the next one
+// — with justifyContent flex-end that oscillated every frame while the user
+// sat still, caught on a screen recording rather than by any test.
 //
 // This walks the source instead of one component: the invariant is repo-wide,
 // and the next person to reach for "height" should turn this red.

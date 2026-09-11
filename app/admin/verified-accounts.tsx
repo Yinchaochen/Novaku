@@ -1,8 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
-import { KeyboardSafeTextInput } from '../../components/KeyboardSafeTextInput';
 import { Screen } from '../../components/Screen';
 import { SettingsHeader } from '../../components/SettingsRow';
 import { VerifiedBadge } from '../../components/VerifiedBadge';
@@ -28,7 +27,7 @@ export default function AdminVerifiedAccountsScreen() {
   };
 
   return (
-    <Screen topInset>
+    <Screen topInset keyboard>
       <SettingsHeader title={t.settings.admin_verified_title} onBack={() => router.back()} />
 
       <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, gap: 14 }}>
@@ -43,7 +42,7 @@ export default function AdminVerifiedAccountsScreen() {
           <Text className="text-[11px] font-bold" style={{ color: colors.textMuted }}>
             {t.settings.admin_verified_lookup_label}
           </Text>
-          <KeyboardSafeTextInput
+          <TextInput
             value={displayId}
             onChangeText={setDisplayId}
             placeholder={t.settings.admin_verified_lookup_placeholder}

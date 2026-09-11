@@ -11,6 +11,7 @@ import {
   Pressable,
   ScrollView,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,13 +19,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppBackground } from '../../components/AppBackground';
 import { FeedbackPressable } from '../../components/FeedbackPressable';
 import { GlassCard } from '../../components/GlassCard';
-import { KeyboardSafeTextInput } from '../../components/KeyboardSafeTextInput';
 import { Pill } from '../../components/Pill';
 import { StackedButton } from '../../components/StackedButton';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuthStore } from '../../store/authStore';
 import { colors, shadows } from '../../theme/tokens';
 import { OdysseyNode, OdysseyState } from './TaskCard';
+import { useKeyboardHeight } from '../../hooks/useKeyboardHeight';
 import {
   useCompleteOdyssey,
   useRedoOdyssey,
@@ -82,6 +83,7 @@ interface Props {
 export function OdysseyDetailModal({ visible, node, state, onClose, onTaskComplete }: Props) {
   const { t, langCode } = useLanguage();
   const insets = useSafeAreaInsets();
+  const keyboardHeight = useKeyboardHeight();
   const user = useAuthStore((s) => s.user);
   const start = useStartOdyssey();
   const complete = useCompleteOdyssey();
@@ -198,7 +200,7 @@ export function OdysseyDetailModal({ visible, node, state, onClose, onTaskComple
       <AppBackground>
         {/* IOS-LOGIN-111: iOS Modal context doesn't propagate safe-area insets
             to SafeAreaView reliably; use outer insets directly. */}
-        <View style={{ flex: 1, paddingTop: insets.top }}>
+        <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: keyboardHeight }}>
           <View
             style={{
               flexDirection: 'row',
@@ -446,7 +448,7 @@ export function OdysseyDetailModal({ visible, node, state, onClose, onTaskComple
                     </Text>
                   ) : null}
                 </View>
-                <KeyboardSafeTextInput
+                <TextInput
                   value={noteDraft}
                   onChangeText={setNoteDraft}
                   placeholder={t.tasks.detail_notes_placeholder}

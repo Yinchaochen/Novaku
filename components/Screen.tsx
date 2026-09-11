@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import { getTabBarHeight } from '../theme/layout';
 import { AppBackground } from './AppBackground';
 
@@ -67,10 +68,17 @@ export function Screen({
   testID,
 }: ScreenProps) {
   const insets = useSafeAreaInsets();
+  // Android never shrinks the window for the keyboard (useKeyboardHeight), so
+  // the frame does it here; the tab bar it would otherwise clear is behind the
+  // keyboard anyway.
+  const keyboardHeight = useKeyboardHeight();
+  const keyboardInset = keyboard ? keyboardHeight : 0;
 
   const paddingTop = header ? 0 : topInset ? insets.top : 0;
   const paddingBottom =
-    (tabBar ? getTabBarHeight(insets.bottom) : insets.bottom) + bottomGap;
+    keyboardInset > 0
+      ? bottomGap
+      : (tabBar ? getTabBarHeight(insets.bottom) : insets.bottom) + bottomGap;
 
   const body = scroll ? (
     <ScrollView
@@ -104,6 +112,7 @@ export function Screen({
     <KeyboardAvoidingView
       className="flex-1"
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={{ paddingBottom: keyboardInset }}
     >
       {inner}
     </KeyboardAvoidingView>

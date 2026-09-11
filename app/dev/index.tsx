@@ -26,7 +26,6 @@ const PAGES: { href: string; title: string; blurb: string }[] = [
   { href: '/dev/seeded-posts', title: 'Seeded posts', blurb: 'Real D-065 seeded posts through the production card, one column' },
   { href: '/dev/official-chip', title: 'Official chip', blurb: 'Editor byline chip, sizes, long German name, legacy payload' },
   { href: '/dev/product-guide', title: 'First-value guide', blurb: 'Spotlight walkthrough, publish confirm, and re-entry in all 6 states' },
-  { href: '/dev/floating-input', title: 'Keyboard-safe input', blurb: 'Floating input sheet proxy in all 6 states with a live demo' },
   { href: '/dev/video-post', title: 'Video post', blurb: 'XHS-style player, card badges, status chips, live sample' },
   { href: '/dev/city-location', title: 'City and location', blurb: 'Real city selection, privacy, and all 6 UI states' },
   { href: '/dev/auth-oauth', title: 'OAuth onboarding', blurb: 'Google and Apple registration in all 6 UI states' },

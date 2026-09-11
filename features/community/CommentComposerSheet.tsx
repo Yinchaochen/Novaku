@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useKeyboardHeight } from '../../hooks/useKeyboardHeight';
 import { useLanguage } from '../../context/LanguageContext';
 
 export interface CommentComposerInput {
@@ -46,6 +47,7 @@ export function CommentComposerSheet({
 }: CommentComposerSheetProps) {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
+  const keyboardHeight = useKeyboardHeight();
   const inputRef = useRef<TextInput>(null);
   const [text, setText] = useState('');
 
@@ -86,9 +88,11 @@ export function CommentComposerSheet({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        // Android stays undefined — see FloatingInputSheet, which copied this
-        // shell along with the oscillation "height" causes here.
+        // Android gets no behavior (it has no right instrument — see
+        // components/__tests__/keyboardAvoidingBehavior.test.ts); this Modal
+        // window does not shrink for the IME on its own, so the padding is
+        // what keeps the composer above the keyboard instead of under it.
+        style={{ flex: 1, paddingBottom: keyboardHeight }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <Pressable
@@ -99,7 +103,7 @@ export function CommentComposerSheet({
           <Pressable
             onPress={(e) => e.stopPropagation()}
             className="rounded-t-3xl bg-white px-4 pt-3"
-            style={{ paddingBottom: Math.max(insets.bottom + 12, 16) }}
+            style={{ paddingBottom: keyboardHeight > 0 ? 12 : Math.max(insets.bottom + 12, 16) }}
           >
             {editTarget ? (
               <View className="mb-2 flex-row items-center self-start rounded-full bg-[#F5F5F7] px-3 py-1.5">

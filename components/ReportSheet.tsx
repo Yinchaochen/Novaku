@@ -9,12 +9,13 @@ import {
   Pressable,
   ScrollView,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { KeyboardSafeTextInput } from './KeyboardSafeTextInput';
 import { useLanguage } from '../context/LanguageContext';
+import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import {
   ReportContentType,
   ReportReason,
@@ -55,6 +56,7 @@ export function ReportSheet({
 }: ReportSheetProps) {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
+  const keyboardHeight = useKeyboardHeight();
   const submit = useSubmitReport();
 
   const [reason, setReason] = useState<ReportReason | null>(null);
@@ -109,7 +111,7 @@ export function ReportSheet({
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={handleClose}>
       {/* IOS-LOGIN-111: iOS Modal context doesn't propagate safe-area insets
           to SafeAreaView reliably; use outer insets directly. */}
-      <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom, paddingLeft: insets.left, paddingRight: insets.right, backgroundColor: '#F4F5F8' }}>
+      <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: keyboardHeight > 0 ? keyboardHeight : insets.bottom, paddingLeft: insets.left, paddingRight: insets.right, backgroundColor: '#F4F5F8' }}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -161,7 +163,7 @@ export function ReportSheet({
             <Text className="mb-2 mt-5 px-1 text-[12px] font-semibold uppercase tracking-wider text-neutral-400">
               {t.report.description_label}
             </Text>
-            <KeyboardSafeTextInput
+            <TextInput
               value={description}
               onChangeText={setDescription}
               placeholder={t.report.description_placeholder}

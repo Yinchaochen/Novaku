@@ -1,9 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import type { BuddyPricingMode } from '../../features/buddyPosts/pricing';
 import { colors, radius, spacing, typography } from '../../theme/tokens';
-import { KeyboardSafeTextInput } from '../KeyboardSafeTextInput';
 import { Pill } from '../Pill';
 import { SurfaceCard } from '../SurfaceCard';
 
@@ -40,15 +39,14 @@ export function BuddyPriceField({
     <SurfaceCard style={styles.card}>
       <View style={[styles.priceRow, !isComplete ? styles.priceRequired : null]}>
         <Text style={styles.currencySymbol}>{currency === 'EUR' ? '€' : '$'}</Text>
-        <KeyboardSafeTextInput
+        <TextInput
           accessibilityLabel={fixedLabel}
           value={priceText}
           onChangeText={onPriceTextChange}
-          disabled={mode === 'free'}
+          editable={mode !== 'free'}
           keyboardType="decimal-pad"
           placeholder={amountPlaceholder}
           placeholderTextColor={colors.textSubtle}
-          containerStyle={{ flex: 1, minWidth: 70 }}
           style={styles.priceInput}
         />
         {(['EUR', 'USD'] as const).map((code) => (

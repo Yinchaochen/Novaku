@@ -548,10 +548,14 @@ EXPO_PUBLIC_FOO=actual_value_here
 - 无 header 的屏(表单 / auth):`<Screen topInset keyboard>`。
 - 全屏 Modal 正文也能用 `<Screen background="none">` —— 它读 root inset,比 Modal 内的 `<SafeAreaView>` 可靠(见坑 #1 / #2)。
 
-### 1.5 会被键盘遮挡的输入框,用 `<KeyboardSafeTextInput>`(D-052)
-滚动表单中下部的自由文本框——尤其在 RN `Modal` 里(Android 的 Modal 对 adjustResize 支持不可靠)——不要再逐屏调 KAV,直接换 [`components/KeyboardSafeTextInput.tsx`](../components/KeyboardSafeTextInput.tsx):原位渲染外观一致的只读代理(Pressable 包裹 + 输入框 `pointerEvents:"none"`——`editable=false` 的 TextInput 在 Android 上收不到 press),点击打开 [`components/FloatingInputSheet.tsx`](../components/FloatingInputSheet.tsx)(评论 sheet 同壳:透明 Modal + 压暗 + 输入框贴键盘 + 取消/确认),**确认才经 `onChangeText` 回写**,RHF Controller 零改动。`autoOpen` 替代 `autoFocus`、`disabled` 替代 `editable=false`、flex 行内子项传 `containerStyle`。**不适用**:钉在键盘上方的输入条(聊天/评论——套 sheet 纯加步数)、顶部搜索框、auth 密码框(破坏自动填充)。e2e 注意:Maestro 要点代理 → 等 `*.sheet.input` → 输入 → 点 `*.sheet.confirm`。
+### 1.5 键盘会盖住的输入框:容器自己把键盘高度减掉(D-127,取代 D-052)
+Android 在 edge-to-edge(SDK 54)下**不会**为 IME 缩窗口,全屏 `Modal` 更是自己一个窗口——所以「Android 会自己 resize」这句话在这个仓库里已经不成立了。屏幕自己用 [`hooks/useKeyboardHeight.ts`](../hooks/useKeyboardHeight.ts) 把容器的 `paddingBottom` 加上键盘高度(iOS 恒为 0,继续走 `KeyboardAvoidingView` 的 `padding`);容器一缩,Android 自己的 `requestChildRectangleOnScreen` 就把光标滚回可视区,**普通 `TextInput` 就够用**。
 
-**2026-09-11 修正(D-127):先问窗口有没有缩。** 这套代理的前提是「键盘一定盖得住输入框」。edge-to-edge(SDK 54)下窗口不会因 IME 变小,所以前提对**容器自己没消费 IME inset**的屏成立,但 `FloatingInputSheet` 自己也在一个 Modal 窗口里,同样不缩——它反而整个躲到键盘底下(录屏实测 52% 的打字时间输入面板不可见)。屏幕自己用 [`hooks/useKeyboardHeight.ts`](../hooks/useKeyboardHeight.ts) 把容器 `paddingBottom` 减掉键盘高度之后,Android 的 `requestChildRectangleOnScreen` 会把光标滚进可视区,**普通 `TextInput` 就够了**,不要再套代理。Plaza 发帖器(标题 + 正文)已按此改回;其余 9 处仍是代理,逐屏验证后再撤。
+- 走 [`<Screen keyboard>`](../components/Screen.tsx) 的屏什么都不用做,它已经减了(并且键盘升起时不再给身后的 tab bar 留位)。
+- 自己搭壳的全屏 Modal(发帖器 / ReportSheet / OdysseyDetailModal)在最外层 `View` 上加 `paddingBottom: keyboardHeight`,原来的 `insets.bottom` 在键盘升起时让位——手势条在键盘后面,留着是白留。
+- 贴键盘的输入条(评论 sheet)同理:KAV 加 `paddingBottom: keyboardHeight`,否则整条躲到键盘底下。
+
+**曾经的做法(D-052 的只读代理 + `FloatingInputSheet`)已删除。** 它把输入搬进第二个透明 `Modal`,而那个窗口同样不缩:2026-09-07 的录屏里,72 秒有 37 秒(52%)键盘升着、面板在键盘底下、屏幕上没有任何输入框。为防遮挡造的东西成了唯一被遮挡的东西。`behavior` 那一栏的规矩不变:iOS `padding`、Android `undefined`,由 [`components/__tests__/keyboardAvoidingBehavior.test.ts`](../components/__tests__/keyboardAvoidingBehavior.test.ts) 守着。
 
 ### 2. 渲染 + 核对全状态
 ```bash

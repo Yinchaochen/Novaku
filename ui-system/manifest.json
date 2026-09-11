@@ -306,10 +306,6 @@
         "covers": ["OfficialChip beside an official author", "human author (chip absent)", "long German name + chip wrapping", "missing account_kind renders as human", "chip beside VerifiedBadge", "real feed card"]
       },
       {
-        "path": "/dev/floating-input",
-        "covers": ["KeyboardSafeTextInput", "FloatingInputSheet", "proxy value/empty", "long German", "disabled", "live sheet demo"]
-      },
-      {
         "path": "/dev/video-post",
         "covers": ["VideoFullscreenModal", "video card badges", "moderation status chips", "long German", "live player + action rail"]
       },
