@@ -28,6 +28,7 @@ import {
   StyleSheet,
   Switch,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -51,7 +52,6 @@ import { useGuideTarget } from '../../features/guide/guideTargets';
 import { GuideSpotlight } from '../../components/guide/GuideSpotlight';
 import { EventDateTimeField } from '../../components/datetime/EventDateTimeField';
 import { EMPTY_EVENT_TIME, EventTimeValue } from '../../lib/eventTime';
-import { KeyboardSafeTextInput } from '../../components/KeyboardSafeTextInput';
 import { isTooShortForAiSummary } from '../../features/community/aiSummary';
 import {
   PreparedVideo,
@@ -75,6 +75,7 @@ import {
   useUpdateCommunityPost,
   useUploadCommunityMedia,
 } from '../../features/community/useCommunity';
+import { useKeyboardHeight } from '../../hooks/useKeyboardHeight';
 import { useAuthStore } from '../../store/authStore';
 import { usePlazaComposeIntentStore } from '../../store/plazaComposeIntentStore';
 
@@ -181,6 +182,7 @@ export default function PlazaScreen() {
   const { t } = useLanguage();
   const user = useAuthStore((state) => state.user);
   const insets = useSafeAreaInsets();
+  const keyboardHeight = useKeyboardHeight();
   const [editingPost, setEditingPost] = useState<CommunityPost | null>(null);
   // Which kind of post the reader asked for, or null for everything. Sent to
   // the backend rather than applied here — see communityFeedQueryKey.
@@ -1025,7 +1027,15 @@ export default function PlazaScreen() {
             </Suspense>
           </ErrorBoundary>
         ) : (
-        <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: colors.bgCream }}>
+        <View
+          style={{
+            flex: 1,
+            paddingTop: insets.top,
+            // Nothing else shrinks this window for the keyboard (useKeyboardHeight).
+            paddingBottom: keyboardHeight,
+            backgroundColor: colors.bgCream,
+          }}
+        >
           <KeyboardAvoidingView
             className="flex-1"
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -1164,7 +1174,7 @@ export default function PlazaScreen() {
                 control={control}
                 name="title"
                 render={({ field: { onChange, value } }) => (
-                  <KeyboardSafeTextInput
+                  <TextInput
                     ref={titleTargetRef}
                     testID="plaza.composer.title"
                     placeholder={t.plaza.title_placeholder}
@@ -1187,7 +1197,7 @@ export default function PlazaScreen() {
                 control={control}
                 name="body"
                 render={({ field: { onChange, value } }) => (
-                  <KeyboardSafeTextInput
+                  <TextInput
                     ref={bodyTargetRef}
                     testID="plaza.composer.body"
                     placeholder={t.plaza.body_placeholder}
@@ -1369,7 +1379,7 @@ export default function PlazaScreen() {
 
             <View
               className="absolute bottom-0 left-0 right-0 border-t border-neutral-100 bg-white px-5 pt-4"
-              style={{ paddingBottom: Math.max(insets.bottom + 10, 20) }}
+              style={{ paddingBottom: keyboardHeight > 0 ? 12 : Math.max(insets.bottom + 10, 20) }}
             >
               {composerMessage ? (
                 <Text className="mb-3 text-sm" style={{ color: '#F47C7C' }}>
