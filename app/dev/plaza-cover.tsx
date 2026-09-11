@@ -102,6 +102,46 @@ const CASES: { label: string; post: CommunityPost }[] = [
     label: 'Nothing liftable — header and paper, no invented sentence',
     post: makePost({ id: 'c7', post_type: 'guide', title: 'Kurz', body: 'Ja.' }),
   },
+  {
+    // The post lisum was looking at when they asked for this. Its slug is what
+    // chooses the stamp, so the same card carries 📜 in all 106 locales.
+    label: 'Make It — a real desk post: wash on the payoff, stamp from the slug',
+    post: makePost({
+      id: 'c8',
+      post_type: 'guide',
+      odyssey_slug: 'de_recognition_of_qualifications',
+      title: 'Whether your qualification counts here',
+      body:
+        'Germany splits professions into regulated and non-regulated, and the difference '
+        + 'decides whether you may start work at all.\n\n'
+        + 'Which authority decides depends on your profession and your federal state, so '
+        + 'there is no single office to write to.',
+    }),
+  },
+  {
+    label: 'Make It — final clause after a comma is what gets the wash',
+    post: makePost({
+      id: 'c9',
+      post_type: 'guide',
+      odyssey_slug: 'de_opportunity_card',
+      title: 'Coming to look, before you have an offer',
+      body:
+        'Most work visas want a signed contract first, the opportunity card is the one '
+        + 'that does not.\n\nIt exists so you can come and look.',
+    }),
+  },
+  {
+    label: 'Make It — money slug, and a sentence with no comma to fall back on',
+    post: makePost({
+      id: 'c10',
+      post_type: 'guide',
+      odyssey_slug: 'de_salary_and_deductions',
+      title: 'Why your first payslip is smaller than you expected',
+      body:
+        'The number in the contract is gross.\n\nBetween it and your bank account sit '
+        + 'income tax and five statutory insurances with your employer paying a share.',
+    }),
+  },
 ];
 
 export default function PlazaCoverGallery() {

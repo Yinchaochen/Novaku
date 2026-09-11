@@ -94,6 +94,38 @@ export function PostCover({ post, width }: { post: CommunityPost; width: number 
         />
       </Svg>
 
+      {/* The watermark. Before the rubric and the text in source order, so it
+          stacks underneath them — these are absolutely positioned siblings,
+          and RN has no z-index worth relying on across both platforms.
+
+          It bleeds off the top right on purpose: a mark fully inside the frame
+          reads as a second piece of content competing with the sentence, and a
+          mark cropped by the edge reads as stock the page was printed on.
+
+          It takes `palette.dot` — the ground colour, already specified as the
+          one tone that is visible as texture and gone as noise. The first
+          attempt used the sticker emoji at a tenth opacity and a faded picture
+          of a banknote is not a grey mark: it keeps its own hue, stays legible
+          as an object, and sat behind the words arguing with them. */}
+      {plan.watermark ? (
+        <Text
+          style={{
+            position: 'absolute',
+            right: -1.1 * u,
+            // Enough of the glyph has to survive the crop to still be the mark
+            // it is. A quotation mark sits at the top of its em box, so the
+            // deeper offset this started with left two grey slabs and no quote.
+            top: -1.9 * u,
+            fontSize: u * 12,
+            lineHeight: u * 12,
+            fontWeight: '700',
+            color: palette.dot,
+          }}
+        >
+          {plan.watermark}
+        </Text>
+      ) : null}
+
       {/* Rubric. The type of post, set as a journal header would be: small,
           tracked out, in the secondary ink. It replaces the pill the panel
           used to carry, which had become one more rounded object on a screen
@@ -135,9 +167,42 @@ export function PostCover({ post, width }: { post: CommunityPost; width: number 
             color: palette.ink,
           }}
         >
-          {plan.keyLine}
+          {/* The highlighter swipe. `wash` has been in every palette since the
+              cover shipped and was never drawn — the accent was being spent
+              entirely on a 1dp margin rule. A nested run is what makes it
+              possible without measuring: RN paints the background behind the
+              glyphs and re-flows it with the wrap, so the swipe follows the
+              phrase across a line break on its own. */}
+          {plan.highlight ? (
+            <>
+              {plan.highlight.before}
+              <Text style={{ backgroundColor: palette.wash }}>{plan.highlight.span}</Text>
+              {plan.highlight.after}
+            </>
+          ) : (
+            plan.keyLine
+          )}
         </Text>
       )}
+
+      {/* The stamp. It sits in the bottom margin on purpose: the canon forbids
+          the text block borrowing from the margin, and a mark in the margin is
+          the one thing a margin has always been for. Set as text, so it comes
+          from the reader's own system emoji font and costs no asset — the same
+          reason the type is left on the system stack. */}
+      {plan.sticker ? (
+        <Text
+          style={{
+            position: 'absolute',
+            right: 1.4 * u,
+            bottom: 0.7 * u,
+            fontSize: u * 2.4,
+            opacity: 0.92,
+          }}
+        >
+          {plan.sticker}
+        </Text>
+      ) : null}
     </View>
   );
 }

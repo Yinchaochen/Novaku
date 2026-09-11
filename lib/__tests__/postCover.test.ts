@@ -1,7 +1,9 @@
 import {
   coverPalette,
   coverPlan,
+  coverSticker,
   estimateEm,
+  pickHighlight,
   pickKeyLine,
   splitSentences,
 } from '../postCover';
@@ -328,5 +330,229 @@ describe('coverPalette', () => {
 
   it('falls back rather than crashing on a type it has never seen', () => {
     expect(coverPalette('something_new').paper).toBeTruthy();
+  });
+});
+
+describe('pickHighlight', () => {
+  const LINE = 'Which authority decides depends on your profession and on the federal state.';
+
+  it('loses no character between the three runs', () => {
+    // The renderer prints before + span + after INSTEAD of the line, so a
+    // dropped or duplicated character here is silent text corruption on a
+    // cover — worse than no wash, and invisible to every other assertion.
+    for (const line of [
+      LINE,
+      'An Ausbildung is not school and not an internship, it is a job with a classroom.',
+      '德国把职业分成受管制和不受管制两类，医生和护理必须先通过资历认定才能执业。',
+      'Die Chancenkarte ist der Weg, der keinen unterschriebenen Vertrag voraussetzt.',
+    ]) {
+      const h = pickHighlight(line);
+      expect(h).not.toBeNull();
+      expect(h!.before + h!.span + h!.after).toBe(line);
+    }
+  });
+
+  it('never washes the whole line, which would be a coloured panel', () => {
+    const h = pickHighlight(LINE);
+    expect(h!.before.trim().length).toBeGreaterThan(0);
+  });
+
+  it('stops short of the full stop, the way a marker pen does', () => {
+    expect(pickHighlight(LINE)!.after).toBe('.');
+    expect(pickHighlight('Es gilt ein eigener Aufenthaltstitel für diesen Weg!')!.after).toBe('!');
+  });
+
+  it('leaves a short sentence alone, because the type is already the emphasis', () => {
+    expect(pickHighlight('It does not renew.')).toBeNull();
+    expect(pickHighlight('')).toBeNull();
+  });
+
+  it('takes the final clause when a break leaves one of a usable size', () => {
+    const h = pickHighlight(
+      'Most work visas want a signed contract first, the opportunity card does not.',
+    );
+    expect(h!.span).toBe('the opportunity card does not');
+  });
+
+  it('never starts mid-word in a script that has words', () => {
+    for (const line of [
+      LINE,
+      'Gaps are better named briefly than hidden because they get asked about anyway.',
+      'Der schulische Teil läuft auf Deutsch und das ist meist die eigentliche Hürde.',
+    ]) {
+      const h = pickHighlight(line)!;
+      expect(h.before === '' || h.before.endsWith(' ')).toBe(true);
+      expect(h.span.startsWith(' ')).toBe(false);
+    }
+  });
+
+  it('washes Chinese, which has no spaces to snap to', () => {
+    const h = pickHighlight('学生居留不会自动延续，下一个必须在旧的到期之前申请下来。');
+    expect(h).not.toBeNull();
+    expect(h!.span.length).toBeGreaterThan(1);
+    expect(h!.before.length).toBeGreaterThan(0);
+  });
+
+  it('is deterministic', () => {
+    expect(pickHighlight(LINE)).toEqual(pickHighlight(LINE));
+  });
+});
+
+describe('coverSticker', () => {
+  it('reads the slug, not the words, so translation cannot change it', () => {
+    // The cover text is translated per reader. An English keyword list would
+    // match for English readers and quietly hand everyone else the fallback.
+    expect(coverSticker('guide', 'de_recognition_of_qualifications')).toBe('📜');
+    expect(coverSticker('guide', 'de_after_you_graduate')).toBe('🎓');
+    expect(coverSticker('guide', 'de_salary_and_deductions')).toBe('💶');
+  });
+
+  it('falls back to the post type when there is no slug', () => {
+    expect(coverSticker('question', null)).toBe('💬');
+    expect(coverSticker('warning', undefined)).toBe('⚠️');
+  });
+
+  it('gives one post the same stamp every time it is drawn', () => {
+    expect(coverSticker('guide', 'berlin_anmeldung')).toBe(
+      coverSticker('guide', 'berlin_anmeldung'),
+    );
+  });
+
+  it('returns nothing rather than a wrong stamp for an unknown type', () => {
+    expect(coverSticker('something_new', null)).toBeNull();
+  });
+});
+
+/**
+ * The stocks are a measurement, not a taste, so they are tested as one.
+ *
+ * D-088 had just finished fixing a cover that was invisible against its own
+ * page when the first palette was written, and the note on the palette says so.
+ * Every constraint below is the reason one of the ten looks the way it does,
+ * and a future edit toward "warmer" or "softer" trips whichever one it breaks
+ * instead of shipping a card nobody can see.
+ */
+const PAGE = ['#FFFAF2', '#FBEDDF']; // the app's cream gradient, both ends
+const INK = '#241A16';
+
+function channels(hex: string): [number, number, number] {
+  const h = hex.replace('#', '');
+  return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)) as [number, number, number];
+}
+function linear(c: number): number {
+  const v = c / 255;
+  return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+}
+function relLuminance(hex: string): number {
+  const [r, g, b] = channels(hex).map(linear);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+function contrast(a: string, b: string): number {
+  const [hi, lo] = [relLuminance(a), relLuminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+function toLab(hex: string): [number, number, number] {
+  const [r, g, b] = channels(hex).map(linear);
+  const x = (r * 0.4124 + g * 0.3576 + b * 0.1805) / 0.95047;
+  const y = r * 0.2126 + g * 0.7152 + b * 0.0722;
+  const z = (r * 0.0193 + g * 0.1192 + b * 0.9505) / 1.08883;
+  const f = (t: number) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+  return [116 * f(y) - 16, 500 * (f(x) - f(y)), 200 * (f(y) - f(z))];
+}
+function deltaE(a: string, b: string): number {
+  const [la, aa, ba] = toLab(a);
+  const [lb, ab, bb] = toLab(b);
+  return Math.hypot(la - lb, aa - ab, ba - bb);
+}
+function hueAngle(hex: string): number {
+  const [, a, b] = toLab(hex);
+  return ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360;
+}
+function hueGap(a: string, b: string): number {
+  const d = Math.abs(hueAngle(a) - hueAngle(b));
+  return Math.min(d, 360 - d);
+}
+
+const TYPES = ['guide', 'question', 'recommendation', 'experience', 'warning'];
+const STOCKS = TYPES.flatMap((t) => [
+  { name: `${t}/0`, p: coverPalette(t, 0) },
+  { name: `${t}/1`, p: coverPalette(t, 1) },
+]);
+
+describe('the stocks', () => {
+  it.each(STOCKS)('$name stays visible against the cream page', ({ p }) => {
+    // The D-088 failure exactly: a cover three RGB units from its own
+    // background. Both ends of the gradient, because the card scrolls past both.
+    for (const end of PAGE) expect(deltaE(p.paper, end)).toBeGreaterThanOrEqual(12.5);
+  });
+
+  it.each(STOCKS)('$name is a second colour, not a tint of the paper', ({ p }) => {
+    // What lisum actually pointed at: butter wash on butter paper reads as one
+    // colour. Xiaohongshu puts a blue highlight on a cream ground.
+    expect(hueGap(p.paper, p.wash)).toBeGreaterThanOrEqual(45);
+    expect(deltaE(p.paper, p.wash)).toBeGreaterThanOrEqual(12);
+  });
+
+  it.each(STOCKS)('$name keeps the sentence readable through the wash', ({ p }) => {
+    // The highlight sits BEHIND the body ink; if it darkens the ink stops being
+    // readable, and a highlight that costs legibility is not a highlight.
+    expect(contrast(INK, p.wash)).toBeGreaterThanOrEqual(7);
+    expect(contrast(INK, p.paper)).toBeGreaterThanOrEqual(7);
+  });
+
+  it.each(STOCKS)('$name keeps the rubric at its stated ~5:1', ({ p }) => {
+    expect(contrast(p.paper, p.secondary)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it.each(STOCKS)('$name keeps the dot ground texture, not noise', ({ p }) => {
+    // The module's own rule: 1.2-1.4:1 against the paper, never more.
+    expect(contrast(p.paper, p.dot)).toBeLessThanOrEqual(1.45);
+    expect(contrast(p.paper, p.dot)).toBeGreaterThan(1.05);
+  });
+
+  it('gives each post type two different stocks, so a feed does not repeat', () => {
+    for (const t of TYPES) expect(coverPalette(t, 0).paper).not.toBe(coverPalette(t, 1).paper);
+  });
+
+  it('is papery rather than candied', () => {
+    const chroma = (hex: string) => Math.hypot(toLab(hex)[1], toLab(hex)[2]);
+    const mean = STOCKS.reduce((sum, s) => sum + chroma(s.p.paper), 0) / STOCKS.length;
+    expect(mean).toBeLessThan(14); // the stocks it replaced averaged 20.2
+  });
+});
+
+describe('the wash and a clipped line', () => {
+  it('does not mark the tail when the tail is what got cut off', () => {
+    // Real Make It copy. The sentence overruns the smallest rung, so it ends
+    // "…and your federal state, so there is" — and the wash, which always goes
+    // on the tail, was landing on the fragment the clip created.
+    const plan = coverPlan(
+      {
+        id: 'clip-1',
+        post_type: 'guide',
+        title: 'Whether your qualification counts here',
+        body:
+          'Which authority decides depends on your profession and your federal state, '
+          + 'so there is no single office to write to and no single answer to give you.',
+      },
+      '',
+      '',
+    );
+    expect(plan.keyLine.length).toBeGreaterThan(0);
+    expect(plan.highlight).toBeNull();
+  });
+
+  it('still marks a line that fits', () => {
+    const plan = coverPlan(
+      {
+        id: 'clip-2',
+        post_type: 'guide',
+        title: 'Coming to look',
+        body: 'Most work visas want a signed contract first, the opportunity card does not.',
+      },
+      '',
+      '',
+    );
+    expect(plan.highlight).not.toBeNull();
   });
 });

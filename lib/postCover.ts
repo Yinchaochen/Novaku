@@ -44,10 +44,42 @@ export interface CoverPalette {
   wash: string;
 }
 
+/**
+ * The phrase the highlighter goes under, and the text either side of it.
+ *
+ * Three parts rather than an index pair because the renderer nests them as
+ * three `<Text>` runs: RN paints a nested run's `backgroundColor` behind its
+ * glyphs and re-flows it with the wrap, so the swipe follows a phrase across a
+ * line break for free. Drawing a rect instead would need the measurement pass
+ * this file exists to avoid.
+ */
+export interface CoverHighlight {
+  before: string;
+  span: string;
+  /** Whatever trails the phrase — in practice the full stop, left unpainted. */
+  after: string;
+}
+
 export interface CoverPlan {
   palette: CoverPalette;
   /** The sentence the cover prints. Empty when the post has nothing to lift. */
   keyLine: string;
+  /** The phrase to wash, or null when the line is too short to have a shape. */
+  highlight: CoverHighlight | null;
+  /** One emoji, set as a stamp in the margin. Null when nothing fits the post. */
+  sticker: string | null;
+  /**
+   * The thematic mark set enormous and faint behind the text, bleeding off the
+   * top right corner.
+   *
+   * Half the covers drew `ground: 'plain'` and were exactly that — a flat
+   * panel of colour. lisum put a Xiaohongshu card beside one: theirs is never
+   * a plain field, it carries a big soft grey mark, and that mark is about
+   * what the post says. Slug-derived, so it stays on theme in all 106
+   * locales, which a mark chosen from the words could not. See `coverMark`
+   * for why it is a glyph and not the sticker enlarged.
+   */
+  watermark: string | null;
   /** Type size as a fraction of the canvas width. */
   sizeRatio: number;
   /** Multiplier on the size. Tightens as the size grows, as leading does. */
@@ -68,39 +100,65 @@ export interface CoverPlan {
 }
 
 /**
- * Ivory would have been the authentic notebook stock, and it is unusable here.
- * The app's page is a cream gradient (#FFFAF2 → #FBEDDF) and the card has no
- * plate of its own since D-088, so a cover in #F7F0DF would sit three RGB
- * units from its own background — invisible, which is the exact failure D-088
- * had just finished fixing. The stocks are therefore the post-type tints, and
- * the journaling research is honoured in everything above them: the ground,
- * the margins, the single accent, the restraint.
+ * Ten stocks, two per post type, and every one of them cool.
+ *
+ * That is not a taste: it is the only band the page leaves open. The app's
+ * page is a cream gradient (#FFFAF2 → #FBEDDF) with no plate under the card
+ * since D-088, and measuring candidates in CIELAB against both ends of it
+ * gives a rule with no exceptions — a WARM stock can be light or it can be
+ * low-chroma, never both. Xiaohongshu's own creams measure ΔE 3.3–4.6 here
+ * and are simply invisible; they work there because their page is white.
+ * Four separate attempts at warm paper ran into this, and the last one, which
+ * solved for minimum chroma at every hue, collapsed all ten to the same grey.
+ *
+ * So the ground goes cool and the accent carries the warmth. That inversion
+ * is also what fixes the thing lisum actually pointed at: the old stocks put a
+ * butter wash on butter paper, a peach wash on peach paper — one hue per card,
+ * which is why they read flat next to a Xiaohongshu cover whose cream ground
+ * carries a BLUE highlight. Every pair below is at least 45° of hue apart, and
+ * most are near-complementary.
+ *
+ * Held, and checked by the tests: ΔE ≥ 12.5 from both ends of the page, ink at
+ * ≥ 7:1 on the wash, wash ≥ 12 ΔE from its own paper. Mean chroma is 8.3
+ * against the old 20.2 — paper rather than candy, which was the other half of
+ * the note.
  */
-const PALETTES: Record<CoverType, CoverPalette> = {
-  guide: {
-    paper: '#FBE0AE', dot: '#E7C88E', secondary: '#6B5B48',
-    ink: '#241A16', accent: '#8A5A08', wash: '#F2CE86',
-  },
-  question: {
-    paper: '#E3DAFF', dot: '#CCC1EE', secondary: '#5B5468',
-    ink: '#241A16', accent: '#5546C4', wash: '#CFC2F5',
-  },
-  recommendation: {
-    paper: '#FFD6BC', dot: '#EFBE9E', secondary: '#6C584D',
-    ink: '#241A16', accent: '#A83E27', wash: '#F7BE9B',
-  },
-  experience: {
-    paper: '#D7E9CB', dot: '#BCD4AB', secondary: '#54604B',
-    ink: '#241A16', accent: '#456B34', wash: '#BFD9AC',
-  },
-  warning: {
-    paper: '#FBD3CE', dot: '#EDB6AF', secondary: '#6B5753',
-    ink: '#241A16', accent: '#A8342E', wash: '#F4B7B0',
-  },
+const STOCKS: Record<CoverType, [CoverPalette, CoverPalette]> = {
+  guide: [
+    { paper: '#DCE4EF', dot: '#CAD2DD', secondary: '#5B5F64',
+      ink: '#241A16', accent: '#87621A', wash: '#F7CF93' },
+    { paper: '#D9E7CE', dot: '#C8D5BD', secondary: '#5A6054',
+      ink: '#241A16', accent: '#8E5C4A', wash: '#F3C3B2' },
+  ],
+  question: [
+    { paper: '#E0DAF2', dot: '#CFC9E1', secondary: '#5C5964',
+      ink: '#241A16', accent: '#7D6708', wash: '#F8DC93' },
+    { paper: '#CBE0DD', dot: '#BACFCC', secondary: '#525C5B',
+      ink: '#241A16', accent: '#886032', wash: '#F2C9A0' },
+  ],
+  recommendation: [
+    { paper: '#E9DCEC', dot: '#D8CBDB', secondary: '#615B62',
+      ink: '#241A16', accent: '#886032', wash: '#F2C9A0' },
+    { paper: '#D8DEF0', dot: '#C7CDDF', secondary: '#595B64',
+      ink: '#241A16', accent: '#8B5F3D', wash: '#F3C7A8' },
+  ],
+  experience: [
+    { paper: '#CDDCE6', dot: '#BCCBD5', secondary: '#525A5E',
+      ink: '#241A16', accent: '#7B6720', wash: '#EFD79A' },
+    { paper: '#D2E0C6', dot: '#C1CFB6', secondary: '#565C50',
+      ink: '#241A16', accent: '#8B5C63', wash: '#EEC2C8' },
+  ],
+  warning: [
+    { paper: '#E7E2F0', dot: '#D5D1DE', secondary: '#615E65',
+      ink: '#241A16', accent: '#8B5F3D', wash: '#F3C7A8' },
+    { paper: '#D5DFEA', dot: '#C4CED9', secondary: '#575C61',
+      ink: '#241A16', accent: '#87621A', wash: '#F7CF93' },
+  ],
 };
 
-export function coverPalette(postType: string): CoverPalette {
-  return PALETTES[(postType as CoverType)] ?? PALETTES.experience;
+export function coverPalette(postType: string, variant = 0): CoverPalette {
+  const pair = STOCKS[(postType as CoverType)] ?? STOCKS.experience;
+  return pair[variant % pair.length];
 }
 
 /** Scripts that do not put spaces between words. */
@@ -402,12 +460,194 @@ const MAX_EM = RUNGS[RUNGS.length - 1].capacityEm;
  */
 const MAX_TOKEN_EM = RUNGS[RUNGS.length - 1].lineEm;
 
+/** Where a clause ends, across the scripts the app ships. */
+const CLAUSE_BREAK = ',，、;；:：—–';
+/** Trailing marks a marker pen would stop short of. */
+const TAIL_MARKS = '.。!！?？,，、;；:： ';
+
+/**
+ * A line shorter than this is already emphatic and gets no wash.
+ *
+ * Highlighting half of a six-word sentence does not read as emphasis, it reads
+ * as a second colour. The shortest sentences land on the largest rung, where
+ * the type is doing the emphasis on its own.
+ */
+const MIN_EM_FOR_WASH = 14;
+/** A wash over most of the line is a fill; under a fifth is a smudge. */
+const WASH_MIN_SHARE = 0.12;
+const WASH_MAX_SHARE = 0.55;
+
+/** Walk back from the end until `targetEm` is covered; returns the start index. */
+function startOfTrailingEm(line: string, targetEm: number): number {
+  let em = 0;
+  let index = line.length;
+  while (index > 0 && em < targetEm) {
+    index -= 1;
+    em += estimateEm(line[index]);
+  }
+  return index;
+}
+
+/**
+ * The phrase the highlighter goes under.
+ *
+ * It takes the tail of the sentence rather than hunting for a keyword, and
+ * that is the whole idea: the payoff of a sentence is at its end in every
+ * language the app ships, whereas "the important word" is a semantic judgment
+ * no client-side heuristic makes well in 106 of them. A wash on the last
+ * clause reads as someone underlining while they read. A wash on a word an
+ * algorithm guessed at reads as a machine that has misunderstood the sentence.
+ *
+ * Preference order: the final clause, if a break leaves one of a usable size;
+ * otherwise the trailing third, snapped back to a word boundary in the scripts
+ * that have words. Returns null rather than forcing one, because no wash is a
+ * perfectly good cover and a badly placed one is not.
+ */
+export function pickHighlight(keyLine: string): CoverHighlight | null {
+  const line = keyLine.trim();
+  const total = estimateEm(line);
+  if (!line || total < MIN_EM_FOR_WASH) return null;
+
+  let start = -1;
+  for (let i = line.length - 1; i > 0; i -= 1) {
+    if (!CLAUSE_BREAK.includes(line[i])) continue;
+    let candidate = i + 1;
+    while (candidate < line.length && line[candidate] === ' ') candidate += 1;
+    const share = estimateEm(line.slice(candidate)) / total;
+    if (share >= WASH_MIN_SHARE && share <= WASH_MAX_SHARE) start = candidate;
+    break;
+  }
+
+  if (start < 0) {
+    start = startOfTrailingEm(line, total * 0.32);
+    // Snap onto a word, where there are words. Landing mid-word paints half a
+    // token and is the single most obviously generated thing a cover could do.
+    //
+    // Backwards first, forwards when backwards overshoots. A long compound
+    // straddling the target pulls the whole word in, and in German that word
+    // can be most of the sentence — "Aufenthaltstitel für diesen Weg" is 64%
+    // of its line, which is a panel rather than a wash. Dropping the compound
+    // and washing what follows it is the better of the two readings, and
+    // refusing outright (what this did first) threw away a usable one.
+    if (!NO_SPACE_BREAK.test(line)) {
+      const back = line.lastIndexOf(' ', start);
+      const snapped = back > 0 ? back + 1 : start;
+      if (estimateEm(line.slice(snapped)) / total <= WASH_MAX_SHARE) {
+        start = snapped;
+      } else {
+        const forward = line.indexOf(' ', start);
+        start = forward > 0 ? forward + 1 : snapped;
+      }
+    }
+  }
+
+  let end = line.length;
+  while (end > start && TAIL_MARKS.includes(line[end - 1])) end -= 1;
+
+  const span = line.slice(start, end);
+  const share = estimateEm(span) / total;
+  // `before` must survive: a wash over the entire line is a coloured panel.
+  if (!span.trim() || !line.slice(0, start).trim()) return null;
+  if (share < WASH_MIN_SHARE || share > WASH_MAX_SHARE) return null;
+
+  return { before: line.slice(0, start), span, after: line.slice(end) };
+}
+
+/**
+ * The stamp in the margin.
+ *
+ * Keyed off `odyssey_slug` and `post_type`, never off the words on the cover.
+ * The cover is translated per reader at request time, so an English keyword
+ * list would match for English readers and silently give everyone else the
+ * fallback — the failure would be invisible in the language the project
+ * reviews UI in. A slug is the same string in all 106.
+ */
+const SLUG_STICKERS: [RegExp, string][] = [
+  [/recognition|qualification/, '📜'],
+  [/study|graduate|university|school|kita/, '🎓'],
+  [/vocational|training|ausbildung/, '🔧'],
+  [/blue_card|opportunity|visa|residence|permit|anmeldung|einbuergerung/, '🛂'],
+  [/family|reunification|child/, '👪'],
+  [/salary|tax|bank|money|schufa|gez|insurance|wise/, '💶'],
+  [/job|application|work|employment|contract|business/, '💼'],
+  [/health|doctor|medical|checkup/, '🩺'],
+  [/language|german|vhs|exchange/, '🗣️'],
+  [/housing|apartment|ummeldung|sim|bvg|ticket|airport|transit/, '🔑'],
+  [/food|market|museum|flea|boat|tour|sight|sport|volunteer/, '🌿'],
+];
+
+const TYPE_STICKERS: Record<string, string> = {
+  guide: '🧭',
+  question: '💬',
+  recommendation: '✨',
+  experience: '🌱',
+  warning: '⚠️',
+};
+
+export function coverSticker(postType: string, odysseySlug?: string | null): string | null {
+  const slug = (odysseySlug || '').toLowerCase();
+  if (slug) {
+    for (const [pattern, emoji] of SLUG_STICKERS) {
+      if (pattern.test(slug)) return emoji;
+    }
+  }
+  return TYPE_STICKERS[postType] ?? null;
+}
+
+/**
+ * The big mark behind the text.
+ *
+ * Typographic, not the sticker enlarged. The first attempt was exactly that —
+ * the emoji at eleven times the size and a tenth of the opacity — and a faded
+ * picture is not the same thing as a grey mark: a washed-out banknote still
+ * reads as a banknote, sits behind the words as a second image competing with
+ * them, and keeps its own hue no matter how faint. A glyph takes `palette.dot`
+ * and is therefore actually grey, actually flat, and actually stock.
+ *
+ * Only the themes with an honest mark get one. The rest take the epigraph's
+ * own quotation mark, which is not a fallback so much as the literal truth
+ * about the card: it prints one sentence lifted out of a longer post. Nothing
+ * here is outside Latin-1 and General Punctuation, so every platform has it in
+ * text presentation — an emoji-presented glyph would come back coloured on
+ * some devices and grey on others, which is the bug this is fixing.
+ */
+const SLUG_MARKS: [RegExp, string][] = [
+  [/recognition|qualification/, '§'],
+  [/salary|tax|bank|money|schufa|gez|insurance|wise/, '€'],
+  [/blue_card|opportunity|visa|residence|permit|anmeldung|ummeldung|einbuergerung/, '→'],
+  [/job|application|work|employment|contract|business/, '¶'],
+  [/health|doctor|medical|checkup/, '+'],
+];
+
+const TYPE_MARKS: Record<string, string> = { question: '?', warning: '!' };
+
+export function coverMark(postType: string, odysseySlug?: string | null): string {
+  const slug = (odysseySlug || '').toLowerCase();
+  if (slug) {
+    for (const [pattern, glyph] of SLUG_MARKS) {
+      if (pattern.test(slug)) return glyph;
+    }
+  }
+  return TYPE_MARKS[postType] ?? '“';
+}
+
 export function coverPlan(
-  post: { id: string; post_type: string; title: string; body: string },
+  post: {
+    id: string;
+    post_type: string;
+    title: string;
+    body: string;
+    odyssey_slug?: string | null;
+  },
   displayTitle: string,
   displayBody: string,
 ): CoverPlan {
-  const palette = coverPalette(post.post_type);
+  // Stable per post: the feed loops (feed_round), and a reader scrolling back
+  // must meet the same object rather than a reshuffled one. It picks the
+  // ground and now the stock too, so two guides in one screenful are no longer
+  // the same card twice — which was the other half of "too uniform".
+  const seed = post.id.split('').reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) >>> 0, 7);
+  const palette = coverPalette(post.post_type, seed % 2);
   const keyLine = pickKeyLine(displayBody || post.body, displayTitle || post.title);
   const em = keyLine ? estimateEm(keyLine) : 0;
 
@@ -429,14 +669,24 @@ export function coverPlan(
     RUNGS[RUNGS.length - 1];
   const sizeRatio = rung.sizeRatio;
 
-  // Stable per post: the feed loops (feed_round), and a reader scrolling back
-  // must meet the same object rather than a reshuffled one.
-  const seed = post.id.split('').reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) >>> 0, 7);
-  const ground = (['dotted', 'plain'] as const)[seed % 2];
+  // A sentence past the last rung's capacity is clipped at a word, which this
+  // file calls the honest failure and it is. What is not honest is putting the
+  // highlighter on the part that got cut: "…and your federal state, so there is"
+  // ends mid-clause, and washing "so there is" points at the damage. The tail is
+  // where the wash goes and the tail is exactly what clipping takes, so when the
+  // line clips there is no phrase left worth marking.
+  const clips = em > rung.capacityEm;
+
+  const ground = (['dotted', 'plain'] as const)[(seed >>> 3) % 2];
+
+  const sticker = coverSticker(post.post_type, post.odyssey_slug);
 
   return {
     palette,
     keyLine,
+    highlight: clips ? null : pickHighlight(keyLine),
+    sticker,
+    watermark: coverMark(post.post_type, post.odyssey_slug),
     sizeRatio,
     leading: rung.leading,
     maxLines: rung.maxLines,
