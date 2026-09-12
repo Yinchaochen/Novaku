@@ -169,6 +169,8 @@ export interface CommunityPost {
   city?: string | null;
   identity_scope: 'all' | 'newcomer' | 'resident' | 'traveler' | 'local';
   odyssey_slug?: string | null;
+  /** Closed vocabulary (backend themes.POST_THEMES). Same token in every locale. */
+  theme?: string | null;
   language: string;
   source_language: string;
   title_source_language: string;

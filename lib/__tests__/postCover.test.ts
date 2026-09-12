@@ -580,3 +580,42 @@ describe('the wash and a clipped line', () => {
     expect(plan.highlight).not.toBeNull();
   });
 });
+
+describe('the sticker and the author\'s own words', () => {
+  it('reads the theme, which is what a user post carries instead of a slug', () => {
+    // lisum asked for a sticker chosen from what the author wrote. The
+    // classification is done server-side, once, on the ORIGINAL text
+    // (community_posts.theme, D-096) — fourteen tokens that mean the same in
+    // every locale. Matching the cover's own words could not do this: the
+    // cover is translated per reader.
+    expect(coverSticker('experience', null, 'housing')).toBe('🔑');
+    expect(coverSticker('experience', null, 'money')).toBe('💶');
+    expect(coverSticker('question', null, 'bureaucracy')).toBe('📋');
+  });
+
+  it('lets a slug beat a theme, because a slug is about one step', () => {
+    expect(coverSticker('guide', 'de_recognition_of_qualifications', 'career')).toBe('📜');
+  });
+
+  it('falls back to the post type when there is neither', () => {
+    expect(coverSticker('warning', null, null)).toBe('⚠️');
+  });
+
+  it('ignores a theme outside the closed vocabulary rather than guessing', () => {
+    // The backend stores anything unrecognised as NULL, but a client should not
+    // rely on that to avoid inventing a stamp for a token it does not know.
+    expect(coverSticker('guide', null, 'something_new')).toBe('🧭');
+  });
+
+  it('covers every theme the backend can store', () => {
+    // If the backend vocabulary grows and this does not, those posts silently
+    // drop to the post-type stamp and nobody finds out.
+    const BACKEND_THEMES = [
+      'startup', 'career', 'bureaucracy', 'housing', 'money', 'health', 'transport',
+      'food_drink', 'culture', 'places', 'education', 'language', 'social', 'shopping',
+    ];
+    for (const theme of BACKEND_THEMES) {
+      expect(coverSticker('guide', null, theme)).not.toBe('🧭');
+    }
+  });
+});

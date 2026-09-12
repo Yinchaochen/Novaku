@@ -587,6 +587,38 @@ const SLUG_STICKERS: [RegExp, string][] = [
   [/food|market|museum|flea|boat|tour|sight|sport|volunteer/, '🌿'],
 ];
 
+/**
+ * The backend's closed theme vocabulary, which is what a user post has instead
+ * of a slug.
+ *
+ * lisum asked for a sticker chosen from what the author wrote. Matching the
+ * author's words on the client cannot do that: the cover is translated per
+ * reader, so an English keyword list matches for English readers and hands
+ * everyone else the fallback, invisibly. The classification already exists
+ * server-side though — `community_posts.theme`, written deterministically by
+ * the seeding lanes and by the AI enrichment pass for everything else (D-096),
+ * from the ORIGINAL text, once. Fourteen tokens, identical in all 106 locales.
+ *
+ * It is also the list to commission artwork against when these become drawn
+ * stickers rather than emoji: fourteen, plus the handful of slug specials.
+ */
+const THEME_STICKERS: Record<string, string> = {
+  startup: '🚀',
+  career: '💼',
+  bureaucracy: '📋',
+  housing: '🔑',
+  money: '💶',
+  health: '🩺',
+  transport: '🚲',
+  food_drink: '🍽️',
+  culture: '🎭',
+  places: '📍',
+  education: '🎓',
+  language: '🗣️',
+  social: '👋',
+  shopping: '🛍️',
+};
+
 const TYPE_STICKERS: Record<string, string> = {
   guide: '🧭',
   question: '💬',
@@ -595,13 +627,21 @@ const TYPE_STICKERS: Record<string, string> = {
   warning: '⚠️',
 };
 
-export function coverSticker(postType: string, odysseySlug?: string | null): string | null {
+export function coverSticker(
+  postType: string,
+  odysseySlug?: string | null,
+  theme?: string | null,
+): string | null {
+  // Slug first: it is the most specific thing a post can carry, and a post that
+  // has one is about that step rather than about its theme in general.
   const slug = (odysseySlug || '').toLowerCase();
   if (slug) {
     for (const [pattern, emoji] of SLUG_STICKERS) {
       if (pattern.test(slug)) return emoji;
     }
   }
+  const themed = THEME_STICKERS[(theme || '').toLowerCase()];
+  if (themed) return themed;
   return TYPE_STICKERS[postType] ?? null;
 }
 
@@ -649,6 +689,7 @@ export function coverPlan(
     title: string;
     body: string;
     odyssey_slug?: string | null;
+    theme?: string | null;
   },
   displayTitle: string,
   displayBody: string,
@@ -690,7 +731,7 @@ export function coverPlan(
 
 
 
-  const sticker = coverSticker(post.post_type, post.odyssey_slug);
+  const sticker = coverSticker(post.post_type, post.odyssey_slug, post.theme);
 
   return {
     palette,
