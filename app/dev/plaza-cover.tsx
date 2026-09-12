@@ -144,10 +144,67 @@ const CASES: { label: string; post: CommunityPost }[] = [
   },
 ];
 
+/**
+ * Xiaohongshu's own stocks, sampled off the covers lisum sent, against ours.
+ *
+ * The question this row exists to answer is whether they can simply be copied.
+ * They measure ΔE 3.3–4.6 from our page — D-088 measured the same failure at
+ * "14 units" and called the card invisible — but that was a FLAT panel, and the
+ * cover now carries a watermark and a dot field. So: render them on the real
+ * page and look, rather than settle it from the old number.
+ */
+const THEIRS = [
+  { label: 'cream + blue cloud', paper: '#F7F3E6', dot: '#E6E0CC', secondary: '#7A6B58',
+    ink: '#3A2E24', accent: '#8A7A5A', wash: '#BEE0F5' },
+  { label: 'ivory + yellow marker', paper: '#F5F1E8', dot: '#E3DDCE', secondary: '#736E64',
+    ink: '#3C3A36', accent: '#8A8272', wash: '#FCEEA0' },
+  { label: 'pale yellow', paper: '#FBF8D8', dot: '#EAE6BE', secondary: '#6F6B4A',
+    ink: '#332F1C', accent: '#8A8450', wash: '#C9D9F2' },
+  { label: 'pale green', paper: '#EAF3E4', dot: '#D6E2CE', secondary: '#5F6B58',
+    ink: '#2C3328', accent: '#6E7F64', wash: '#F7D2B0' },
+];
+
+const COMPARE = makePost({
+  id: 'cmp',
+  post_type: 'guide',
+  odyssey_slug: 'de_salary_and_deductions',
+  title: 'Why your first payslip is smaller than you expected',
+  body: 'The number in the contract is gross.\n\nBetween it and your bank account sit income tax and five statutory insurances.',
+});
+
+function TheirColoursRow() {
+  return (
+    <View>
+      <SectionLabel>Theirs, on our page — can we copy the colours directly?</SectionLabel>
+      <ScrollView horizontal contentContainerStyle={{ gap: 10, paddingHorizontal: 10 }}>
+        <View>
+          <View style={{ width: 184.5, borderRadius: 12, overflow: 'hidden' }}>
+            <PostCover post={COMPARE} width={184.5} />
+          </View>
+          <Text style={{ fontSize: 10, color: colors.textMuted, paddingTop: 4, width: 184.5 }}>
+            ours (cool stock)
+          </Text>
+        </View>
+        {THEIRS.map((stock) => (
+          <View key={stock.label}>
+            <View style={{ width: 184.5, borderRadius: 12, overflow: 'hidden' }}>
+              <PostCover post={COMPARE} width={184.5} paletteOverride={stock} />
+            </View>
+            <Text style={{ fontSize: 10, color: colors.textMuted, paddingTop: 4, width: 184.5 }}>
+              {stock.label}
+            </Text>
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
 export default function PlazaCoverGallery() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={{ paddingBottom: 48 }}>
+        <TheirColoursRow />
         {CASES.map((testCase) => (
           <View key={testCase.post.id}>
             <SectionLabel>{testCase.label}</SectionLabel>

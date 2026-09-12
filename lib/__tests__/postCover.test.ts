@@ -298,14 +298,18 @@ describe('coverPlan', () => {
     expect(grounds.size).toBe(1);
   });
 
-  it('spreads grounds across different posts', () => {
-    const grounds = new Set(
+  it('spreads STOCKS across different posts, which is where the variety moved', () => {
+    // It used to be the ground that varied — dotted or plain — and that was
+    // half of "too uniform": the plain half was a bare fill. The ground is now
+    // always dotted because it is what holds the card's edge, so two posts of
+    // one type are told apart by their paper instead.
+    const papers = new Set(
       ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map(
-        (id) => coverPlan({ ...post, id }, BER_TITLE, BER_BODY).ground,
+        (id) => coverPlan({ ...post, id }, BER_TITLE, BER_BODY).palette.paper,
       ),
     );
 
-    expect(grounds.size).toBeGreaterThan(1);
+    expect(papers.size).toBeGreaterThan(1);
   });
 
   it('marks a post with nothing to lift as blank rather than inventing a line', () => {
@@ -480,17 +484,43 @@ const STOCKS = TYPES.flatMap((t) => [
 ]);
 
 describe('the stocks', () => {
-  it.each(STOCKS)('$name stays visible against the cream page', ({ p }) => {
-    // The D-088 failure exactly: a cover three RGB units from its own
-    // background. Both ends of the gradient, because the card scrolls past both.
-    for (const end of PAGE) expect(deltaE(p.paper, end)).toBeGreaterThanOrEqual(12.5);
+  it.each(STOCKS)('$name carries the structure that holds its edge', ({ p }) => {
+    // These stocks are Xiaohongshu's and they sit ΔE 2.9-10.2 from our page, so
+    // the fill is NOT what separates the card from the background — the print
+    // on it is. D-088's "14 units and invisible" was measured on a flat panel;
+    // this one has a watermark, a dot field, a margin rule and a corner radius.
+    // The dots therefore have to be genuinely visible, which is the one part of
+    // that structure this module owns. If a future edit softens them back
+    // toward invisible, the card goes with them.
+    expect(contrast(p.paper, p.dot)).toBeGreaterThanOrEqual(1.25);
+    expect(contrast(p.paper, p.dot)).toBeLessThanOrEqual(1.45);
+  });
+
+  it('never draws a bare fill, which on these stocks would be no card at all', () => {
+    const plan = coverPlan(
+      { id: 'ground-1', post_type: 'guide', title: 'T', body: 'A sentence worth lifting out of a post.' },
+      '',
+      '',
+    );
+    expect(plan.ground).toBe('dotted');
   });
 
   it.each(STOCKS)('$name is a second colour, not a tint of the paper', ({ p }) => {
     // What lisum actually pointed at: butter wash on butter paper reads as one
     // colour. Xiaohongshu puts a blue highlight on a cream ground.
-    expect(hueGap(p.paper, p.wash)).toBeGreaterThanOrEqual(45);
+    //
+    // Hue angle alone cannot say this. A near-neutral paper has no stable hue —
+    // #F5F1E8 is within a couple of units of grey, so its angle is noise, and
+    // the first version of this test failed four perfectly good pairs on it.
+    // Against a neutral ground ANY coloured wash is already a second colour;
+    // it is only a coloured ground that has to be argued with.
+    const chroma = (hex: string) => Math.hypot(toLab(hex)[1], toLab(hex)[2]);
     expect(deltaE(p.paper, p.wash)).toBeGreaterThanOrEqual(12);
+    if (chroma(p.paper) >= 6) {
+      expect(hueGap(p.paper, p.wash)).toBeGreaterThanOrEqual(45);
+    } else {
+      expect(chroma(p.wash)).toBeGreaterThanOrEqual(12);
+    }
   });
 
   it.each(STOCKS)('$name keeps the sentence readable through the wash', ({ p }) => {
@@ -504,12 +534,6 @@ describe('the stocks', () => {
     expect(contrast(p.paper, p.secondary)).toBeGreaterThanOrEqual(4.5);
   });
 
-  it.each(STOCKS)('$name keeps the dot ground texture, not noise', ({ p }) => {
-    // The module's own rule: 1.2-1.4:1 against the paper, never more.
-    expect(contrast(p.paper, p.dot)).toBeLessThanOrEqual(1.45);
-    expect(contrast(p.paper, p.dot)).toBeGreaterThan(1.05);
-  });
-
   it('gives each post type two different stocks, so a feed does not repeat', () => {
     for (const t of TYPES) expect(coverPalette(t, 0).paper).not.toBe(coverPalette(t, 1).paper);
   });
@@ -517,7 +541,7 @@ describe('the stocks', () => {
   it('is papery rather than candied', () => {
     const chroma = (hex: string) => Math.hypot(toLab(hex)[1], toLab(hex)[2]);
     const mean = STOCKS.reduce((sum, s) => sum + chroma(s.p.paper), 0) / STOCKS.length;
-    expect(mean).toBeLessThan(14); // the stocks it replaced averaged 20.2
+    expect(mean).toBeLessThan(10); // the first stocks averaged 20.2
   });
 });
 

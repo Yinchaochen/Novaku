@@ -100,59 +100,70 @@ export interface CoverPlan {
 }
 
 /**
- * Ten stocks, two per post type, and every one of them cool.
+ * Ten stocks, two per post type, sampled off Xiaohongshu's own covers.
  *
- * That is not a taste: it is the only band the page leaves open. The app's
- * page is a cream gradient (#FFFAF2 → #FBEDDF) with no plate under the card
- * since D-088, and measuring candidates in CIELAB against both ends of it
- * gives a rule with no exceptions — a WARM stock can be light or it can be
- * low-chroma, never both. Xiaohongshu's own creams measure ΔE 3.3–4.6 here
- * and are simply invisible; they work there because their page is white.
- * Four separate attempts at warm paper ran into this, and the last one, which
- * solved for minimum chroma at every hue, collapsed all ten to the same grey.
+ * lisum asked twice whether their colours could simply be copied, and the
+ * measured answer was no both times: cream #F7F3E6 sits ΔE 3.7 from our page,
+ * ivory 3.3, near-white 2.9, and D-088 had already measured that exact failure
+ * at "14 units" and called the card invisible. Two rounds were spent building
+ * around it — cool stocks, then a solver for the least chroma that clears the
+ * page, which collapsed all ten to the same grey and made the thing MORE
+ * uniform, not less.
  *
- * So the ground goes cool and the accent carries the warmth. That inversion
- * is also what fixes the thing lisum actually pointed at: the old stocks put a
- * butter wash on butter paper, a peach wash on peach paper — one hue per card,
- * which is why they read flat next to a Xiaohongshu cover whose cream ground
- * carries a BLUE highlight. Every pair below is at least 45° of hue apart, and
- * most are near-complementary.
+ * Then the premise was rechecked rather than the arithmetic, and the premise
+ * had expired. D-088 measured a FLAT panel. This cover is no longer flat: it
+ * carries a watermark bleeding off one corner, a dot field, a margin rule and a
+ * 12dp corner radius. Rendered on the real page, their creams hold their edge
+ * on structure instead of on fill — so the card is defined the way a sheet of
+ * paper on a desk is, by what is printed on it, not by being a different colour
+ * from the desk. D-088's two rejected escapes stay rejected: no border was
+ * added and the page is still cream.
  *
- * Held, and checked by the tests: ΔE ≥ 12.5 from both ends of the page, ink at
- * ≥ 7:1 on the wash, wash ≥ 12 ΔE from its own paper. Mean chroma is 8.3
- * against the old 20.2 — paper rather than candy, which was the other half of
- * the note.
+ * That is also why `ground` is no longer a coin flip. A 'plain' variant would
+ * be a fill with nothing on it, which on these stocks is genuinely the
+ * invisible card D-088 warned about — and it was half of what lisum meant by
+ * the backgrounds being too plain. Every cover is dotted now.
+ *
+ * The second half of the note — "多种颜色在一起" — is the wash. The stocks this
+ * replaced put a butter wash on butter paper: one hue per card, which is
+ * exactly why they read flat beside a cover whose cream ground carries a BLUE
+ * cloud. Every pair here is a near-neutral or soft ground against a wash from a
+ * different family.
+ *
+ * Held by the tests: ink ≥ 7:1 on both paper and wash, wash ≥ 12 ΔE from its
+ * own paper and a genuinely different colour from it, dots ≥ 1.25:1 so the
+ * structure that now carries the edge is actually visible.
  */
 const STOCKS: Record<CoverType, [CoverPalette, CoverPalette]> = {
   guide: [
-    { paper: '#DCE4EF', dot: '#CAD2DD', secondary: '#5B5F64',
-      ink: '#241A16', accent: '#87621A', wash: '#F7CF93' },
-    { paper: '#D9E7CE', dot: '#C8D5BD', secondary: '#5A6054',
-      ink: '#241A16', accent: '#8E5C4A', wash: '#F3C3B2' },
+    { paper: '#F7F3E6', dot: '#DAD6CA', secondary: '#6A6862',
+      ink: '#3A2E26', accent: '#7C7765', wash: '#BEE0F5' },
+    { paper: '#FBF8D8', dot: '#DEDBBC', secondary: '#6C6B5A',
+      ink: '#3A2E26', accent: '#7D7C4E', wash: '#C9D9F2' },
   ],
   question: [
-    { paper: '#E0DAF2', dot: '#CFC9E1', secondary: '#5C5964',
-      ink: '#241A16', accent: '#7D6708', wash: '#F8DC93' },
-    { paper: '#CBE0DD', dot: '#BACFCC', secondary: '#525C5B',
-      ink: '#241A16', accent: '#886032', wash: '#F2C9A0' },
+    { paper: '#F5F1E8', dot: '#D8D5CC', secondary: '#696763',
+      ink: '#3A2E26', accent: '#7C766A', wash: '#FCEEA0' },
+    { paper: '#FBFAF7', dot: '#DEDDDA', secondary: '#6D6C6B',
+      ink: '#3A2E26', accent: '#7D7C78', wash: '#D8C8F0' },
   ],
   recommendation: [
-    { paper: '#E9DCEC', dot: '#D8CBDB', secondary: '#615B62',
-      ink: '#241A16', accent: '#886032', wash: '#F2C9A0' },
-    { paper: '#D8DEF0', dot: '#C7CDDF', secondary: '#595B64',
-      ink: '#241A16', accent: '#8B5F3D', wash: '#F3C7A8' },
+    { paper: '#EAF3E4', dot: '#CED7C8', secondary: '#636860',
+      ink: '#3A2E26', accent: '#6C7964', wash: '#F7D2B0' },
+    { paper: '#F7F3E6', dot: '#DAD6CA', secondary: '#6A6862',
+      ink: '#3A2E26', accent: '#7C7765', wash: '#DCCBF2' },
   ],
   experience: [
-    { paper: '#CDDCE6', dot: '#BCCBD5', secondary: '#525A5E',
-      ink: '#241A16', accent: '#7B6720', wash: '#EFD79A' },
-    { paper: '#D2E0C6', dot: '#C1CFB6', secondary: '#565C50',
-      ink: '#241A16', accent: '#8B5C63', wash: '#EEC2C8' },
+    { paper: '#F5F1E8', dot: '#D8D5CC', secondary: '#696763',
+      ink: '#3A2E26', accent: '#7C766A', wash: '#CDE8C4' },
+    { paper: '#FBF8D8', dot: '#DEDBBC', secondary: '#6C6B5A',
+      ink: '#3A2E26', accent: '#7D7C4E', wash: '#E7C9E8' },
   ],
   warning: [
-    { paper: '#E7E2F0', dot: '#D5D1DE', secondary: '#615E65',
-      ink: '#241A16', accent: '#8B5F3D', wash: '#F3C7A8' },
-    { paper: '#D5DFEA', dot: '#C4CED9', secondary: '#575C61',
-      ink: '#241A16', accent: '#87621A', wash: '#F7CF93' },
+    { paper: '#EAF3E4', dot: '#CED7C8', secondary: '#636860',
+      ink: '#3A2E26', accent: '#6C7964', wash: '#F3C6D6' },
+    { paper: '#FBFAF7', dot: '#DEDDDA', secondary: '#6D6C6B',
+      ink: '#3A2E26', accent: '#7D7C78', wash: '#C6DDF5' },
   ],
 };
 
@@ -677,7 +688,7 @@ export function coverPlan(
   // line clips there is no phrase left worth marking.
   const clips = em > rung.capacityEm;
 
-  const ground = (['dotted', 'plain'] as const)[(seed >>> 3) % 2];
+
 
   const sticker = coverSticker(post.post_type, post.odyssey_slug);
 
@@ -690,7 +701,7 @@ export function coverPlan(
     sizeRatio,
     leading: rung.leading,
     maxLines: rung.maxLines,
-    ground,
+    ground: 'dotted',
     isBlank: keyLine.length === 0,
   };
 }

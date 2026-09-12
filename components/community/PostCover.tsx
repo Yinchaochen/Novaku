@@ -2,7 +2,7 @@ import { Text, View } from 'react-native';
 import Svg, { Circle, Defs, Line, Pattern, Rect } from 'react-native-svg';
 
 import { useLanguage } from '../../context/LanguageContext';
-import { coverPlan } from '../../lib/postCover';
+import { coverPlan, type CoverPalette } from '../../lib/postCover';
 import type { CommunityPost } from '../../features/community/useCommunity';
 
 /**
@@ -49,14 +49,23 @@ const MARGIN_TOP = 2;
 const MARGIN_RIGHT = 4;
 const MEASURE = 18 - MARGIN_LEFT - MARGIN_RIGHT;
 
-export function PostCover({ post, width }: { post: CommunityPost; width: number }) {
+export function PostCover({
+  post,
+  width,
+  paletteOverride,
+}: {
+  post: CommunityPost;
+  width: number;
+  /** Dev gallery only: compare stocks side by side without ten fake posts. */
+  paletteOverride?: CoverPalette;
+}) {
   const { t } = useLanguage();
   const plan = coverPlan(
     post,
     post.translated_title ?? post.title,
     post.translated_body ?? post.body,
   );
-  const { palette } = plan;
+  const palette = paletteOverride ?? plan.palette;
 
   const u = width / 18;
   const size = width * plan.sizeRatio;
