@@ -45,13 +45,12 @@ export interface CoverPalette {
 }
 
 /**
- * The phrase the highlighter goes under, and the text either side of it.
+ * The phrase the rule goes under, and the text either side of it.
  *
- * Three parts rather than an index pair because the renderer nests them as
- * three `<Text>` runs: RN paints a nested run's `backgroundColor` behind its
- * glyphs and re-flows it with the wrap, so the swipe follows a phrase across a
- * line break for free. Drawing a rect instead would need the measurement pass
- * this file exists to avoid.
+ * Three parts rather than an index pair because the renderer sets them as
+ * separate blocks: the phrase gets one of its own so a rounded rule can be
+ * drawn under it at exactly the width of its text. `coverPlan` is what refuses
+ * a phrase that will not fit that line — the picker only reads the sentence.
  */
 export interface CoverHighlight {
   before: string;
@@ -429,7 +428,15 @@ const MEASURE_UNITS = 12 / 18;
  */
 const PACKING = 0.78;
 
-const RUNGS = [
+type Rung = {
+  sizeRatio: number;
+  leading: number;
+  maxLines: number;
+  capacityEm: number;
+  lineEm: number;
+};
+
+const RUNGS: Rung[] = [
   { sizeRatio: 0.115, leading: 1.16, maxLines: 3 },
   { sizeRatio: 0.098, leading: 1.24, maxLines: 4 },
   { sizeRatio: 0.082, leading: 1.32, maxLines: 5 },
@@ -514,7 +521,7 @@ function startOfTrailingEm(line: string, targetEm: number): number {
  * that have words. Returns null rather than forcing one, because no wash is a
  * perfectly good cover and a badly placed one is not.
  */
-export function pickHighlight(keyLine: string): CoverHighlight | null {
+export function pickHighlight(keyLine: string, maxEm = Infinity): CoverHighlight | null {
   const line = keyLine.trim();
   const total = estimateEm(line);
   if (!line || total < MIN_EM_FOR_WASH) return null;
@@ -554,6 +561,25 @@ export function pickHighlight(keyLine: string): CoverHighlight | null {
 
   let end = line.length;
   while (end > start && TAIL_MARKS.includes(line[end - 1])) end -= 1;
+
+  // The rule is drawn under a block that holds one line, so a phrase wider
+  // than a line walks forward to the next word until it fits. A shorter tail
+  // is still a tail. Refusing instead would leave most covers unmarked: at the
+  // smallest rung a line holds about nine ems, and a final clause is regularly
+  // longer than that.
+  // Measured through to the end of the line, not to `end`: whatever trails the
+  // phrase is set beside it and takes width from the same line. Leaving the
+  // full stop out of the sum cost the phrase its last word to an ellipsis.
+  const noWords = NO_SPACE_BREAK.test(line);
+  while (start < end && estimateEm(line.slice(start)) > maxEm) {
+    if (noWords) {
+      start += 1;
+      continue;
+    }
+    const next = line.indexOf(' ', start);
+    if (next < 0 || next + 1 >= end) break;
+    start = next + 1;
+  }
 
   const span = line.slice(start, end);
   const share = estimateEm(span) / total;
@@ -716,10 +742,8 @@ export function coverPlan(
   // line now. Same mistake as the hand-picked boundaries above: one rung's
   // number standing in for a property of all of them.
   const longest = keyLine ? longestTokenEm(keyLine) : 0;
-  const rung =
-    RUNGS.find((r) => em <= r.capacityEm && longest <= r.lineEm) ??
-    RUNGS[RUNGS.length - 1];
-  const sizeRatio = rung.sizeRatio;
+  const plain =
+    RUNGS.find((r) => em <= r.capacityEm && longest <= r.lineEm) ?? RUNGS[RUNGS.length - 1];
 
   // A sentence past the last rung's capacity is clipped at a word, which this
   // file calls the honest failure and it is. What is not honest is putting the
@@ -727,16 +751,44 @@ export function coverPlan(
   // ends mid-clause, and washing "so there is" points at the damage. The tail is
   // where the wash goes and the tail is exactly what clipping takes, so when the
   // line clips there is no phrase left worth marking.
-  const clips = em > rung.capacityEm;
+  const clips = em > plain.capacityEm;
 
-
+  // The rule is drawn under the phrase, not behind it, and that costs the
+  // phrase a line of its own. A nested run inside a paragraph is the only
+  // thing in RN that re-flows with the wrap, and the only mark it can carry is
+  // a square band the full height of the line — which is the box this
+  // replaced. A block that shrink-wraps its text can carry a rounded rule, but
+  // a block starts on a new line.
+  //
+  // The phrase is cut to one line, and what is left of the sentence has to fit
+  // the lines that remain. Where it does not, the rung below buys the line back
+  // — the type is a shade smaller and the phrase keeps its mark. Asking the
+  // rung the sentence already sits on and stopping there left the mark only on
+  // short sentences, because a sentence that fills its rung has no spare line
+  // by definition, and those are most of them.
+  let rung = plain;
+  let highlight: CoverHighlight | null = null;
+  if (!clips) {
+    for (const r of RUNGS) {
+      if (em > r.capacityEm || longest > r.lineEm) continue;
+      // Nine tenths of the line, because estimateEm is an estimate: a wrapped
+      // block absorbs the error in its wrap and a single line has nowhere to
+      // put it but an ellipsis.
+      const h = pickHighlight(keyLine, r.lineEm * 0.9);
+      if (!h || estimateEm(h.before) > r.lineEm * (r.maxLines - 1) * PACKING) continue;
+      rung = r;
+      highlight = h;
+      break;
+    }
+  }
+  const sizeRatio = rung.sizeRatio;
 
   const sticker = coverSticker(post.post_type, post.odyssey_slug, post.theme);
 
   return {
     palette,
     keyLine,
-    highlight: clips ? null : pickHighlight(keyLine),
+    highlight,
     sticker,
     watermark: coverMark(post.post_type, post.odyssey_slug),
     sizeRatio,

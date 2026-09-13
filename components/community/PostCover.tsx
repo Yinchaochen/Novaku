@@ -49,6 +49,17 @@ const MARGIN_TOP = 2;
 const MARGIN_RIGHT = 4;
 const MEASURE = 18 - MARGIN_LEFT - MARGIN_RIGHT;
 
+/** The rule under the phrase, as fractions of the type size. */
+const RULE_HEIGHT = 0.58;
+/** How far above the baseline the rule reaches, cutting into the glyphs.
+ *  Half the leading and the descender are below the baseline; both are added,
+ *  not subtracted — a rule that clears the descenders is a rule under the
+ *  text, and the highlighter this imitates runs through it. */
+const OVERLAP = 0.46;
+/** How far below the baseline the font descends. True enough of every system
+ *  face the app lands on to place a rule; nothing here is precise about it. */
+const DESCENDER = 0.21;
+
 export function PostCover({
   post,
   width,
@@ -70,6 +81,16 @@ export function PostCover({
   const u = width / 18;
   const size = width * plan.sizeRatio;
   const rubricSize = Math.max(9.5, u * 0.62);
+  const rule = Math.max(3, size * RULE_HEIGHT);
+  const type = {
+    fontSize: size,
+    lineHeight: size * plan.leading,
+    fontWeight: '700' as const,
+    // Tracking runs inversely with size. Getting the direction wrong is the
+    // most reliable tell of type that was set by a machine.
+    letterSpacing: size > 18 ? -0.4 : 0,
+    color: palette.ink,
+  };
 
   return (
     <View style={{ width: '100%', aspectRatio: 1, backgroundColor: palette.paper }}>
@@ -160,38 +181,61 @@ export function PostCover({
       </Text>
 
       {plan.isBlank ? null : (
-        <Text
-          numberOfLines={plan.maxLines}
+        <View
           style={{
             position: 'absolute',
             left: MARGIN_LEFT * u,
             top: 4 * u,
             width: MEASURE * u,
-            fontSize: size,
-            lineHeight: size * plan.leading,
-            fontWeight: '700',
-            // Tracking runs inversely with size. Getting the direction wrong
-            // is the most reliable tell of type that was set by a machine.
-            letterSpacing: size > 18 ? -0.4 : 0,
-            color: palette.ink,
           }}
         >
-          {/* The highlighter swipe. `wash` has been in every palette since the
-              cover shipped and was never drawn — the accent was being spent
-              entirely on a 1dp margin rule. A nested run is what makes it
-              possible without measuring: RN paints the background behind the
-              glyphs and re-flows it with the wrap, so the swipe follows the
-              phrase across a line break on its own. */}
+          <Text
+            numberOfLines={plan.highlight ? Math.max(1, plan.maxLines - 1) : plan.maxLines}
+            style={type}
+          >
+            {plan.highlight ? plan.highlight.before.trimEnd() : plan.keyLine}
+          </Text>
+
+          {/* The rule. `wash` has been in every palette since the cover shipped
+              and was never drawn — the accent was being spent entirely on a 1dp
+              margin rule. It was a band behind the glyphs first, which is all a
+              nested run can paint: square, and the full height of the line. The
+              phrase gets a block of its own instead, and the block shrinks to
+              its own text, so the rule underneath is the width of the words and
+              nothing else. */}
           {plan.highlight ? (
-            <>
-              {plan.highlight.before}
-              <Text style={{ backgroundColor: palette.wash }}>{plan.highlight.span}</Text>
-              {plan.highlight.after}
-            </>
-          ) : (
-            plan.keyLine
-          )}
-        </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+              <View style={{ flexShrink: 1 }}>
+                {/* Declared before the text, so it paints beneath it: the rule
+                    rides up over the baseline and the glyphs stay on top of
+                    it, which is a highlighter and not a strikethrough. Absolute
+                    so it contributes no height — the block is still exactly as
+                    wide and as tall as the phrase. */}
+                <View
+                  style={{
+                    position: 'absolute',
+                    left: -size * 0.04,
+                    right: -size * 0.04,
+                    // Measured up from the bottom of the line box. Half the
+                    // leading plus the descender is where the baseline sits;
+                    // OVERLAP is how far above it the rule reaches.
+                    bottom:
+                      (size * (plan.leading - 1)) / 2 + size * (DESCENDER + OVERLAP) - rule,
+                    height: rule,
+                    borderRadius: rule / 2,
+                    backgroundColor: palette.wash,
+                  }}
+                />
+                <Text numberOfLines={1} style={type}>
+                  {plan.highlight.span}
+                </Text>
+              </View>
+              {plan.highlight.after ? (
+                <Text style={type}>{plan.highlight.after}</Text>
+              ) : null}
+            </View>
+          ) : null}
+        </View>
       )}
 
       {/* The stamp. It sits in the bottom margin on purpose: the canon forbids
