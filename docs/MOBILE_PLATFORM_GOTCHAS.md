@@ -567,6 +567,18 @@ style={{ ..., color: value ? colors.textMain : colors.textSubtle }}
 
 **什么时候必须这么写**:输入框**无边框、字号大、与正文同样式**时——那种 placeholder 渲染成深色就等于"这篇稿子已经写好了"(Plaza 发帖器的标题和正文)。灰底框里的小输入框可以先不动。
 
+### 1.7 `autoFocus` 在 Android 上是原生的,别默认它需要 `setTimeout`(D-127)
+`autoFocus` 不是「JS 挂载时调 `focus()`」。[`ReactEditText.onAttachedToWindow()`](../node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/textinput/ReactEditText.kt) 里:
+
+```kotlin
+if (autoFocus && !didAttachToWindow) { requestFocusProgrammatically() }
+```
+`requestFocusProgrammatically()` 显式调 `showSoftKeyboard()`——RN 自己的注释写明「不能用 stock `requestFocus()`,它不弹键盘,只有真手指点才会」。所以它已经是"等挂上窗口再 focus 并主动拉 IME"。
+
+**需要延迟 focus 的只有 `Modal`**:那是独立的原生窗口,滑入动画期间 IME 焦点会被吞掉。`CommentComposerSheet` 的 `setTimeout(…, 200)` 就是为这个存在的,留着。**普通路由页不要抄这个疤**(`edit-bio` 是 `router.push` 进去的,用 `autoFocus`)。
+
+真要升级,也不是补一个 200——`200` 是拍出来的数,Android 的动画倍率是开发者选项/无障碍设置,用户改过就不准;定时器还可能在用户返回后开火,把键盘弹在下一个界面上。该用 `InteractionManager.runAfterInteractions()`,它等的是真实动画结束。
+
 ### 2. 渲染 + 核对全状态
 ```bash
 cd novaku-app && npm run web      # 起 Expo Web
