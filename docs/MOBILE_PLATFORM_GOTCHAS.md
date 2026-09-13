@@ -557,6 +557,16 @@ Android 在 edge-to-edge(SDK 54)下**不会**为 IME 缩窗口,全屏 `Modal` �
 
 **曾经的做法(D-052 的只读代理 + `FloatingInputSheet`)已删除。** 它把输入搬进第二个透明 `Modal`,而那个窗口同样不缩:2026-09-07 的录屏里,72 秒有 37 秒(52%)键盘升着、面板在键盘底下、屏幕上没有任何输入框。为防遮挡造的东西成了唯一被遮挡的东西。`behavior` 那一栏的规矩不变:iOS `padding`、Android `undefined`,由 [`components/__tests__/keyboardAvoidingBehavior.test.ts`](../components/__tests__/keyboardAvoidingBehavior.test.ts) 守着。
 
+### 1.6 `placeholderTextColor` 在 Android 上不生效,空值时改 `style.color`(D-127)
+这个包里 hint 是用 `style.color` 画的,不是用 `placeholderTextColor`(Android `TextView` 在 hint 颜色未设时就拿 `mTextColor` 画 hint)。实测:同字号下 placeholder(规格 #C4C4C4)与真文字(规格 #2B2B2B)的灰度分位数无法区分。
+
+```tsx
+style={{ ..., color: value ? colors.textMain : colors.textSubtle }}
+```
+字段为空时没有自己的文字会被这个颜色影响,所以 iOS / web 无副作用;`placeholderTextColor` 一起留着,哪天 RN 修好了自然生效。
+
+**什么时候必须这么写**:输入框**无边框、字号大、与正文同样式**时——那种 placeholder 渲染成深色就等于"这篇稿子已经写好了"(Plaza 发帖器的标题和正文)。灰底框里的小输入框可以先不动。
+
 ### 2. 渲染 + 核对全状态
 ```bash
 cd novaku-app && npm run web      # 起 Expo Web

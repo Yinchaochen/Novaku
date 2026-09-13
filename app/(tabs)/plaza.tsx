@@ -7,7 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { router, type Href } from 'expo-router';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, FieldErrors, useForm } from 'react-hook-form';
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 // Lazy-load the map-based picker so Expo Go doesn't try to mount
 // react-native-maps until the user actually opens it. In Expo Go the map
@@ -266,6 +266,7 @@ export default function PlazaScreen() {
   const locationTargetRef = useGuideTarget('location');
   const publishTargetRef = useGuideTarget('publish');
   const impressionKeysRef = useRef<Set<string>>(new Set());
+  const composerScrollRef = useRef<ScrollView>(null);
 
   const {
     control,
@@ -290,6 +291,12 @@ export default function PlazaScreen() {
     body: watchedBody ?? '',
     placesCount: selectedPlaces.length,
   });
+  // The button asks the schema instead of repeating "4" and "12" — pressing
+  // Post on an empty form used to do nothing visible at all, because the two
+  // error lines render beside the fields, twenty screens above the button.
+  const canSubmit = schema
+    .pick({ title: true, body: true })
+    .safeParse({ title: watchedTitle ?? '', body: watchedBody ?? '' }).success;
   const composerContentTooShort = isTooShortForAiSummary(watchedTitle ?? '', watchedBody ?? '');
   const composerHint = t.plaza.composer_hint;
   // Place search now happens inside <LocationPicker> via Google Places
@@ -617,12 +624,21 @@ export default function PlazaScreen() {
     });
   };
 
+  // Whoever presses Post is at the bottom of the form; the errors render at the
+  // top, beside the two fields. Say it where the press happened, then go there.
+  const onInvalid = (formErrors: FieldErrors<FormData>) => {
+    setComposerMessage(
+      fieldErrorText(t.validation, formErrors.title ?? formErrors.body) ?? t.common.error,
+    );
+    composerScrollRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
   // Guided publish: the confirm sheet dispatches the real submit, and the
   // walkthrough only completes once a valid form actually went out.
   const submitFromGuideConfirm = handleSubmit((form) => {
     onSubmit(form);
     guide.completeWalkthrough('action');
-  });
+  }, onInvalid);
 
   // Final Continue on the publish step: the tour is over. With an untouched
   // draft that means closing the composer and landing back on Plaza; a real
@@ -1067,6 +1083,7 @@ export default function PlazaScreen() {
             </View>
 
             <ScrollView
+              ref={composerScrollRef}
               className="flex-1"
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{
@@ -1164,7 +1181,12 @@ export default function PlazaScreen() {
                         ) : null}
                       </View>
                     ) : (
-                      <Ionicons name="add" size={34} color="#D0D0D0" />
+                      <View style={{ alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="image-outline" size={30} color={colors.brandCoral} />
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textMuted }}>
+                          {t.plaza.add_photo}
+                        </Text>
+                      </View>
                     )}
                   </Pressable>
                 ) : null}
@@ -1184,7 +1206,11 @@ export default function PlazaScreen() {
                     style={{
                       fontSize: 30,
                       lineHeight: 38,
-                      color: '#111111',
+                      // Android ignores placeholderTextColor here and draws the
+                      // hint in the text colour, which made an empty composer
+                      // read as a written one (D-127). An empty field has no
+                      // text of its own to tint.
+                      color: value ? '#111111' : '#B9B9B9',
                       fontWeight: '500',
                       marginBottom: 14,
                     }}
@@ -1210,7 +1236,7 @@ export default function PlazaScreen() {
                       minHeight: 220,
                       fontSize: 20,
                       lineHeight: 31,
-                      color: '#2B2B2B',
+                      color: value ? '#2B2B2B' : '#C4C4C4',
                       paddingTop: 4,
                     }}
                   />
@@ -1218,12 +1244,7 @@ export default function PlazaScreen() {
               />
               {errors.body ? <Text className="mb-2 text-sm text-danger">{fieldErrorText(t.validation, errors.body)}</Text> : null}
 
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                className="mb-6 mt-2"
-                contentContainerStyle={{ gap: 10, paddingRight: 10 }}
-              >
+              <View className="mb-6 mt-2 flex-row flex-wrap" style={{ gap: 10 }}>
                 {POST_TYPES.map((type) => {
                   const active = selectedType === type;
                   return (
@@ -1254,7 +1275,7 @@ export default function PlazaScreen() {
                     </FeedbackPressable>
                   );
                 })}
-              </ScrollView>
+              </View>
 
               <View className="mb-2 border-t border-neutral-100 pt-2">
                 <View className="min-h-[58px] flex-row items-center justify-between">
@@ -1424,7 +1445,7 @@ export default function PlazaScreen() {
                     borderWidth: 1,
                     borderColor: 'rgba(255, 200, 175, 0.65)',
                     backgroundColor: '#F67673',
-                    opacity: isSubmitting || isUploadingMedia ? 0.7 : 1,
+                    opacity: isSubmitting || isUploadingMedia || !canSubmit ? 0.45 : 1,
                     ...shadows.cta,
                   }}
                 >
@@ -1444,9 +1465,9 @@ export default function PlazaScreen() {
                         guide.requestPublishConfirm();
                         return;
                       }
-                      handleSubmit(onSubmit)();
+                      handleSubmit(onSubmit, onInvalid)();
                     }}
-                    disabled={isSubmitting || isUploadingMedia}
+                    disabled={isSubmitting || isUploadingMedia || !canSubmit}
                     accessibilityRole="button"
                     accessibilityLabel={editingPost ? t.common.save : t.plaza.publish_note}
                     style={StyleSheet.absoluteFill}
