@@ -47,7 +47,7 @@ export function CommentComposerSheet({
 }: CommentComposerSheetProps) {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
-  const keyboardHeight = useKeyboardHeight();
+  const keyboardHeight = useKeyboardHeight(visible);
   const inputRef = useRef<TextInput>(null);
   const [text, setText] = useState('');
 

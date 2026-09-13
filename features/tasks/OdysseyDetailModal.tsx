@@ -83,7 +83,7 @@ interface Props {
 export function OdysseyDetailModal({ visible, node, state, onClose, onTaskComplete }: Props) {
   const { t, langCode } = useLanguage();
   const insets = useSafeAreaInsets();
-  const keyboardHeight = useKeyboardHeight();
+  const keyboardHeight = useKeyboardHeight(visible);
   const user = useAuthStore((s) => s.user);
   const start = useStartOdyssey();
   const complete = useCompleteOdyssey();

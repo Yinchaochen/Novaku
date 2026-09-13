@@ -182,7 +182,6 @@ export default function PlazaScreen() {
   const { t } = useLanguage();
   const user = useAuthStore((state) => state.user);
   const insets = useSafeAreaInsets();
-  const keyboardHeight = useKeyboardHeight();
   const [editingPost, setEditingPost] = useState<CommunityPost | null>(null);
   // Which kind of post the reader asked for, or null for everything. Sent to
   // the backend rather than applied here — see communityFeedQueryKey.
@@ -228,6 +227,7 @@ export default function PlazaScreen() {
   const [plazaBanner, setPlazaBanner] = useState<{ tone: 'success' | 'info'; message: string } | null>(null);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [composerVisible, setComposerVisible] = useState(false);
+  const keyboardHeight = useKeyboardHeight(composerVisible);
   const [selectedPost, setSelectedPost] = useState<CommunityPost | null>(null);
   const [selectedPlaces, setSelectedPlaces] = useState<CommunitySelectedPlaceInput[]>([]);
   const [locationPickerVisible, setLocationPickerVisible] = useState(false);
@@ -1181,9 +1181,16 @@ export default function PlazaScreen() {
                         ) : null}
                       </View>
                     ) : (
-                      <View style={{ alignItems: 'center', gap: 6 }}>
+                      <View style={{ alignItems: 'center', gap: 6, paddingHorizontal: 10 }}>
                         <Ionicons name="image-outline" size={30} color={colors.brandCoral} />
-                        <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textMuted }}>
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontWeight: '700',
+                            color: colors.textMuted,
+                            textAlign: 'center',
+                          }}
+                        >
                           {t.plaza.add_photo}
                         </Text>
                       </View>

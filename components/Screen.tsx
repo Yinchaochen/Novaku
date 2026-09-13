@@ -71,8 +71,7 @@ export function Screen({
   // Android never shrinks the window for the keyboard (useKeyboardHeight), so
   // the frame does it here; the tab bar it would otherwise clear is behind the
   // keyboard anyway.
-  const keyboardHeight = useKeyboardHeight();
-  const keyboardInset = keyboard ? keyboardHeight : 0;
+  const keyboardInset = useKeyboardHeight(keyboard);
 
   const paddingTop = header ? 0 : topInset ? insets.top : 0;
   const paddingBottom =

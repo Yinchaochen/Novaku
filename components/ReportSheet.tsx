@@ -56,7 +56,7 @@ export function ReportSheet({
 }: ReportSheetProps) {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
-  const keyboardHeight = useKeyboardHeight();
+  const keyboardHeight = useKeyboardHeight(visible);
   const submit = useSubmitReport();
 
   const [reason, setReason] = useState<ReportReason | null>(null);

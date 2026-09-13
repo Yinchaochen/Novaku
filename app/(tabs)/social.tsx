@@ -33,6 +33,7 @@ import { FeedbackPressable } from '../../components/FeedbackPressable';
 import { DateTimeRangePicker } from '../../components/datetime/DateTimeRangePicker';
 import { PlacePicker, type PickedPlace } from '../../components/places/PlacePicker';
 import { Screen } from '../../components/Screen';
+import { useKeyboardHeight } from '../../hooks/useKeyboardHeight';
 import { useLanguage } from '../../context/LanguageContext';
 import type { SocialGuideStep } from '../../features/guide/socialGuide';
 import { useSocialGuide } from '../../features/guide/useSocialGuide';
@@ -615,6 +616,10 @@ export default function SocialScreen() {
   const [isMultiSelect, setIsMultiSelect] = useState(false);
   const [selectedMsgIds, setSelectedMsgIds] = useState<Set<string>>(new Set());
   const [isForwardVisible, setIsForwardVisible] = useState(false);
+  // Only these four shells hold the fields the keyboard can reach.
+  const keyboardHeight = useKeyboardHeight(
+    isCreateGroupVisible || isCreateMeetupVisible || isConnectionsVisible || isForwardVisible,
+  );
   const [forwardMessage, setForwardMessage] = useState<ChatMessage | null>(null);
 
   const messagesListRef = useRef<FlatList>(null);
@@ -1603,7 +1608,7 @@ export default function SocialScreen() {
 
       {/* ── Connections modal ── */}
       <Modal visible={isConnectionsVisible} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setIsConnectionsVisible(false)}>
-        <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom, paddingLeft: insets.left, paddingRight: insets.right, backgroundColor: '#F6F7FB' }}>
+        <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: keyboardHeight > 0 ? keyboardHeight : insets.bottom, paddingLeft: insets.left, paddingRight: insets.right, backgroundColor: '#F6F7FB' }}>
           <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <View className="flex-row items-center justify-between px-5 pb-4 pt-4">
               <Pressable onPress={() => setIsConnectionsVisible(false)}>
@@ -1736,7 +1741,7 @@ export default function SocialScreen() {
 
       {/* ── Create group modal ── */}
       <Modal visible={isCreateGroupVisible} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setIsCreateGroupVisible(false)}>
-        <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom, paddingLeft: insets.left, paddingRight: insets.right, backgroundColor: '#F6F7FB' }}>
+        <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: keyboardHeight > 0 ? keyboardHeight : insets.bottom, paddingLeft: insets.left, paddingRight: insets.right, backgroundColor: '#F6F7FB' }}>
           <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <View className="flex-row items-center justify-between px-5 pb-4 pt-4">
               <Pressable onPress={() => setIsCreateGroupVisible(false)}>
@@ -2427,7 +2432,7 @@ export default function SocialScreen() {
 
       {/* ── Forward modal ── */}
       <Modal visible={isForwardVisible} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setIsForwardVisible(false)}>
-        <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom, paddingLeft: insets.left, paddingRight: insets.right, backgroundColor: '#F6F7FB' }}>
+        <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: keyboardHeight > 0 ? keyboardHeight : insets.bottom, paddingLeft: insets.left, paddingRight: insets.right, backgroundColor: '#F6F7FB' }}>
           <View className="flex-row items-center justify-between px-5 pb-4 pt-4">
             <Pressable onPress={() => setIsForwardVisible(false)}>
               <Ionicons name="close" size={28} color="#111827" />
@@ -2504,7 +2509,7 @@ export default function SocialScreen() {
 
       {/* ── Create meetup modal ── */}
       <Modal visible={isCreateMeetupVisible} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setIsCreateMeetupVisible(false)}>
-        <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom, paddingLeft: insets.left, paddingRight: insets.right, backgroundColor: '#F6F7FB' }}>
+        <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: keyboardHeight > 0 ? keyboardHeight : insets.bottom, paddingLeft: insets.left, paddingRight: insets.right, backgroundColor: '#F6F7FB' }}>
           <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <View className="flex-row items-center justify-between px-5 pb-4 pt-4">
               <Pressable onPress={() => setIsCreateMeetupVisible(false)}>
