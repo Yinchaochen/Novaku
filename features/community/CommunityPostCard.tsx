@@ -1,7 +1,7 @@
 ﻿import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 
 import { colors } from '../../theme/tokens';
@@ -21,6 +21,7 @@ import {
 } from './useCommunity';
 import { PostCover } from '../../components/community/PostCover';
 import { VerifiedBadge } from '../../components/VerifiedBadge';
+import type { CardOrigin } from './CommunityPostDetailModal';
 
 function formatDuration(totalSeconds?: number | null): string {
   const safe = Math.max(0, Math.floor(totalSeconds ?? 0));
@@ -29,7 +30,13 @@ function formatDuration(totalSeconds?: number | null): string {
 
 interface Props {
   post: CommunityPost;
-  onPress?: (post: CommunityPost) => void;
+  /**
+   * The second argument is where this card sat when it was tapped, so a wide
+   * layout can grow the detail out of it (D-141). Measured here rather than
+   * guessed from the index: a masonry column has no row height to compute
+   * from, and the reader may be mid-scroll.
+   */
+  onPress?: (post: CommunityPost, origin?: CardOrigin) => void;
   /** Search results only: highlight this query inside the displayed title. */
   titleHighlight?: string;
   /**
@@ -136,6 +143,7 @@ function HighlightedCardTitle({
 
 export function CommunityPostCard({ post, onPress, titleHighlight, columnWidth }: Props) {
   const wide = (columnWidth ?? 0) >= WIDE_CARD_MIN_WIDTH;
+  const cardRef = useRef<View>(null);
   const { t, langCode } = useLanguage();
   const helpful = useMarkCommunityHelpful();
   const unhelpful = useUnmarkCommunityHelpful();
@@ -165,7 +173,28 @@ export function CommunityPostCard({ post, onPress, titleHighlight, columnWidth }
     }
   };
 
-  const openDetail = () => onPress?.(post);
+  // measureInWindow is asynchronous and can miss (a recycled cell mid-layout
+  // returns nothing), so the press is never held waiting for it: the callback
+  // fires with a rect when there is one and without when there is not, and the
+  // detail opens either way.
+  const openDetail = () => {
+    const node = cardRef.current;
+    if (!node) {
+      onPress?.(post);
+      return;
+    }
+    let delivered = false;
+    const deliver = (origin?: CardOrigin) => {
+      if (delivered) return;
+      delivered = true;
+      onPress?.(post, origin);
+    };
+    node.measureInWindow((x, y, width, height) => {
+      deliver(width > 0 && height > 0 ? { x, y, width, height } : undefined);
+    });
+    // measureInWindow does not fire at all on a detached node in RN Web.
+    setTimeout(() => deliver(undefined), 60);
+  };
 
   // Tap avatar / display name → author's profile (or own tab if it's me).
   const openAuthorProfile = () => {
@@ -199,6 +228,8 @@ export function CommunityPostCard({ post, onPress, titleHighlight, columnWidth }
 
   return (
     <View
+      ref={cardRef}
+      collapsable={false}
       style={{
         // No plate, no shadow — the picture sits on the page and the words sit
         // under it (D-088, lisum's call). Measured on Xiaohongshu: the gap

@@ -10,6 +10,7 @@ import {
   Alert,
   Animated,
   BackHandler,
+  Easing,
   KeyboardAvoidingView,
   Linking,
   Modal,
@@ -18,6 +19,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   useWindowDimensions,
   View,
@@ -27,6 +29,7 @@ import ViewShot from 'react-native-view-shot';
 
 import { useLanguage } from '../../context/LanguageContext';
 import { detailMediaHeight, detailMediaHeightFor } from '../../lib/cardAspect';
+import { WIDE_LAYOUT_MIN_WIDTH } from '../../theme/layout';
 import { formatDisplayLocation } from '../../lib/displayLocation';
 import { formatEventTime } from '../../lib/eventTime';
 import { normalizeMapUrl } from '../../lib/maps';
@@ -73,11 +76,131 @@ import {
 import { OfficialChip, isOfficialAuthor } from '../../components/OfficialChip';
 import { VerifiedBadge } from '../../components/VerifiedBadge';
 
+/** Where on screen the card that opened this sat, in window coordinates. */
+export interface CardOrigin {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 interface Props {
   post: CommunityPost | null;
   visible: boolean;
   onClose: () => void;
   onEditPost?: (post: CommunityPost) => void;
+  /** Wide layouts only: the rect the detail grows out of (D-141). */
+  origin?: CardOrigin | null;
+}
+
+/**
+ * The frame the detail is presented in.
+ *
+ * On a phone it is nothing: a full-screen native Modal sliding up is what the
+ * platform does and what the reader expects, and this component hands its
+ * children straight through.
+ *
+ * On a browser it is the thing lisum filmed on 2026-09-15. Three parts, and
+ * each was measured off that recording rather than guessed:
+ *
+ *  - The wall does NOT go dark. It is veiled in WHITE to about a third of its
+ *    contrast and stays exactly where it was, so the reader can still see the
+ *    shape of the page they came from and lands back in the same place when
+ *    they close. (The modal never unmounts the feed, so the scroll position
+ *    was never at risk — the veil is what makes that visible.)
+ *  - The sheet GROWS OUT OF THE CARD that was clicked, rather than appearing
+ *    in the middle or sliding from an edge. That is what ties the thing you
+ *    are now reading to the thing you just pointed at.
+ *  - It takes about 220ms, ease-out. I timed it across frames at 55fps: the
+ *    sheet is a small translucent ghost at 4.92s and full size at 5.08s.
+ */
+function DetailFrame({
+  wide,
+  origin,
+  visible,
+  onClose,
+  children,
+}: {
+  wide: boolean;
+  origin?: CardOrigin | null;
+  visible: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const progress = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!wide) return;
+    if (!visible) {
+      progress.setValue(0);
+      return;
+    }
+    progress.setValue(0);
+    Animated.timing(progress, {
+      toValue: 1,
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [wide, visible, progress]);
+
+  if (!wide) return <>{children}</>;
+
+  const sheetWidth = Math.min(1120, windowWidth - 120);
+  const sheetHeight = Math.min(940, windowHeight - 72);
+  const left = (windowWidth - sheetWidth) / 2;
+  const top = (windowHeight - sheetHeight) / 2;
+
+  // Without a measured card the sheet still animates, just from its own
+  // centre — a search result opened by keyboard has no rect to grow from.
+  const startScale = origin ? Math.max(0.2, Math.min(1, origin.width / sheetWidth)) : 0.88;
+  const dx = origin ? origin.x + origin.width / 2 - (left + sheetWidth / 2) : 0;
+  const dy = origin ? origin.y + origin.height / 2 - (top + sheetHeight / 2) : 0;
+
+  return (
+    <View style={{ flex: 1 }}>
+      <Animated.View
+        style={{
+          ...StyleSheet.absoluteFillObject,
+          backgroundColor: 'rgba(255, 248, 241, 0.72)',
+          opacity: progress,
+        }}
+      >
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          accessibilityRole="button"
+          testID="plaza.detail.scrim"
+        />
+      </Animated.View>
+      <Animated.View
+        style={{
+          position: 'absolute',
+          left,
+          top,
+          width: sheetWidth,
+          height: sheetHeight,
+          borderRadius: 20,
+          overflow: 'hidden',
+          backgroundColor: '#FFF8F1',
+          shadowColor: '#7A4A2C',
+          shadowOpacity: 0.18,
+          shadowRadius: 40,
+          shadowOffset: { width: 0, height: 18 },
+          elevation: 12,
+          opacity: progress.interpolate({ inputRange: [0, 0.35, 1], outputRange: [0, 0.8, 1] }),
+          transform: [
+            { translateX: progress.interpolate({ inputRange: [0, 1], outputRange: [dx, 0] }) },
+            { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [dy, 0] }) },
+            { scale: progress.interpolate({ inputRange: [0, 1], outputRange: [startScale, 1] }) },
+          ],
+        }}
+      >
+        {children}
+      </Animated.View>
+    </View>
+  );
 }
 
 
@@ -130,7 +253,11 @@ function wrapMediaIndex(index: number, itemCount: number) {
   return ((index % itemCount) + itemCount) % itemCount;
 }
 
-export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onEditPost }: Props) {
+export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onEditPost, origin }: Props) {
+  // A browser window reads the detail as a sheet over the wall it came from;
+  // a phone reads it as the next screen. Same breakpoint as the tab rail.
+  const { width: detailWindowWidth } = useWindowDimensions();
+  const wideDetail = detailWindowWidth >= WIDE_LAYOUT_MIN_WIDTH;
   // Tapping a related post swaps the displayed post in place — pushing a
   // route would land underneath this native Modal (see openAuthorProfile).
   // The stack lets hardware back walk the chain before closing the modal.
@@ -668,10 +795,19 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
   }
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent={wideDetail}
+      // The wide frame runs its own 220ms grow-from-the-card; letting the
+      // platform slide the window as well would play two animations at once.
+      animationType={wideDetail ? 'none' : 'slide'}
+      presentationStyle={wideDetail ? undefined : 'fullScreen'}
+      onRequestClose={onClose}
+    >
+      <DetailFrame wide={wideDetail} origin={origin} visible={visible} onClose={onClose}>
       {/* IOS-LOGIN-111: iOS Modal context doesn't propagate safe-area insets
           to SafeAreaView reliably; use outer insets directly. */}
-      <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: '#FFF8F1' }}>
+      <View style={{ flex: 1, paddingTop: wideDetail ? 8 : insets.top, backgroundColor: '#FFF8F1' }}>
         <View className="px-4 pb-3 pt-2" style={{ borderBottomWidth: 1, borderBottomColor: 'rgba(98,57,40,0.06)' }}>
           <View className="flex-row items-center">
             <Pressable onPress={() => (postStack.length > 0 ? setPostStack((prev) => prev.slice(0, -1)) : onClose())} className="mr-3">
@@ -1276,6 +1412,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
         />
         </>
       ) : null}
+      </DetailFrame>
     </Modal>
   );
 }

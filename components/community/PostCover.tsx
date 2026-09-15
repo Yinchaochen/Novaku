@@ -2,7 +2,7 @@ import { Text, View } from 'react-native';
 import Svg, { Circle, Defs, Line, Pattern, Rect } from 'react-native-svg';
 
 import { useLanguage } from '../../context/LanguageContext';
-import { coverPlan, type CoverPalette } from '../../lib/postCover';
+import { coverPlan, readingMinutes, type CoverPalette } from '../../lib/postCover';
 import type { CommunityPost } from '../../features/community/useCommunity';
 
 /**
@@ -77,6 +77,7 @@ export function PostCover({
     post.translated_body ?? post.body,
   );
   const palette = paletteOverride ?? plan.palette;
+  const minutes = readingMinutes(post.translated_body ?? post.body);
 
   const u = width / 18;
   const size = width * plan.sizeRatio;
@@ -179,6 +180,28 @@ export function PostCover({
       >
         {t.plaza[`type_${post.post_type}`]}
       </Text>
+
+      {/* What the post costs to read, on the rubric line opposite its type.
+          Xiaohongshu prints this on long notes and it is the cheapest honest
+          thing on the card: a reader learns what they are committing to before
+          they commit. Silent under three minutes, where the number would say
+          less than the two lines of the post already showing. */}
+      {minutes > 0 ? (
+        <Text
+          numberOfLines={1}
+          style={{
+            position: 'absolute',
+            right: (18 - MARGIN_LEFT - 1) * u,
+            top: MARGIN_TOP * u,
+            fontSize: rubricSize,
+            fontWeight: '700',
+            letterSpacing: rubricSize * 0.04,
+            color: palette.secondary,
+          }}
+        >
+          {t.plaza.cover_reading_time.replace('{minutes}', String(minutes))}
+        </Text>
+      ) : null}
 
       {plan.isBlank ? null : (
         <View

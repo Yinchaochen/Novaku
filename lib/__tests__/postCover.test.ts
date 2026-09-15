@@ -1,4 +1,6 @@
 import {
+  COVER_TEMPLATES,
+  COVER_TEMPLATE_IDS,
   coverPalette,
   coverPlan,
   coverSticker,
@@ -6,6 +8,8 @@ import {
   pickHighlight,
   pickKeyLine,
   splitSentences,
+  readingMinutes,
+  templatePalette,
 } from '../postCover';
 
 // The bodies below are the real ones from app/dev/_seededPosts.json. Every
@@ -617,5 +621,181 @@ describe('the sticker and the author\'s own words', () => {
     for (const theme of BACKEND_THEMES) {
       expect(coverSticker('guide', null, theme)).not.toBe('🧭');
     }
+  });
+});
+
+/* The families (D-141). The stocks above answer "what does a post look like
+ * when nobody chose"; these answer "what may an author choose", and the two
+ * have different rules. A family is allowed to be candied — that is the point
+ * of it — but it is not allowed to be unreadable, and it is not allowed to
+ * stop being a family, which is what these hold. */
+const FAMILY_SWATCHES = COVER_TEMPLATE_IDS.flatMap((id) =>
+  COVER_TEMPLATES[id].swatches.map((swatch, index) => ({
+    name: `${id}/${index}`,
+    id,
+    index,
+    swatch,
+    p: templatePalette(id, index),
+  })),
+);
+
+describe('the template families', () => {
+  it.each(FAMILY_SWATCHES)('$name keeps the sentence readable on its own ground', ({ p }) => {
+    // The wash sits behind the words; the paper is around them. Both are read
+    // through, so both take the same 7:1 the stocks take.
+    expect(contrast(p.ink, p.paper)).toBeGreaterThanOrEqual(7);
+    expect(contrast(p.ink, p.wash)).toBeGreaterThanOrEqual(7);
+  });
+
+  it.each(FAMILY_SWATCHES.filter((f) => COVER_TEMPLATES[f.id].highlight))(
+    '$name draws a highlighter you can actually see',
+    ({ p }) => {
+      // A wash that matches its own ground is not a highlighter, which is the
+      // exact failure the papery stocks were rebuilt to fix. On a coloured
+      // ground the wash is the same hue, so the test is lightness, not hue.
+      expect(deltaE(p.paper, p.wash)).toBeGreaterThanOrEqual(8);
+    },
+  );
+
+  it('draws no highlighter at all in the family that cannot carry one', () => {
+    // Not a gap: no (tint, wash) pair keeps 7:1 ink on both a mid-tone dusk
+    // ground and a swipe visible against it. The family rules its text instead.
+    expect(COVER_TEMPLATES.manuscript.highlight).toBe(false);
+    const plan = coverPlan(
+      {
+        id: 'p-1',
+        post_type: 'guide',
+        title: 'T',
+        body: 'A sentence long enough to be worth marking a phrase inside of, easily.',
+        cover_template: 'manuscript',
+        cover_palette: 2,
+      },
+      '',
+      '',
+    );
+    expect(plan.highlight).toBeNull();
+  });
+
+  it.each(FAMILY_SWATCHES)('$name keeps its rubric legible', ({ p }) => {
+    expect(contrast(p.paper, p.secondary)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('makes every swatch in a family produce a different card', () => {
+    // Not necessarily a different PAPER: the notebook varies its highlighter
+    // over one stock and the night family varies its headline over one black.
+    // What must differ is the palette as a whole, or the row is decoration.
+    for (const id of COVER_TEMPLATE_IDS) {
+      const palettes = COVER_TEMPLATES[id].swatches.map((_, i) =>
+        JSON.stringify(templatePalette(id, i)),
+      );
+      expect(new Set(palettes).size).toBe(palettes.length);
+    }
+  });
+
+  it('keeps the candy family and the dusk family in different registers', () => {
+    // This is the thing lisum pointed at, and it is a property of the SETS,
+    // not of any one colour: their bright rail averages roughly three times
+    // the chroma of their dusk rail, which is why a wall of one never looks
+    // like a wall of the other.
+    const chroma = (hex: string) => Math.hypot(toLab(hex)[1], toLab(hex)[2]);
+    const mean = (id: 'bold' | 'manuscript') =>
+      COVER_TEMPLATES[id].swatches.reduce((sum, s) => sum + chroma(s), 0) /
+      COVER_TEMPLATES[id].swatches.length;
+
+    expect(mean('bold')).toBeGreaterThan(mean('manuscript') * 1.5);
+  });
+
+  it('inverts the night family rather than tinting it', () => {
+    for (let i = 0; i < COVER_TEMPLATES.night.swatches.length; i += 1) {
+      const p = templatePalette('night', i);
+      expect(p.paper).toBe('#1E1E1E');
+      // The swatch is the headline here, not the ground.
+      expect(p.ink).toBe(COVER_TEMPLATES.night.swatches[i]);
+    }
+  });
+
+  it('wraps a swatch index rather than crashing on one out of range', () => {
+    expect(templatePalette('bold', 99)).toEqual(
+      templatePalette('bold', 99 % COVER_TEMPLATES.bold.swatches.length),
+    );
+    expect(templatePalette('bold', -1).paper).toBeTruthy();
+  });
+
+  it('leaves a post that chose nothing exactly where it was', () => {
+    const post = { id: 'p-1', post_type: 'guide', title: 'T', body: 'A sentence worth lifting out.' };
+    expect(coverPlan(post, '', '').template).toBeNull();
+    expect(coverPlan(post, '', '').ground).toBe('dotted');
+  });
+
+  it('obeys the author who chose', () => {
+    const plan = coverPlan(
+      {
+        id: 'p-1', post_type: 'guide', title: 'T', body: 'A sentence worth lifting out.',
+        cover_template: 'night', cover_palette: 1,
+      },
+      '',
+      '',
+    );
+    expect(plan.template).toBe('night');
+    expect(plan.palette).toEqual(templatePalette('night', 1));
+    expect(plan.ground).toBe('plain');
+  });
+
+  it('fits the sentence a family sets larger, rather than clipping it', () => {
+    // The gallery caught this the moment the families first rendered: the
+    // scale was applied to the type AFTER the rung was chosen, so every bold
+    // and night cover ended "...five statutory ...". A family may set bigger;
+    // it may not set bigger than it can fit. Capacity is derived exactly as
+    // the default-stock test above derives it — sizeRatio already carries the
+    // family's scale, so the same arithmetic covers both.
+    const MEASURE_UNITS = 12 / 18;
+    const PACKING = 0.78;
+    const body =
+      'Between it and your bank account sit income tax and five statutory insurances.';
+
+    for (const id of COVER_TEMPLATE_IDS) {
+      const plan = coverPlan(
+        { id: 'p-fit', post_type: 'guide', title: 'zzz', body, cover_template: id, cover_palette: 0 },
+        'zzz',
+        body,
+      );
+      const capacity = (MEASURE_UNITS / plan.sizeRatio) * plan.maxLines * PACKING;
+      expect(estimateEm(plan.keyLine)).toBeLessThanOrEqual(capacity);
+    }
+  });
+
+  it('ignores a template id that is not one of ours', () => {
+    const plan = coverPlan(
+      {
+        id: 'p-1', post_type: 'guide', title: 'T', body: 'A sentence worth lifting out.',
+        cover_template: 'whatever-the-server-said', cover_palette: 3,
+      },
+      '',
+      '',
+    );
+    expect(plan.template).toBeNull();
+  });
+});
+
+describe('readingMinutes', () => {
+  it('is silent about anything short enough that the number would be noise', () => {
+    expect(readingMinutes('')).toBe(0);
+    expect(readingMinutes('Two sentences. Not a long read at all.')).toBe(0);
+  });
+
+  it('charges a spaced script about two hundred words a minute', () => {
+    const words = new Array(800).fill('word').join(' ');
+    expect(readingMinutes(words)).toBe(4);
+  });
+
+  it('charges Chinese at their own measured rate', () => {
+    // Their card reads "全文6877字 · 阅读需14分钟", i.e. 491 characters a
+    // minute. 500 is that rounded, and it has to land back on 14.
+    expect(readingMinutes('字'.repeat(6877))).toBe(14);
+  });
+
+  it('charges a mixed post for both halves rather than for the louder one', () => {
+    const mixed = '柏林'.repeat(1200) + ' ' + new Array(400).fill('word').join(' ');
+    expect(readingMinutes(mixed)).toBeGreaterThan(readingMinutes('柏林'.repeat(1200)));
   });
 });

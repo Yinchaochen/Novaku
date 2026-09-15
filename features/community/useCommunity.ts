@@ -171,6 +171,9 @@ export interface CommunityPost {
   odyssey_slug?: string | null;
   /** Closed vocabulary (backend themes.POST_THEMES). Same token in every locale. */
   theme?: string | null;
+  /** The drawn cover the author chose, or null for the default (D-141). */
+  cover_template?: string | null;
+  cover_palette?: number | null;
   language: string;
   source_language: string;
   title_source_language: string;

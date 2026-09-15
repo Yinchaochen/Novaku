@@ -4,6 +4,7 @@ import { Screen } from '../../components/Screen';
 import { SectionLabel } from '../../components/SectionLabel';
 import { PostCover } from '../../components/community/PostCover';
 import type { CommunityPost } from '../../features/community/useCommunity';
+import { COVER_TEMPLATE_IDS, COVER_TEMPLATES } from '../../lib/postCover';
 import { colors } from '../../theme/tokens';
 
 /**
@@ -200,11 +201,44 @@ function TheirColoursRow() {
   );
 }
 
+function FamilyRows() {
+  return (
+    <View>
+      <SectionLabel>
+        The families an author may choose (D-141) — every colour in each
+      </SectionLabel>
+      {COVER_TEMPLATE_IDS.map((id) => (
+        <View key={id} style={{ paddingBottom: 6 }}>
+          <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textMuted, paddingHorizontal: 10, paddingBottom: 4 }}>
+            {id}
+          </Text>
+          <ScrollView horizontal contentContainerStyle={{ gap: 10, paddingHorizontal: 10 }}>
+            {COVER_TEMPLATES[id].swatches.map((swatch, index) => (
+              <View key={swatch}>
+                <View style={{ width: 184.5, borderRadius: 12, overflow: 'hidden' }}>
+                  <PostCover
+                    post={{ ...COMPARE, cover_template: id, cover_palette: index } as typeof COMPARE}
+                    width={184.5}
+                  />
+                </View>
+                <Text style={{ fontSize: 10, color: colors.textMuted, paddingTop: 4, width: 184.5 }}>
+                  {swatch}
+                </Text>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export default function PlazaCoverGallery() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={{ paddingBottom: 48 }}>
         <TheirColoursRow />
+        <FamilyRows />
         {CASES.map((testCase) => (
           <View key={testCase.post.id}>
             <SectionLabel>{testCase.label}</SectionLabel>

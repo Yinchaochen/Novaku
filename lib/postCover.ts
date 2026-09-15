@@ -94,6 +94,8 @@ export interface CoverPlan {
    * assert a baseline — which is why dotted notebooks exist.
    */
   ground: 'dotted' | 'plain';
+  /** The family the author chose, or null when nobody chose (D-141). */
+  template: CoverTemplateId | null;
   /** A cover with no sentence worth lifting: header and paper, nothing false. */
   isBlank: boolean;
 }
@@ -169,6 +171,165 @@ const STOCKS: Record<CoverType, [CoverPalette, CoverPalette]> = {
 export function coverPalette(postType: string, variant = 0): CoverPalette {
   const pair = STOCKS[(postType as CoverType)] ?? STOCKS.experience;
   return pair[variant % pair.length];
+}
+
+/* ------------------------------------------------------------------ *
+ * Template families (D-141)
+ *
+ * The stocks above are what a post gets when nobody chose anything, and they
+ * are deliberately papery: a near-neutral ground carrying one wash. That is
+ * one register, and one register is what lisum saw the limit of when he put a
+ * Xiaohongshu recording beside ours on 2026-09-15.
+ *
+ * Theirs is not one register with more colours in it. Their composer offers
+ * named FAMILIES, and each family carries its own colour set — I sampled them
+ * out of the recording rather than guessing:
+ *
+ *   优雅几何 / 平实叙事  #F6CE72 #76CEFA #FAF29E #8AFA9A #BAFEC6 #AAE6FE
+ *   黄昏手稿            #FAE6C6 #E2AAB2 #7E8AC6 #BAAA76
+ *   (the inverted one)   paper #1E1E1E, headline #FAEA92
+ *
+ * Two families, two worlds. The first six are candy: chroma 30-60, all of them
+ * light. The second four are dusty: same hues, a third of the chroma, and one
+ * of them (#7E8AC6) is genuinely mid-tone. A card from one set can never be
+ * mistaken for a card from the other, and THAT is what makes a wall of their
+ * text notes look composed rather than random — not the individual colours.
+ *
+ * So the author picks a family and then a colour inside it, and the family
+ * decides what that colour becomes. The rendered card is never the swatch: I
+ * measured their green swatch #8AFA9A rendering as paper #DEFADE and their
+ * blue #76CEFA as #DAEAFA — a 72% tint both times. Picking a strong colour and
+ * being given its quiet tint is the whole trick, and it is why their bold
+ * covers stay readable.
+ * ------------------------------------------------------------------ */
+
+function channels(hex: string): [number, number, number] {
+  const v = hex.replace('#', '');
+  return [
+    parseInt(v.slice(0, 2), 16),
+    parseInt(v.slice(2, 4), 16),
+    parseInt(v.slice(4, 6), 16),
+  ];
+}
+
+function toHex(rgb: number[]): string {
+  return `#${rgb.map((c) => Math.round(Math.min(255, Math.max(0, c))).toString(16).padStart(2, '0')).join('')}`.toUpperCase();
+}
+
+/** Mix `hex` toward `target` by t. t=0 keeps the colour, t=1 is the target. */
+function mix(hex: string, target: string, t: number): string {
+  const a = channels(hex);
+  const b = channels(target);
+  return toHex(a.map((c, i) => c + (b[i] - c) * t));
+}
+
+export type CoverTemplateId = 'notebook' | 'bold' | 'night' | 'manuscript';
+
+export interface CoverTemplate {
+  id: CoverTemplateId;
+  /** The colours an author may pick inside this family. */
+  swatches: string[];
+  /** Dots or a bare ground. Only the notebook keeps its dot field. */
+  ground: 'dotted' | 'plain';
+  /**
+   * Multiplier on the type size. A family that fills the card with colour has
+   * to fill it with type as well, or the colour is just a large empty panel.
+   */
+  scale: number;
+  /**
+   * Whether this family draws the highlighter rule at all.
+   *
+   * The dusk family does not, and that is a finding rather than a taste: I
+   * searched the whole (tint, wash) space for a pair that keeps 7:1 ink on
+   * BOTH the ground and the swipe while leaving the swipe visible against the
+   * ground, and for a mid-tone stock like #7E8AC6 no such pair exists. Their
+   * own dusk cards draw no highlighter either - the family's device is ruled
+   * text on a tinted stock. A highlighter you cannot read through is not a
+   * highlighter, so the family goes without one instead of faking it.
+   */
+  highlight: boolean;
+}
+
+/** The candy set, straight off their 优雅几何 and 平实叙事 rails. */
+const BRIGHT_SWATCHES = ['#F6CE72', '#76CEFA', '#FAF29E', '#8AFA9A', '#BAFEC6', '#AAE6FE'];
+
+/** Their 黄昏手稿 set: same hues at a third of the chroma. */
+const DUSK_SWATCHES = ['#FAE6C6', '#E2AAB2', '#7E8AC6', '#BAAA76'];
+
+/** The washes the papery stocks already use, so the notebook's row is its own. */
+const NOTEBOOK_SWATCHES = ['#BEE0F5', '#FCEEA0', '#F7D2B0', '#CDE8C4', '#DCCBF2', '#F3C6D6'];
+
+export const COVER_TEMPLATES: Record<CoverTemplateId, CoverTemplate> = {
+  notebook: { id: 'notebook', swatches: NOTEBOOK_SWATCHES, ground: 'dotted', scale: 1, highlight: true },
+  bold: { id: 'bold', swatches: BRIGHT_SWATCHES, ground: 'plain', scale: 1.16, highlight: true },
+  night: { id: 'night', swatches: BRIGHT_SWATCHES, ground: 'plain', scale: 1.16, highlight: true },
+  manuscript: { id: 'manuscript', swatches: DUSK_SWATCHES, ground: 'dotted', scale: 0.92, highlight: false },
+};
+
+export const COVER_TEMPLATE_IDS = Object.keys(COVER_TEMPLATES) as CoverTemplateId[];
+
+export function isCoverTemplateId(value: unknown): value is CoverTemplateId {
+  return typeof value === 'string' && value in COVER_TEMPLATES;
+}
+
+/** Warm near-black. The ink everywhere except the inverted family. */
+const DAY_INK = '#3A2E26';
+
+/**
+ * The palette a family makes out of one swatch.
+ *
+ * Every number here was tuned against the contrast tests rather than chosen:
+ * the wash sits BEHIND the sentence, so `contrast(ink, wash) >= 7` is what
+ * decides how far each family may push its colour, and the families differ in
+ * how far that is because their swatches start in different places.
+ */
+export function templatePalette(id: CoverTemplateId, swatchIndex: number): CoverPalette {
+  const template = COVER_TEMPLATES[id];
+  const swatch = template.swatches[((swatchIndex % template.swatches.length) + template.swatches.length) % template.swatches.length];
+
+  if (id === 'notebook') {
+    // The ground stays paper and the swatch is the highlighter — the existing
+    // stocks' own arrangement, with the choice handed to the author.
+    return {
+      paper: '#F7F3E6', dot: '#DAD6CA', secondary: '#6A6862',
+      ink: DAY_INK, accent: '#7C7765', wash: swatch,
+    };
+  }
+
+  if (id === 'night') {
+    // Their inverted card: near-black stock, the swatch as the headline. The
+    // wash cannot be the swatch here — it would erase the words it sits under
+    // — so it is the swatch dropped most of the way to the stock, which reads
+    // as a lit band rather than a highlighter.
+    return {
+      paper: '#1E1E1E',
+      dot: mix('#1E1E1E', '#FFFFFF', 0.16),
+      secondary: mix(swatch, '#1E1E1E', 0.32),
+      ink: swatch,
+      accent: swatch,
+      wash: mix(swatch, '#1E1E1E', 0.88),
+    };
+  }
+
+  // bold and manuscript: the card IS the colour. 0.72 is their measured tint
+  // for the candy set; the dusk set stays twice as coloured (0.50) because it
+  // starts at a third of the chroma - their own dusk cards render mid-tone,
+  // and a dusk swatch tinted to 0.72 is just off-white. 0.50 is the lowest
+  // tint that still clears 7:1 ink on all four (7.70 at the periwinkle).
+  const whiten = id === 'bold' ? 0.72 : 0.5;
+  const paper = mix(swatch, '#FFFFFF', whiten);
+  return {
+    paper,
+    dot: mix(paper, DAY_INK, 0.12),
+    secondary: mix(paper, DAY_INK, 0.82),
+    ink: DAY_INK,
+    accent: mix(swatch, DAY_INK, 0.3),
+    // A highlighter has to be visible against the ground it is drawn on, so on
+    // a coloured ground it is the swatch near full strength. The dusk family
+    // draws none at all (see CoverTemplate.highlight), and its wash is its own
+    // paper so nothing can accidentally paint with it.
+    wash: id === 'bold' ? mix(swatch, '#FFFFFF', 0.14) : paper,
+  };
 }
 
 /** Scripts that do not put spaces between words. */
@@ -708,6 +869,44 @@ export function coverMark(postType: string, odysseySlug?: string | null): string
   return TYPE_MARKS[postType] ?? '“';
 }
 
+/**
+ * How long the post takes to read, in whole minutes.
+ *
+ * Xiaohongshu prints this on the cover of a long note -- "全文6877字 · 阅读需14
+ * 分钟" -- and it is the cheapest honest thing on that card: it tells the
+ * reader what they are committing to before they commit. Our Odyssey guides
+ * are exactly the length that needs it.
+ *
+ * Their own ratio is 6877/14 = 491 characters a minute, so 500 is theirs
+ * rounded, and 200 words a minute is the ordinary figure for prose in a spaced
+ * script. Which one applies is decided by the text rather than by the post's
+ * language column: a German post quoting a Chinese sign is still German, and a
+ * Chinese post is full of Latin place names.
+ *
+ * Returns 0 for anything short enough that the number would be noise. The
+ * caller prints nothing at 0 rather than printing "1 min", which on a card
+ * that already shows two lines of the post says nothing at all.
+ */
+export const READING_TIME_MIN_MINUTES = 3;
+
+export function readingMinutes(body: string): number {
+  const text = (body || '').trim();
+  if (!text) return 0;
+  const cjkChars = (text.match(/[぀-ヿ㐀-䶿一-鿿豈-﫿가-힯]/gu) || []).length;
+  // The two counts are in different units, so the CJK is taken OUT before the
+  // words are counted rather than subtracted from them afterwards. Subtracting
+  // characters from words is what the first version did, and it charged a post
+  // of 2400 Chinese characters the same whether or not 400 English words were
+  // sitting next to them.
+  const words = text
+    .replace(/[぀-ヿ㐀-䶿一-鿿豈-﫿가-힯]/gu, ' ')
+    .split(/\s+/)
+    .filter(Boolean).length;
+  const minutes = cjkChars / 500 + words / 200;
+  const rounded = Math.round(minutes);
+  return rounded >= READING_TIME_MIN_MINUTES ? rounded : 0;
+}
+
 export function coverPlan(
   post: {
     id: string;
@@ -716,6 +915,10 @@ export function coverPlan(
     body: string;
     odyssey_slug?: string | null;
     theme?: string | null;
+    /** The family the author picked, or null for the papery default (D-141). */
+    cover_template?: string | null;
+    /** Which colour inside that family. Ignored without a template. */
+    cover_palette?: number | null;
   },
   displayTitle: string,
   displayBody: string,
@@ -725,7 +928,14 @@ export function coverPlan(
   // ground and now the stock too, so two guides in one screenful are no longer
   // the same card twice — which was the other half of "too uniform".
   const seed = post.id.split('').reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) >>> 0, 7);
-  const palette = coverPalette(post.post_type, seed % 2);
+  // An author who chose is obeyed; everybody else gets what they got before.
+  // The default is not 'notebook' with a swatch picked for them — it is the
+  // existing pair of stocks, because those carry variety this file spent two
+  // rounds earning and a default template would flatten it back out.
+  const template = isCoverTemplateId(post.cover_template) ? post.cover_template : null;
+  const palette = template
+    ? templatePalette(template, post.cover_palette ?? 0)
+    : coverPalette(post.post_type, seed % 2);
   const keyLine = pickKeyLine(displayBody || post.body, displayTitle || post.title);
   const em = keyLine ? estimateEm(keyLine) : 0;
 
@@ -742,8 +952,29 @@ export function coverPlan(
   // line now. Same mistake as the hand-picked boundaries above: one rung's
   // number standing in for a property of all of them.
   const longest = keyLine ? longestTokenEm(keyLine) : 0;
-  const plain =
-    RUNGS.find((r) => em <= r.capacityEm && longest <= r.lineEm) ?? RUNGS[RUNGS.length - 1];
+
+  // A family that sets 16% larger fits 16% less, so the SCALE IS APPLIED
+  // BEFORE the rung is chosen, not after. Applying it afterwards is what the
+  // first version did, and the dev gallery showed the result immediately:
+  // every bold and night cover ended "...five statutory ..." because the rung
+  // had been picked for type one size smaller than what was drawn.
+  let scale = template ? COVER_TEMPLATES[template].scale : 1;
+  const fits = (s: number) =>
+    RUNGS.find((r) => em * s <= r.capacityEm && longest * s <= r.lineEm) ?? null;
+
+  let plain = fits(scale);
+  if (plain === null && scale > 1) {
+    // A long sentence in a family that sets 16% larger would run off the last
+    // rung, and a card ending "...five statutory ..." is a worse outcome than
+    // a card set at ordinary size. The family gives the extra size back and
+    // keeps everything that actually identifies it — its stock, its ground,
+    // its colour. Clipping stays reserved for a sentence no rung can hold.
+    scale = 1;
+    plain = fits(1);
+  }
+  plain = plain ?? RUNGS[RUNGS.length - 1];
+  const emFit = em * scale;
+  const longestFit = longest * scale;
 
   // A sentence past the last rung's capacity is clipped at a word, which this
   // file calls the honest failure and it is. What is not honest is putting the
@@ -751,7 +982,7 @@ export function coverPlan(
   // ends mid-clause, and washing "so there is" points at the damage. The tail is
   // where the wash goes and the tail is exactly what clipping takes, so when the
   // line clips there is no phrase left worth marking.
-  const clips = em > plain.capacityEm;
+  const clips = emFit > plain.capacityEm;
 
   // The rule is drawn under the phrase, not behind it, and that costs the
   // phrase a line of its own. A nested run inside a paragraph is the only
@@ -768,20 +999,22 @@ export function coverPlan(
   // by definition, and those are most of them.
   let rung = plain;
   let highlight: CoverHighlight | null = null;
-  if (!clips) {
+  if (!clips && (!template || COVER_TEMPLATES[template].highlight)) {
     for (const r of RUNGS) {
-      if (em > r.capacityEm || longest > r.lineEm) continue;
+      if (emFit > r.capacityEm || longestFit > r.lineEm) continue;
       // Nine tenths of the line, because estimateEm is an estimate: a wrapped
       // block absorbs the error in its wrap and a single line has nowhere to
       // put it but an ellipsis.
-      const h = pickHighlight(keyLine, r.lineEm * 0.9);
-      if (!h || estimateEm(h.before) > r.lineEm * (r.maxLines - 1) * PACKING) continue;
+      const h = pickHighlight(keyLine, (r.lineEm * 0.9) / scale);
+      if (!h || estimateEm(h.before) * scale > r.lineEm * (r.maxLines - 1) * PACKING) continue;
       rung = r;
       highlight = h;
       break;
     }
   }
-  const sizeRatio = rung.sizeRatio;
+  // A family that fills the card with colour sets larger, so the colour reads
+  // as the card's own rather than as a panel the words happen to sit on.
+  const sizeRatio = rung.sizeRatio * scale;
 
   const sticker = coverSticker(post.post_type, post.odyssey_slug, post.theme);
 
@@ -794,7 +1027,8 @@ export function coverPlan(
     sizeRatio,
     leading: rung.leading,
     maxLines: rung.maxLines,
-    ground: 'dotted',
+    ground: template ? COVER_TEMPLATES[template].ground : 'dotted',
+    template,
     isBlank: keyLine.length === 0,
   };
 }

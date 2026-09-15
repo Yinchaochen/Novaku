@@ -2,6 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { fieldErrorText } from '../../lib/formErrors';
 import { feedGrid } from '../../lib/feedGrid';
+import { isCoverTemplateId, type CoverTemplateId } from '../../lib/postCover';
+import { CoverTemplatePicker } from '../../components/community/CoverTemplatePicker';
+import { PostCover } from '../../components/community/PostCover';
 import { WIDE_LAYOUT_MIN_WIDTH } from '../../theme/layout';
 import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
@@ -64,7 +67,7 @@ import {
 } from '../../features/community/videoPicker';
 import { CommunityPostCard } from '../../features/community/CommunityPostCard';
 import { FeedFilterRow } from '../../components/community/FeedFilterRow';
-import { CommunityPostDetailModal } from '../../features/community/CommunityPostDetailModal';
+import { CommunityPostDetailModal, type CardOrigin } from '../../features/community/CommunityPostDetailModal';
 import {
   CommunityPost,
   CommunitySelectedPlaceInput,
@@ -243,9 +246,16 @@ export default function PlazaScreen() {
   const [composerVisible, setComposerVisible] = useState(false);
   const keyboardHeight = useKeyboardHeight(composerVisible);
   const [selectedPost, setSelectedPost] = useState<CommunityPost | null>(null);
+  // Where the card that opened the detail sat, so a wide layout grows the
+  // sheet out of it instead of dropping it in from nowhere (D-141).
+  const [detailOrigin, setDetailOrigin] = useState<CardOrigin | null>(null);
   const [selectedPlaces, setSelectedPlaces] = useState<CommunitySelectedPlaceInput[]>([]);
   const [locationPickerVisible, setLocationPickerVisible] = useState(false);
   const [aiSummaryEnabled, setAiSummaryEnabled] = useState(true);
+  // D-141: the drawn cover a text post wears. null = the papery default, which
+  // is also what every post written before this picker existed carries.
+  const [coverTemplate, setCoverTemplate] = useState<CoverTemplateId | null>(null);
+  const [coverPaletteIndex, setCoverPaletteIndex] = useState(0);
   // Optional event clock on the post (D-105). Empty = an ordinary post.
   const [eventTime, setEventTime] = useState<EventTimeValue>(EMPTY_EVENT_TIME);
   const guide = useProductGuide();
@@ -312,6 +322,19 @@ export default function PlazaScreen() {
     .pick({ title: true, body: true })
     .safeParse({ title: watchedTitle ?? '', body: watchedBody ?? '' }).success;
   const composerContentTooShort = isTooShortForAiSummary(watchedTitle ?? '', watchedBody ?? '');
+  // What the cover will look like for what is written so far. A real
+  // CommunityPost shape rather than a mock, because PostCover reads the same
+  // fields the feed will hand it — the preview lies the moment it does not.
+  const composerPreviewPost = {
+    id: editingPost?.id ?? 'composer-preview',
+    post_type: selectedType ?? 'experience',
+    title: watchedTitle ?? '',
+    body: watchedBody ?? '',
+    odyssey_slug: editingPost?.odyssey_slug ?? null,
+    theme: editingPost?.theme ?? null,
+    cover_template: coverTemplate,
+    cover_palette: coverPaletteIndex,
+  } as unknown as CommunityPost;
   const composerHint = t.plaza.composer_hint;
   // Place search now happens inside <LocationPicker> via Google Places
   // Autocomplete; the legacy Nominatim hook (usePlaceSuggestions) and the
@@ -484,6 +507,8 @@ export default function PlazaScreen() {
     setLocationPickerVisible(false);
     setComposerMessage(null);
     setAiSummaryEnabled(post.ai_summary_enabled ?? true);
+    setCoverTemplate(isCoverTemplateId(post.cover_template) ? post.cover_template : null);
+    setCoverPaletteIndex(post.cover_palette ?? 0);
     // Prefill the event clock, or editing the title would silently clear it.
     setEventTime({ start: post.event_starts_at ?? null, end: post.event_ends_at ?? null });
     reset({
@@ -494,7 +519,8 @@ export default function PlazaScreen() {
     setComposerVisible(true);
   };
 
-  const openPostFromFeed = (post: CommunityPost) => {
+  const openPostFromFeed = (post: CommunityPost, origin?: CardOrigin) => {
+    setDetailOrigin(origin ?? null);
     setSelectedPost(post);
   };
 
@@ -558,6 +584,8 @@ export default function PlazaScreen() {
       selected_places: selectedPlaces,
       save_places_as_odysseys: false,
       ai_summary_enabled: aiSummaryEnabled,
+      cover_template: coverTemplate,
+      cover_palette: coverTemplate ? coverPaletteIndex : null,
       event_starts_at: eventTime.start,
       event_ends_at: eventTime.end,
       city: editingPost?.city ?? user?.city,
@@ -1397,6 +1425,34 @@ export default function PlazaScreen() {
                 </View>
               </View>
 
+              {/* Only a post with no picture gets a drawn cover, so only a
+                  post with no picture is asked about one. The preview is the
+                  real component at a real width — a thumbnail of a cover whose
+                  whole point is its typography would be a picture of the
+                  wrong thing. */}
+              {mediaItems.length === 0 && !videoDraft ? (
+                <View className="border-t border-neutral-100 py-4">
+                  <View className="flex-row">
+                    <View className="flex-1 pr-3">
+                      <CoverTemplatePicker
+                        template={coverTemplate}
+                        paletteIndex={coverPaletteIndex}
+                        onChange={(next, index) => {
+                          setCoverTemplate(next);
+                          setCoverPaletteIndex(index);
+                        }}
+                      />
+                    </View>
+                    <View
+                      style={{ width: 118, borderRadius: 12, overflow: 'hidden' }}
+                      testID="plaza.cover-preview"
+                    >
+                      <PostCover post={composerPreviewPost} width={118} />
+                    </View>
+                  </View>
+                </View>
+              ) : null}
+
               <View className="border-t border-neutral-100 py-4">
                 <View className="mb-2 flex-row items-center">
                   <Ionicons name="settings-outline" size={20} color="#242424" />
@@ -1521,6 +1577,7 @@ export default function PlazaScreen() {
       <CommunityPostDetailModal
         post={selectedPost}
         visible={Boolean(selectedPost)}
+        origin={detailOrigin}
         onClose={() => setSelectedPost(null)}
         onEditPost={openComposerForEdit}
       />

@@ -385,6 +385,14 @@ export type Translations = {
     composer_widgets_row: string;
     composer_widgets_value: string;
     composer_advanced_row: string;
+    cover_reading_time: string;
+    cover_template_label: string;
+    cover_template_default: string;
+    cover_template_notebook: string;
+    cover_template_bold: string;
+    cover_template_night: string;
+    cover_template_manuscript: string;
+    cover_palette_label: string;
     ai_summary_toggle: string;
     ai_summary_toggle_desc: string;
     ai_summary_too_short_hint: string;
