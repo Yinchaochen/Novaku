@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 
 import { fieldErrorText } from '../../lib/formErrors';
+import { feedGrid } from '../../lib/feedGrid';
+import { WIDE_LAYOUT_MIN_WIDTH } from '../../theme/layout';
 import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -29,6 +31,7 @@ import {
   Switch,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -182,6 +185,17 @@ export default function PlazaScreen() {
   const { t } = useLanguage();
   const user = useAuthStore((state) => state.user);
   const insets = useSafeAreaInsets();
+  // The wall is two columns on a phone and follows its own width on anything
+  // wider — a browser, a tablet, a phone turned sideways. Its own width, not
+  // the window's: past WIDE_LAYOUT_MIN_WIDTH the tab rail has already taken a
+  // slice off the left, and a wall that counted the window would lay out one
+  // column too many and centre itself off to the right. See lib/feedGrid.
+  const { width: windowWidth } = useWindowDimensions();
+  const [wallWidth, setWallWidth] = useState(0);
+  const grid = feedGrid(wallWidth || windowWidth);
+  // With the tabs on a rail there is no bar along the bottom to clear, so the
+  // room reserved for one is just the last screen of the wall left empty.
+  const railed = windowWidth >= WIDE_LAYOUT_MIN_WIDTH;
   const [editingPost, setEditingPost] = useState<CommunityPost | null>(null);
   // Which kind of post the reader asked for, or null for everything. Sent to
   // the backend rather than applied here — see communityFeedQueryKey.
@@ -805,27 +819,37 @@ export default function PlazaScreen() {
           The -32 tuck slides the list under the hero's rounded edge (see
           zIndex note above); paddingTop compensates so resting layout is
           unchanged. */}
-      <View style={{ flex: 1, marginTop: -32, zIndex: 0 }}>
+      <View
+        style={{ flex: 1, marginTop: -32, zIndex: 0 }}
+        onLayout={(event) => setWallWidth(event.nativeEvent.layout.width)}
+      >
       <FlashList
         data={filteredPosts}
         masonry
-        numColumns={2}
+        // FlashList measures its columns once; a window resized across a
+        // breakpoint has to hand it a new list rather than a new prop.
+        key={`feed-${grid.columns}`}
+        numColumns={grid.columns}
         keyExtractor={feedItemKey}
         renderItem={({ item }) => (
           <View style={{ paddingHorizontal: 3 }}>
-            <CommunityPostCard post={item} onPress={openPostFromFeed} />
+            <CommunityPostCard
+              post={item}
+              onPress={openPostFromFeed}
+              columnWidth={grid.columnWidth}
+            />
           </View>
         )}
         // 3px either side of each card plus 6 here = a 6px gutter between
         // columns and 6px to the screen edge, so the wall reads as one surface
         // rather than as cards floating apart.
         contentContainerStyle={{
-          paddingHorizontal: 6,
+          paddingHorizontal: grid.sidePadding,
           // 46 over-compensated the -32 tuck by 14dp of dead space above the
           // first card. That is 14dp taken off every screen of feed, on a
           // surface where a whole card costs about 300.
           paddingTop: 34,
-          paddingBottom: Math.max(insets.bottom + 180, 200),
+          paddingBottom: railed ? 48 : Math.max(insets.bottom + 180, 200),
         }}
         ListHeaderComponent={
           showNewPill || localPoolEmpty ? (
@@ -941,7 +965,7 @@ export default function PlazaScreen() {
           position: 'absolute',
           left: 0,
           right: 0,
-          bottom: Math.max(insets.bottom + 96, 116),
+          bottom: railed ? 32 : Math.max(insets.bottom + 96, 116),
           alignItems: 'center',
           zIndex: 50,
           opacity: postButtonOffset.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),

@@ -19,7 +19,6 @@ import {
   useMarkCommunityHelpful,
   useUnmarkCommunityHelpful,
 } from './useCommunity';
-import { OfficialChip, isOfficialAuthor } from '../../components/OfficialChip';
 import { PostCover } from '../../components/community/PostCover';
 import { VerifiedBadge } from '../../components/VerifiedBadge';
 
@@ -33,6 +32,14 @@ interface Props {
   onPress?: (post: CommunityPost) => void;
   /** Search results only: highlight this query inside the displayed title. */
   titleHighlight?: string;
+  /**
+   * How wide this card's column is, when the list already knows (the browser
+   * wall, where a column is 300-400px rather than a phone's ~190). Passed in
+   * rather than measured: a font size chosen from onLayout changes the card's
+   * height after layout, and in a masonry column that shoves everything below
+   * it down while the reader is scrolling.
+   */
+  columnWidth?: number;
 }
 
 // A card without a picture is a coloured panel, and varying its height is what
@@ -43,10 +50,12 @@ function Avatar({
   name,
   avatarUrl,
   recyclingKey,
+  size = 22,
 }: {
   name: string;
   avatarUrl?: string | null;
   recyclingKey: string;
+  size?: number;
 }) {
   const resolvedAvatarUrl = resolveMediaUrl(avatarUrl);
 
@@ -59,7 +68,7 @@ function Avatar({
         // now belongs to somebody else.
         recyclingKey={recyclingKey}
         contentFit="cover"
-        style={{ width: 22, height: 22, borderRadius: 11 }}
+        style={{ width: size, height: size, borderRadius: size / 2 }}
       />
     );
   }
@@ -67,41 +76,57 @@ function Avatar({
   return (
     <View
       style={{
-        width: 22,
-        height: 22,
-        borderRadius: 11,
+        width: size,
+        height: size,
+        borderRadius: size / 2,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#FFE8DA',
       }}
     >
-      <Text style={{ color: colors.brandCoral, fontSize: 10, fontWeight: '700' }}>
+      <Text style={{ color: colors.brandCoral, fontSize: size * 0.45, fontWeight: '700' }}>
         {name.trim().slice(0, 1).toUpperCase() || 'N'}
       </Text>
     </View>
   );
 }
 
-const CARD_TITLE_STYLE = {
-  fontSize: 14.5,
-  fontWeight: '700',
-  lineHeight: 20,
-  color: colors.textMain,
-  marginBottom: 8,
-} as const;
+// The card carries two type scales and no more. A continuous ramp would put
+// the title at a different size in every window, and the byline is a 22dp
+// avatar next to an 11.5dp name because that is what a 148dp column allows,
+// not because it is the right size for a 340px one.
+const WIDE_CARD_MIN_WIDTH = 280;
 
-function HighlightedCardTitle({ text, query }: { text: string; query: string }) {
+function cardTitleStyle(wide: boolean) {
+  return {
+    fontSize: wide ? 17 : 14.5,
+    fontWeight: '700',
+    lineHeight: wide ? 23 : 20,
+    color: colors.textMain,
+    marginBottom: 8,
+  } as const;
+}
+
+function HighlightedCardTitle({
+  text,
+  query,
+  wide,
+}: {
+  text: string;
+  query: string;
+  wide: boolean;
+}) {
   const trimmed = query.trim();
   const index = trimmed ? text.toLowerCase().indexOf(trimmed.toLowerCase()) : -1;
   if (index === -1) {
     return (
-      <Text numberOfLines={2} style={CARD_TITLE_STYLE}>
+      <Text numberOfLines={2} style={cardTitleStyle(wide)}>
         {text}
       </Text>
     );
   }
   return (
-    <Text numberOfLines={2} style={CARD_TITLE_STYLE}>
+    <Text numberOfLines={2} style={cardTitleStyle(wide)}>
       {text.slice(0, index)}
       <Text style={{ color: colors.brandCoral }}>{text.slice(index, index + trimmed.length)}</Text>
       {text.slice(index + trimmed.length)}
@@ -109,7 +134,8 @@ function HighlightedCardTitle({ text, query }: { text: string; query: string }) 
   );
 }
 
-export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
+export function CommunityPostCard({ post, onPress, titleHighlight, columnWidth }: Props) {
+  const wide = (columnWidth ?? 0) >= WIDE_CARD_MIN_WIDTH;
   const { t, langCode } = useLanguage();
   const helpful = useMarkCommunityHelpful();
   const unhelpful = useUnmarkCommunityHelpful();
@@ -123,7 +149,6 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
   // you scroll. A slot is reserved now, from what we already know, and the
   // image is fitted into it.
   const media = cardMediaFit(post.media_items[0], post.id);
-  const showOfficialChip = isOfficialAuthor(post.author);
   const hasEventCandidate = post.action_candidates.some(
     (candidate) => candidate.metadata_json?.['card_type'] === 'event'
   );
@@ -192,6 +217,10 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
         marginBottom: 10,
       }}
     >
+      {/* The Editor chip is not on the cover. It sat bottom-left on every
+          seeded card and lisum read it as clutter across the artwork; the
+          disclosure now runs where the content is actually read — the detail
+          header, the author's profile and the Terms (D-140, narrowing D-065). */}
       {/* Long press replaces the per-card "..." button: the menu holds one
           rarely-used action, and in this column its 35dp cost was paid by
           the author's name on every single card. */}
@@ -239,19 +268,6 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
                 backgroundColor: media.fit === 'contain' ? colors.bgWarmDeep : '#1F1B18',
               }}
             />
-            {showOfficialChip ? (
-              // The chip used to sit beside the author's name. In a 148dp
-              // column it never fit: it does not shrink, so the name — which
-              // does — collapsed to nothing and every seeded card read
-              // ".. Editor" with no author at all. Moving it onto the picture
-              // gives the name the row back and makes the disclosure larger,
-              // not smaller, which is the direction D-065 cares about.
-              // Bottom-left: top-left is the moderation chip, bottom-right the
-              // video duration.
-              <View pointerEvents="none" style={{ position: 'absolute', left: 8, bottom: 8 }}>
-                <OfficialChip />
-              </View>
-            ) : null}
             {isVideoMedia(post.media_items[0]) ? (
               <>
                 {/* D-033 video affordance: centered play glyph + duration. */}
@@ -326,14 +342,6 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
           // do not read as posts that failed to have an image.
           <View onLayout={(event) => setCoverWidth(event.nativeEvent.layout.width)}>
             <PostCover post={post} width={coverWidth} />
-            {showOfficialChip ? (
-              // Bottom-left, exactly where it sits on a photo cover. The chip
-              // used to ride beside the type pill, which only existed because
-              // a text post had nowhere else to put it.
-              <View pointerEvents="none" style={{ position: 'absolute', left: 8, bottom: 8 }}>
-                <OfficialChip />
-              </View>
-            ) : null}
           </View>
         )}
       </Pressable>
@@ -348,6 +356,7 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
             <HighlightedCardTitle
               text={post.translated_title ?? post.title}
               query={titleHighlight}
+              wide={wide}
             />
           ) : (
             <TranslatedText
@@ -356,13 +365,7 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
               sourceLanguage={post.title_source_language ?? post.source_language}
               numberOfLines={2}
               showToggle={false}
-              textStyle={{
-                fontSize: 14.5,
-                fontWeight: '700',
-                lineHeight: 20,
-                color: colors.textMain,
-                marginBottom: 8,
-              }}
+              textStyle={cardTitleStyle(wide)}
             />
           )}
 
@@ -419,10 +422,16 @@ export function CommunityPostCard({ post, onPress, titleHighlight }: Props) {
               name={post.author.display_name}
               avatarUrl={post.author.avatar_url}
               recyclingKey={post.author.id}
+              size={wide ? 28 : 22}
             />
             <Text
               numberOfLines={1}
-              style={{ marginLeft: 8, flexShrink: 1, fontSize: 11.5, color: colors.textMutedOnCream }}
+              style={{
+                marginLeft: 8,
+                flexShrink: 1,
+                fontSize: wide ? 13.5 : 11.5,
+                color: colors.textMutedOnCream,
+              }}
             >
               {post.author.display_name}
             </Text>

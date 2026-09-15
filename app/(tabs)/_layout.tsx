@@ -2,7 +2,7 @@ import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppUpdateGate } from '../../components/appUpdate/AppUpdateGate';
@@ -13,7 +13,12 @@ import { useMe } from '../../features/auth/useAuth';
 import { useProductGuideController } from '../../features/guide/useProductGuide';
 import { tap } from '../../lib/haptics';
 import { useAuthStore } from '../../store/authStore';
-import { getTabBarHeight, TAB_BAR_MIN_BOTTOM } from '../../theme/layout';
+import {
+  getTabBarHeight,
+  TAB_BAR_MIN_BOTTOM,
+  TAB_RAIL_WIDTH,
+  WIDE_LAYOUT_MIN_WIDTH,
+} from '../../theme/layout';
 import { colors, gradients, shadows } from '../../theme/tokens';
 
 const ACTIVE_TINT = colors.brandCoral;
@@ -75,6 +80,12 @@ export default function TabsLayout() {
 
   const tabBarBottomPadding = Math.max(insets.bottom, TAB_BAR_MIN_BOTTOM);
   const tabBarHeight = getTabBarHeight(insets.bottom);
+  // A browser window is not a big phone: five tabs stretched across 2000px is
+  // navigation you have to look for. Past WIDE_LAYOUT_MIN_WIDTH the same five
+  // move to a rail down the left, which is where every desktop feed keeps
+  // them and costs the wall one column instead of a whole strip of screen.
+  const { width: windowWidth } = useWindowDimensions();
+  const railed = windowWidth >= WIDE_LAYOUT_MIN_WIDTH;
 
   return (
     <>
@@ -99,7 +110,14 @@ export default function TabsLayout() {
             paddingTop: 6,
           },
           tabBarBackground: () => (
-            <View style={[StyleSheet.absoluteFill, { borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden' }]}>
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                railed
+                  ? { borderTopRightRadius: 28, borderBottomRightRadius: 28, overflow: 'hidden' }
+                  : { borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden' },
+              ]}
+            >
               {/* iOS: real frosted blur underneath. Android: skip — perf + reliability. */}
               {Platform.OS === 'ios' ? (
                 <BlurView intensity={32} tint="light" style={StyleSheet.absoluteFill} />
@@ -118,19 +136,45 @@ export default function TabsLayout() {
               {/* Top edge highlight */}
               <View
                 pointerEvents="none"
-                style={{
-                  position: 'absolute',
-                  left: 24,
-                  right: 24,
-                  top: 0,
-                  height: 1,
-                  backgroundColor: 'rgba(255,255,255,0.85)',
-                  borderRadius: 1,
-                }}
+                style={
+                  railed
+                    ? {
+                        position: 'absolute',
+                        right: 0,
+                        top: 24,
+                        bottom: 24,
+                        width: 1,
+                        backgroundColor: 'rgba(255,255,255,0.85)',
+                        borderRadius: 1,
+                      }
+                    : {
+                        position: 'absolute',
+                        left: 24,
+                        right: 24,
+                        top: 0,
+                        height: 1,
+                        backgroundColor: 'rgba(255,255,255,0.85)',
+                        borderRadius: 1,
+                      }
+                }
               />
             </View>
           ),
-          tabBarStyle: {
+          tabBarPosition: railed ? 'left' : 'bottom',
+          tabBarStyle: railed
+            ? {
+                width: TAB_RAIL_WIDTH,
+                paddingTop: 24,
+                paddingBottom: tabBarBottomPadding,
+                borderRightWidth: 0,
+                borderTopWidth: 0,
+                borderTopRightRadius: 28,
+                borderBottomRightRadius: 28,
+                backgroundColor: 'transparent',
+                elevation: 0,
+                shadowOpacity: 0,
+              }
+            : {
             position: 'absolute',
             left: 0,
             right: 0,

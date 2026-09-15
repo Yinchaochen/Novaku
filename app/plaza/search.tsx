@@ -2,7 +2,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Keyboard, ScrollView, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Keyboard,
+  ScrollView,
+  Text,
+  TextInput,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 
 import { FeedbackPressable } from '../../components/FeedbackPressable';
 import { GlassCard } from '../../components/GlassCard';
@@ -23,10 +31,15 @@ import {
   normalizeHistoryQuery,
   usePlazaSearchHistoryStore,
 } from '../../store/plazaSearchHistoryStore';
+import { feedGrid } from '../../lib/feedGrid';
+import { WIDE_LAYOUT_MIN_WIDTH } from '../../theme/layout';
 import { colors } from '../../theme/tokens';
 
 type PostType = CommunityPost['post_type'];
 type TimeRange = CommunitySearchParams['timeRange'];
+
+/** How wide the centred search masthead may grow before it stops. */
+const SEARCH_BAR_MAX_WIDTH = 760;
 
 const POST_TYPES: PostType[] = ['experience', 'question', 'guide', 'warning', 'recommendation'];
 const TIME_ORDER: TimeRange[] = ['all', 'week', 'month', 'half_year'];
@@ -98,6 +111,10 @@ export default function PlazaSearchScreen() {
   const { t } = useLanguage();
   const user = useAuthStore((state) => state.user);
   const hasCity = Boolean(user?.city);
+  const { width: windowWidth } = useWindowDimensions();
+  const [wallWidth, setWallWidth] = useState(0);
+  const grid = feedGrid(wallWidth || windowWidth);
+  const wideLayout = windowWidth >= WIDE_LAYOUT_MIN_WIDTH;
 
   const historyItems = usePlazaSearchHistoryStore((state) => state.items);
   useEffect(() => {
@@ -174,14 +191,21 @@ export default function PlazaSearchScreen() {
 
   return (
     <Screen background="default" topInset keyboard contentStyle={{ flex: 1 }}>
+      {/* On a browser the field is the page's masthead rather than a strip
+          beside a back arrow: Xiaohongshu centres one wide pill across the top
+          and so does this. Same row, same controls, same testIDs — the
+          measurements change, not the structure. */}
       <View
         style={{
           flexDirection: 'row',
           alignItems: 'center',
-          gap: 8,
+          alignSelf: 'center',
+          width: '100%',
+          maxWidth: wideLayout ? SEARCH_BAR_MAX_WIDTH : undefined,
+          gap: wideLayout ? 12 : 8,
           paddingHorizontal: 14,
-          paddingTop: 6,
-          paddingBottom: 10,
+          paddingTop: wideLayout ? 18 : 6,
+          paddingBottom: wideLayout ? 18 : 10,
         }}
       >
         <FeedbackPressable
@@ -199,18 +223,23 @@ export default function PlazaSearchScreen() {
             flex: 1,
             flexDirection: 'row',
             alignItems: 'center',
-            gap: 6,
+            gap: wideLayout ? 10 : 6,
             backgroundColor: '#FFFFFF',
             borderRadius: 999,
-            paddingHorizontal: 12,
-            height: 40,
+            paddingHorizontal: wideLayout ? 20 : 12,
+            height: wideLayout ? 50 : 40,
             borderWidth: 1,
             borderColor: 'rgba(98, 57, 40, 0.08)',
           }}
         >
-          <Ionicons name="search" size={16} color={colors.textMuted} />
+          <Ionicons name="search" size={wideLayout ? 20 : 16} color={colors.textMuted} />
           <TextInput
-            style={{ flex: 1, fontSize: 14, color: colors.textMain, paddingVertical: 0 }}
+            style={{
+              flex: 1,
+              fontSize: wideLayout ? 16.5 : 14,
+              color: colors.textMain,
+              paddingVertical: 0,
+            }}
             placeholder={t.plaza.search_placeholder}
             placeholderTextColor={colors.textMuted}
             value={rawQuery}
@@ -227,7 +256,7 @@ export default function PlazaSearchScreen() {
           />
           {rawQuery ? (
             <FeedbackPressable onPress={() => setRawQuery('')} hitSlop={14} pressedStyle={{ opacity: 0.6 }}>
-              <Ionicons name="close-circle" size={16} color={colors.textMuted} />
+              <Ionicons name="close-circle" size={wideLayout ? 20 : 16} color={colors.textMuted} />
             </FeedbackPressable>
           ) : null}
         </View>
@@ -235,10 +264,27 @@ export default function PlazaSearchScreen() {
           onPress={() => submit()}
           testID="plaza-search.submit"
           hitSlop={8}
-          style={{ paddingHorizontal: 6, paddingVertical: 8 }}
+          style={
+            wideLayout
+              ? {
+                  paddingHorizontal: 22,
+                  height: 50,
+                  borderRadius: 999,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: colors.brandCoral,
+                }
+              : { paddingHorizontal: 6, paddingVertical: 8 }
+          }
           pressedStyle={{ opacity: 0.7 }}
         >
-          <Text style={{ color: colors.brandCoral, fontWeight: '800', fontSize: 14.5 }}>
+          <Text
+            style={{
+              color: wideLayout ? '#FFFFFF' : colors.brandCoral,
+              fontWeight: '800',
+              fontSize: wideLayout ? 16 : 14.5,
+            }}
+          >
             {t.plaza.search_button}
           </Text>
         </FeedbackPressable>
@@ -466,11 +512,15 @@ export default function PlazaSearchScreen() {
           />
         </View>
       ) : (
-        <View style={{ flex: 1 }}>
+        <View
+          style={{ flex: 1 }}
+          onLayout={(event) => setWallWidth(event.nativeEvent.layout.width)}
+        >
           <FlashList
             data={posts}
             masonry
-            numColumns={2}
+            key={`search-${grid.columns}`}
+            numColumns={grid.columns}
             keyExtractor={(post) => post.id}
             renderItem={({ item }) => (
               <View style={{ paddingHorizontal: 6 }}>
@@ -478,10 +528,11 @@ export default function PlazaSearchScreen() {
                   post={item}
                   onPress={setSelectedPost}
                   titleHighlight={params?.q}
+                  columnWidth={grid.columnWidth}
                 />
               </View>
             )}
-            contentContainerStyle={{ paddingHorizontal: 4, paddingBottom: 60 }}
+            contentContainerStyle={{ paddingHorizontal: grid.sidePadding, paddingBottom: 60 }}
             onEndReached={() => {
               if (searchQuery.hasNextPage && !searchQuery.isFetchingNextPage) {
                 void searchQuery.fetchNextPage();

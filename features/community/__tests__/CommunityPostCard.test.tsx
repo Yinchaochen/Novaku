@@ -131,18 +131,18 @@ describe('CommunityPostCard', () => {
     expect(tree.getByText('7')).toBeTruthy();
   });
 
-  it('keeps the Editor disclosure on the card exactly once', async () => {
-    // D-065 and the Terms clause both hang on this chip being present; moving
-    // it off the byline row must not have quietly dropped it.
+  it('keeps the Editor chip off the cover of a seeded card', async () => {
+    // D-140: the disclosure moved to the detail header and the author profile.
+    // The card is a preview; the reader meets the chip where the words are.
     const tree = await render(<CommunityPostCard post={makePost()} />);
 
-    expect(tree.getAllByTestId('account.official-chip')).toHaveLength(1);
+    expect(tree.queryByTestId('account.official-chip')).toBeNull();
   });
 
-  it('still shows the disclosure on a card that has no picture to carry it', async () => {
+  it('keeps it off the drawn cover a text post gets too', async () => {
     const tree = await render(<CommunityPostCard post={makePost({ media_items: [] })} />);
 
-    expect(tree.getAllByTestId('account.official-chip')).toHaveLength(1);
+    expect(tree.queryByTestId('account.official-chip')).toBeNull();
   });
 
   it('shows no chip for a post by a real person', async () => {
