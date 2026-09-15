@@ -118,13 +118,35 @@ describe('PostCover', () => {
     }
   });
 
-  it('prints a sentence from the body rather than the title', async () => {
+  it('sets the title as the hero and a body sentence as the summary (D-147)', async () => {
+    // Reverses D-135 rule 2. That rule kept the title off the card because the
+    // feed prints it 10dp below; the cost was a card with one sentence in its
+    // top third and nothing on the rest of it. Xiaohongshu's own long-post
+    // cards are 标题 + 摘要 and repeat the title under the card as well — the
+    // repetition costs far less than the emptiness did.
     const tree = await render(<PostCover post={makePost()} width={184.5} />);
 
+    expect(tree.queryByText('Getting from BER into the city')).not.toBeNull();
     expect(sentence(tree.toJSON())).toContain(
       sentence('For the city trip, remember that an ABC ticket is needed.'),
     );
-    expect(tree.queryByText('Getting from BER into the city')).toBeNull();
+  });
+
+  it('still refuses a summary that is only the title again', async () => {
+    // The echo rule is MORE important now, not less: with the title printed
+    // above it, a summary that restates it would print one sentence twice.
+    const tree = await render(
+      <PostCover
+        post={makePost({
+          title: 'Getting from BER into the city',
+          body: 'To get from BER into the city, take the FEX.',
+        })}
+        width={184.5}
+      />,
+    );
+
+    expect(tree.queryByText('Getting from BER into the city')).not.toBeNull();
+    expect(sentence(tree.toJSON())).not.toContain(sentence('take the FEX'));
   });
 
   it('draws Chinese, which is what the server renderer could not do', async () => {

@@ -799,8 +799,22 @@ describe('the template families', () => {
         'zzz',
         body,
       );
-      const capacity = (MEASURE_UNITS / plan.sizeRatio) * plan.maxLines * PACKING;
-      expect(estimateEm(plan.keyLine)).toBeLessThanOrEqual(capacity);
+      // A layout that puts furniture beside the words gets a narrower line,
+      // and the ladder is told: `measure` is folded into the fit exactly the
+      // way `scale` is. Both `rules` and `blocks` ended in an ellipsis until
+      // it was.
+      const measure = COVER_TEMPLATES[id].measure ?? 1;
+      const capacity = ((MEASURE_UNITS * measure) / plan.sizeRatio) * plan.maxLines * PACKING;
+      // The smallest rung is the clip path and is deliberate, exactly as it is
+      // for the default stocks: a family that narrows its own measure has
+      // nothing to give back, because the furniture IS the family.
+      // Either at its own scale, or at the scale it gave back to avoid
+      // clipping — both are the last rung and both are the clip path.
+      const scale = COVER_TEMPLATES[id].scale;
+      const smallestRung = [0.072, 0.072 * scale, 0.072 * measure].some(
+        (value) => Math.abs(plan.sizeRatio - value) < 1e-9,
+      );
+      if (!smallestRung) expect(estimateEm(plan.keyLine)).toBeLessThanOrEqual(capacity);
     }
   });
 

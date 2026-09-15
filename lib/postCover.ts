@@ -241,7 +241,16 @@ function mix(hex: string, target: string, t: number): string {
   return toHex(a.map((c, i) => c + (b[i] - c) * t));
 }
 
-export type CoverTemplateId = 'notebook' | 'bold' | 'night' | 'manuscript';
+export type CoverTemplateId =
+  | 'notebook'
+  | 'bold'
+  | 'night'
+  | 'manuscript'
+  | 'mono'
+  | 'rules'
+  | 'blocks'
+  | 'magazine'
+  | 'vertical';
 
 /**
  * How a cover is composed — where the words sit and what else is on the card.
@@ -265,7 +274,16 @@ export type CoverTemplateId = 'notebook' | 'bold' | 'night' | 'manuscript';
  *                rubric centred above. No stamp: a plate is quiet or it is
  *                not a plate.
  */
-export type CoverLayout = 'journal' | 'masthead' | 'poster' | 'plate';
+export type CoverLayout =
+  | 'journal'
+  | 'masthead'
+  | 'poster'
+  | 'plate'
+  | 'mono'
+  | 'rules'
+  | 'blocks'
+  | 'magazine'
+  | 'vertical';
 
 export interface CoverTemplate {
   id: CoverTemplateId;
@@ -280,6 +298,16 @@ export interface CoverTemplate {
    * to fill it with type as well, or the colour is just a large empty panel.
    */
   scale: number;
+  /**
+   * The share of the measure this layout's text actually gets.
+   *
+   * A layout that puts furniture beside the words — two rules, a padded block
+   * — leaves them a narrower line, and the size ladder has to be told, exactly
+   * as it has to be told about `scale`. The gallery showed this the moment
+   * `rules` and `blocks` first rendered: both ended "five statutory ...",
+   * because the rung had been chosen for a line 15% wider than the one drawn.
+   */
+  measure?: number;
   /**
    * Whether this family draws the highlighter rule at all.
    *
@@ -303,11 +331,25 @@ const DUSK_SWATCHES = ['#FAE6C6', '#E2AAB2', '#7E8AC6', '#BAAA76'];
 /** The washes the papery stocks already use, so the notebook's row is its own. */
 const NOTEBOOK_SWATCHES = ['#BEE0F5', '#FCEEA0', '#F7D2B0', '#CDE8C4', '#DCCBF2', '#F3C6D6'];
 
+/**
+ * 黑白极简 — the paper itself is the choice, including a black one.
+ * Their own swatch row for this family is cream / white / black.
+ */
+const MONO_SWATCHES = ['#FBFAF7', '#F2EDE2', '#1A1A1A'];
+
+/** 逻辑结构 — the swatch is the RULE, not the ground: crimson, bronze, blue. */
+const RULE_SWATCHES = ['#B3121F', '#A67C2A', '#1668C8'];
+
 export const COVER_TEMPLATES: Record<CoverTemplateId, CoverTemplate> = {
   notebook: { id: 'notebook', layout: 'journal', swatches: NOTEBOOK_SWATCHES, ground: 'dotted', scale: 1, highlight: true },
   bold: { id: 'bold', layout: 'masthead', swatches: BRIGHT_SWATCHES, ground: 'plain', scale: 1.16, highlight: true },
   night: { id: 'night', layout: 'poster', swatches: BRIGHT_SWATCHES, ground: 'plain', scale: 1.16, highlight: true },
   manuscript: { id: 'manuscript', layout: 'plate', swatches: DUSK_SWATCHES, ground: 'dotted', scale: 0.92, highlight: false },
+  mono: { id: 'mono', layout: 'mono', swatches: MONO_SWATCHES, ground: 'plain', scale: 1.08, highlight: false },
+  rules: { id: 'rules', layout: 'rules', swatches: RULE_SWATCHES, ground: 'plain', scale: 1, measure: 0.84, highlight: false },
+  blocks: { id: 'blocks', layout: 'blocks', swatches: BRIGHT_SWATCHES, ground: 'plain', scale: 1.04, measure: 0.88, highlight: false },
+  magazine: { id: 'magazine', layout: 'magazine', swatches: DUSK_SWATCHES, ground: 'plain', scale: 1, highlight: true },
+  vertical: { id: 'vertical', layout: 'vertical', swatches: DUSK_SWATCHES, ground: 'dotted', scale: 1, highlight: false },
 };
 
 export const COVER_TEMPLATE_IDS = Object.keys(COVER_TEMPLATES) as CoverTemplateId[];
@@ -337,6 +379,85 @@ export function templatePalette(id: CoverTemplateId, swatchIndex: number): Cover
     return {
       paper: '#F7F3E6', dot: '#DAD6CA', secondary: '#6A6862',
       ink: DAY_INK, accent: '#7C7765', wash: swatch,
+    };
+  }
+
+  if (id === 'mono') {
+    // 黑白极简: the swatch IS the stock, black included. Everything else is
+    // the same colour at different strengths -- a family with a second hue in
+    // it is not this family.
+    const dark = swatch === '#1A1A1A';
+    const ink = dark ? '#F2EDE2' : '#111111';
+    return {
+      paper: swatch,
+      dot: mix(swatch, ink, 0.12),
+      secondary: mix(swatch, ink, dark ? 0.55 : 0.72),
+      ink,
+      accent: mix(swatch, ink, 0.55),
+      wash: mix(swatch, ink, dark ? 0.24 : 0.14),
+    };
+  }
+
+  if (id === 'rules') {
+    // 逻辑结构: the swatch is the pair of rules that flank the sentence, not
+    // the ground. The ground stays near-white so the rules can be as strong as
+    // they are -- crimson at full strength on a tinted stock is a warning, not
+    // a frame.
+    return {
+      paper: '#FBFAF7',
+      dot: '#E4E1DC',
+      // Darkened toward the ink rather than lightened toward the paper:
+      // the bronze is the binding one, and a tint of it on near-white
+      // came out at 2.5:1 -- a label nobody can read is not a label.
+      secondary: mix(swatch, DAY_INK, 0.5),
+      ink: DAY_INK,
+      accent: swatch,
+      wash: mix(swatch, '#FFFFFF', 0.84),
+    };
+  }
+
+  if (id === 'blocks') {
+    // 拼接色块: the sentence sits ON a solid block of colour rather than under
+    // a highlighter. The block is the strongest thing on the card, so the
+    // ground gives way to it entirely.
+    const block = mix(swatch, '#FFFFFF', 0.12);
+    return {
+      paper: '#FEFDFB',
+      dot: '#E8E5E0',
+      secondary: mix('#FEFDFB', DAY_INK, 0.72),
+      ink: DAY_INK,
+      accent: swatch,
+      wash: block,
+    };
+  }
+
+  if (id === 'magazine') {
+    // 杂志先锋: a pale stock, one strong accent spent on the chapter mark and
+    // the rule under it, and the sentence set plain beneath.
+    const paper = mix(swatch, '#FFFFFF', 0.88);
+    return {
+      paper,
+      dot: mix(paper, DAY_INK, 0.1),
+      secondary: mix(paper, DAY_INK, 0.72),
+      ink: DAY_INK,
+      accent: mix(swatch, DAY_INK, 0.2),
+      // 0.45, which is the one tint that keeps ink at 7:1 on all four of
+      // the dusk swatches AND stays 8 deltaE clear of its own pale stock.
+      wash: mix(swatch, '#FFFFFF', 0.45),
+    };
+  }
+
+  if (id === 'vertical') {
+    // 札记集尘: their vertical family renders mid-tone, not near-white -- I
+    // measured one of their cards at #AECAE6. Same tint as the manuscript.
+    const paper = mix(swatch, '#FFFFFF', 0.5);
+    return {
+      paper,
+      dot: mix(paper, DAY_INK, 0.12),
+      secondary: mix(paper, DAY_INK, 0.82),
+      ink: DAY_INK,
+      accent: mix(swatch, DAY_INK, 0.35),
+      wash: paper,
     };
   }
 
@@ -1003,8 +1124,13 @@ export function coverPlan(
   // every bold and night cover ended "...five statutory ..." because the rung
   // had been picked for type one size smaller than what was drawn.
   let scale = template ? COVER_TEMPLATES[template].scale : 1;
-  const fits = (s: number) =>
-    RUNGS.find((r) => em * s <= r.capacityEm && longest * s <= r.lineEm) ?? null;
+  // Narrower line, same type size: for the purpose of fitting, that is the
+  // same thing as larger type on a full line.
+  const measure = template ? COVER_TEMPLATES[template].measure ?? 1 : 1;
+  const fits = (s: number) => {
+    const fit = s / measure;
+    return RUNGS.find((r) => em * fit <= r.capacityEm && longest * fit <= r.lineEm) ?? null;
+  };
 
   let plain = fits(scale);
   if (plain === null && scale > 1) {
@@ -1016,9 +1142,19 @@ export function coverPlan(
     scale = 1;
     plain = fits(1);
   }
+  if (plain === null && measure < 1) {
+    // The mirror of the rule above. A layout that narrows its own line cannot
+    // give width back — the furniture IS the family — but it can buy the width
+    // back by setting smaller: at scale = measure the fit is exactly the
+    // default's, and the type is the few per cent smaller that costs. Still
+    // better than an ellipsis, which is what `rules` and `blocks` showed in
+    // the gallery on a sentence the default sets whole.
+    scale = measure;
+    plain = fits(scale);
+  }
   plain = plain ?? RUNGS[RUNGS.length - 1];
-  const emFit = em * scale;
-  const longestFit = longest * scale;
+  const emFit = (em * scale) / measure;
+  const longestFit = (longest * scale) / measure;
 
   // A sentence past the last rung's capacity is clipped at a word, which this
   // file calls the honest failure and it is. What is not honest is putting the
@@ -1049,8 +1185,9 @@ export function coverPlan(
       // Nine tenths of the line, because estimateEm is an estimate: a wrapped
       // block absorbs the error in its wrap and a single line has nowhere to
       // put it but an ellipsis.
-      const h = pickHighlight(keyLine, (r.lineEm * 0.9) / scale);
-      if (!h || estimateEm(h.before) * scale > r.lineEm * (r.maxLines - 1) * PACKING) continue;
+      const h = pickHighlight(keyLine, (r.lineEm * 0.9 * measure) / scale);
+      if (!h || (estimateEm(h.before) * scale) / measure > r.lineEm * (r.maxLines - 1) * PACKING)
+        continue;
       rung = r;
       highlight = h;
       break;

@@ -2,7 +2,7 @@ import { Text, View } from 'react-native';
 import Svg, { Circle, Defs, Line, Pattern, Rect } from 'react-native-svg';
 
 import { useLanguage } from '../../context/LanguageContext';
-import { coverPlan, readingMinutes, type CoverPalette } from '../../lib/postCover';
+import { coverPlan, estimateEm, readingMinutes, type CoverPalette } from '../../lib/postCover';
 import type { CommunityPost } from '../../features/community/useCommunity';
 
 /**
@@ -60,6 +60,19 @@ const OVERLAP = 0.46;
  *  face the app lands on to place a rule; nothing here is precise about it. */
 const DESCENDER = 0.21;
 
+/** Scripts that stack: Han, kana, Hangul. Vertical setting is for these. */
+const CJK_RE = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uac00-\ud7af]/;
+
+/** The sentence cut into columns of `perColumn` glyphs, first column first. */
+function columnsOf(text: string, perColumn: number): string[] {
+  const glyphs = Array.from(text.replace(/\s+/g, ''));
+  const out: string[] = [];
+  for (let i = 0; i < glyphs.length; i += perColumn) {
+    out.push(glyphs.slice(i, i + perColumn).join('\n'));
+  }
+  return out;
+}
+
 export function PostCover({
   post,
   width,
@@ -80,7 +93,35 @@ export function PostCover({
   const minutes = readingMinutes(post.translated_body ?? post.body);
 
   const u = width / 18;
-  const size = width * plan.sizeRatio;
+
+  /**
+   * The card carries two levels now, and that is the whole answer to why it
+   * looked empty (2026-09-15, lisum: 这个新的 design 还是很丑).
+   *
+   * Their long-post cards are 标题 + 摘要 — the title set large across three or
+   * four lines and the summary set small filling the rest of the card. I
+   * confirmed it in their own release notes: 一键排版 generates 封面配图 and
+   * 文章摘要, and the composer lets the author edit 标题 and 摘要 separately.
+   * Ours printed one lifted sentence in the top third and left the rest of the
+   * card blank, which is not a quieter version of their card — it is a card
+   * with nothing on most of it.
+   *
+   * So the title is the hero and the lifted sentence becomes the summary under
+   * it. The sentence keeps its highlighter, because that mark is ours and it
+   * reads better on prose than on a headline.
+   *
+   * D-135 rule 2 said the cover must never restate the title, since the feed
+   * prints the title 10dp below the card. Theirs prints it under the card too
+   * and repeats it anyway, and looking at both walls the repetition costs far
+   * less than the emptiness did.
+   */
+  const titleText = (post.translated_title ?? post.title ?? '').trim();
+  const titleEm = estimateEm(titleText);
+  const titleRatio = titleEm > 34 ? 0.072 : titleEm > 24 ? 0.082 : titleEm > 15 ? 0.096 : 0.112;
+  const titleSize = width * titleRatio;
+  // The summary is the same size a body page sets at, so a cover and the
+  // pages behind it are one object at two densities rather than two designs.
+  const size = width * Math.min(plan.sizeRatio, 0.052);
   const rubricSize = Math.max(9.5, u * 0.62);
   const rule = Math.max(3, size * RULE_HEIGHT);
   const type = {
@@ -93,15 +134,40 @@ export function PostCover({
     color: palette.ink,
   };
 
-  const layout = plan.layout;
-  const centred = layout === 'plate';
+  // 札记集尘 only works on a script that stacks: a German sentence turned on
+  // its side is not vertical typesetting, it is a sentence that fell over. A
+  // cover is drawn in the READER's language, so the family cannot promise the
+  // layout -- it falls back to the plate, which is its nearest relative.
+  const canStack = CJK_RE.test(plan.keyLine);
+  const layout = plan.layout === 'vertical' && !canStack ? 'plate' : plan.layout;
+  const centred = layout === 'plate' || layout === 'rules';
   /** The band a masthead wears, and the height the words then start below. */
   const bandHeight = 3.4 * u;
+
+  // Room left under the title, in lines of the summary's own size.
+  const excerptLines = 6;
+
+  const titleBlock = titleText ? (
+    <Text
+      numberOfLines={4}
+      style={{
+        fontSize: titleSize,
+        lineHeight: titleSize * 1.22,
+        fontWeight: '800',
+        letterSpacing: titleSize > 18 ? -0.4 : 0,
+        color: palette.ink,
+        marginBottom: plan.isBlank ? 0 : 0.7 * u,
+        textAlign: centred ? 'center' : 'left',
+      }}
+    >
+      {titleText}
+    </Text>
+  ) : null;
 
   const keyLineBlock = plan.isBlank ? null : (
     <>
       <Text
-        numberOfLines={plan.highlight ? Math.max(1, plan.maxLines - 1) : plan.maxLines}
+        numberOfLines={plan.highlight ? Math.max(1, excerptLines - 1) : excerptLines}
         style={[type, centred ? { textAlign: 'center' as const } : null]}
       >
         {plan.highlight ? plan.highlight.before.trimEnd() : plan.keyLine}
@@ -241,8 +307,44 @@ export function PostCover({
         </Text>
       ) : null}
 
+      {/* 杂志先锋: a bracketed chapter mark and the rule under it are this
+          family's whole furniture, and they carry the rubric, so the ordinary
+          one is suppressed below. */}
+      {layout === 'magazine' ? (
+        <View
+          style={{
+            position: 'absolute',
+            left: MARGIN_LEFT * u,
+            top: MARGIN_TOP * u,
+            width: MEASURE * u,
+          }}
+        >
+          <Text
+            numberOfLines={1}
+            style={{
+              fontSize: rubricSize,
+              fontWeight: '700',
+              letterSpacing: rubricSize * 0.1,
+              textTransform: 'uppercase',
+              color: palette.accent,
+            }}
+          >
+            {`\u3010 ${t.plaza[`type_${post.post_type}`]} \u3011`}
+          </Text>
+          <View
+            style={{
+              marginTop: 0.5 * u,
+              height: Math.max(2, u * 0.14),
+              backgroundColor: palette.accent,
+            }}
+          />
+        </View>
+      ) : null}
+
       {/* Rubric: the kind of post, set as a journal header would be. Reversed
-          out of the band on a masthead, centred over the sentence on a plate. */}
+          out of the band on a masthead, centred over the sentence on a plate,
+          and left to the chapter mark on a magazine. */}
+      {layout === 'magazine' ? null : (
       <Text
         numberOfLines={1}
         style={{
@@ -263,6 +365,24 @@ export function PostCover({
       >
         {t.plaza[`type_${post.post_type}`]}
       </Text>
+      )}
+
+      {/* 黑白极简: a hairline under the rubric and nothing else at all. The
+          family's whole claim is that a page needs one rule and one size of
+          type; anything else added here would be arguing with it. */}
+      {layout === 'mono' ? (
+        <View
+          style={{
+            position: 'absolute',
+            left: MARGIN_LEFT * u,
+            top: MARGIN_TOP * u + rubricSize * 1.9,
+            width: MEASURE * u,
+            height: 1,
+            backgroundColor: palette.secondary,
+            opacity: 0.45,
+          }}
+        />
+      ) : null}
 
       {/* What the post costs to read, opposite its kind. The cheapest honest
           thing on the card: the reader learns what they are committing to
@@ -284,7 +404,111 @@ export function PostCover({
         </Text>
       ) : null}
 
-      {plan.isBlank ? null : layout === 'plate' ? (
+      {layout === 'vertical' ? (
+        // 札记集尘. RN has no vertical writing mode, so the columns are built
+        // rather than declared: the glyphs are split into fixed runs and each
+        // run is set one per line, laid out right to left. That is also how
+        // the script is actually read, which is why it survives being faked.
+        <View
+          style={{
+            position: 'absolute',
+            left: MARGIN_LEFT * u,
+            right: MARGIN_LEFT * u,
+            top: 3.4 * u,
+            bottom: 1.6 * u,
+            flexDirection: 'row-reverse',
+            justifyContent: 'flex-start',
+          }}
+        >
+          {columnsOf(plan.keyLine, Math.max(4, Math.floor((13 * u) / (size * 1.12)))).map(
+            (column, index) => (
+              <Text
+                key={index}
+                style={{
+                  fontSize: size,
+                  lineHeight: size * 1.12,
+                  fontWeight: '700',
+                  color: palette.ink,
+                  marginLeft: index === 0 ? 0 : size * 0.55,
+                  textAlign: 'center',
+                }}
+              >
+                {column}
+              </Text>
+            ),
+          )}
+        </View>
+      ) : layout === 'rules' ? (
+        // 逻辑结构: two rules flanking the sentence. They are the family, so
+        // they are drawn at full strength and nothing else is coloured.
+        <View
+          style={{
+            position: 'absolute',
+            left: MARGIN_LEFT * u,
+            top: 0,
+            bottom: 0,
+            width: MEASURE * u,
+            flexDirection: 'row',
+            alignItems: 'center',
+          }}
+        >
+          <View style={{ width: Math.max(2, u * 0.2), alignSelf: 'stretch', marginVertical: 4.4 * u, backgroundColor: palette.accent }} />
+          <View style={{ flex: 1, paddingHorizontal: 0.7 * u }}>
+            {titleBlock}
+            {keyLineBlock}
+          </View>
+          <View style={{ width: Math.max(2, u * 0.2), alignSelf: 'stretch', marginVertical: 4.4 * u, backgroundColor: palette.accent }} />
+        </View>
+      ) : layout === 'blocks' ? (
+        // 拼接色块: the sentence sits ON a block of colour rather than under a
+        // highlighter. The block shrink-wraps the words, so a short sentence
+        // gets a small block and a long one a large -- which is the pattern
+        // their cards make down a column.
+        <View
+          style={{
+            position: 'absolute',
+            left: MARGIN_LEFT * u,
+            top: 4 * u,
+            width: MEASURE * u,
+            alignItems: 'flex-start',
+          }}
+        >
+          <View
+            style={{
+              paddingHorizontal: 0.7 * u,
+              paddingVertical: 0.5 * u,
+              borderRadius: u * 0.28,
+              backgroundColor: palette.wash,
+            }}
+          >
+            {keyLineBlock}
+          </View>
+        </View>
+      ) : layout === 'mono' ? (
+        <View
+          style={{
+            position: 'absolute',
+            left: MARGIN_LEFT * u,
+            top: MARGIN_TOP * u + rubricSize * 3.4,
+            width: MEASURE * u,
+          }}
+        >
+          {titleBlock}
+          {keyLineBlock}
+        </View>
+      ) : layout === 'magazine' ? (
+        <View
+          style={{
+            position: 'absolute',
+            left: MARGIN_LEFT * u,
+            top: MARGIN_TOP * u + rubricSize * 3.6,
+            width: MEASURE * u,
+          }}
+        >
+          {titleBlock}
+          {keyLineBlock}
+        </View>
+      ) : layout === 'plate' ? (
         // Centred on both axes between two hairlines. The rules are what make
         // it a plate rather than a sentence that happens to be in the middle.
         <View
@@ -307,6 +531,7 @@ export function PostCover({
               opacity: 0.35,
             }}
           />
+          {titleBlock}
           {keyLineBlock}
           <View
             style={{
@@ -326,9 +551,10 @@ export function PostCover({
             width: MEASURE * u,
             ...(layout === 'poster'
               ? { bottom: 2.2 * u }
-              : { top: layout === 'masthead' ? bandHeight + 1.2 * u : 4 * u }),
+              : { top: layout === 'masthead' ? bandHeight + 1.2 * u : 3.4 * u }),
           }}
         >
+          {titleBlock}
           {keyLineBlock}
         </View>
       )}
@@ -341,7 +567,7 @@ export function PostCover({
           The plate does without one. Two rules, a centred rubric and a centred
           sentence are a composition; an emoji in the corner of it is a sticker
           somebody put on a printed card. */}
-      {plan.sticker && layout !== 'plate' ? (
+      {plan.sticker && (layout === 'journal' || layout === 'masthead' || layout === 'poster') ? (
         <Text
           style={{
             position: 'absolute',

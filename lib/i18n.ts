@@ -392,6 +392,11 @@ export type Translations = {
     cover_template_bold: string;
     cover_template_night: string;
     cover_template_manuscript: string;
+    cover_template_mono: string;
+    cover_template_rules: string;
+    cover_template_blocks: string;
+    cover_template_magazine: string;
+    cover_template_vertical: string;
     cover_palette_label: string;
     ai_summary_toggle: string;
     ai_summary_toggle_desc: string;
