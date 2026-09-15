@@ -2,6 +2,7 @@ import {
   COVER_TEMPLATES,
   COVER_TEMPLATE_IDS,
   DEFAULT_STOCK_COUNT,
+  defaultLayout,
   defaultStock,
   coverPlan,
   coverSticker,
@@ -740,10 +741,30 @@ describe('the template families', () => {
     expect(templatePalette('bold', -1).paper).toBeTruthy();
   });
 
-  it('leaves a post that chose nothing exactly where it was', () => {
+  it('leaves a post that chose nothing without a template', () => {
     const post = { id: 'p-1', post_type: 'guide', title: 'T', body: 'A sentence worth lifting out.' };
     expect(coverPlan(post, '', '').template).toBeNull();
     expect(coverPlan(post, '', '').ground).toBe('dotted');
+  });
+
+  it('varies the composition of posts nobody chose for, not only the colour (D-146)', () => {
+    // The wall is almost entirely seeded posts, which choose nothing. Nine
+    // colours of one composition is one design; the layout has to move too.
+    const layouts = new Set(Array.from({ length: 40 }, (_, i) => defaultLayout(i * 7 + 1)));
+    expect(layouts.size).toBeGreaterThan(2);
+  });
+
+  it('keeps a card colour and its composition independent', () => {
+    // If the two moved together a reader would meet nine fixed designs rather
+    // than a mix, and would learn the pairing long before running out of feed.
+    const pairs = new Set(
+      Array.from({ length: 60 }, (_, seed) => `${defaultStock(seed).paper}|${defaultLayout(seed)}`),
+    );
+    expect(pairs.size).toBeGreaterThan(DEFAULT_STOCK_COUNT);
+  });
+
+  it('gives one post the same composition every time it is drawn', () => {
+    expect(defaultLayout(17)).toBe(defaultLayout(17));
   });
 
   it('obeys the author who chose', () => {

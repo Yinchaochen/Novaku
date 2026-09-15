@@ -36,3 +36,16 @@ export const WIDE_LAYOUT_MIN_WIDTH = 900;
 
 /** How much width the left rail takes when it is shown. */
 export const TAB_RAIL_WIDTH = 116;
+
+/**
+ * How wide a sign-in form may grow before it stops and centres (D-145).
+ *
+ * A phone form fills the screen because the screen is the form's width. The
+ * same layout on a 1600px browser stretched an email field to 1570px for a
+ * value of at most forty characters, put the password field's eye icon a
+ * screen-width away from the password, and left "remember me" and "forgot
+ * password" a metre apart at opposite edges — two controls that belong to each
+ * other. 460 is the ordinary width of a web sign-in card, and the brand band
+ * across the top keeps running edge to edge, because a band is supposed to.
+ */
+export const AUTH_FORM_MAX_WIDTH = 460;

@@ -96,6 +96,8 @@ export interface CoverPlan {
   ground: 'dotted' | 'plain';
   /** The family the author chose, or null when nobody chose (D-141). */
   template: CoverTemplateId | null;
+  /** Where the words sit on the card (D-146). */
+  layout: CoverLayout;
   /** A cover with no sentence worth lifting: header and paper, nothing false. */
   isBlank: boolean;
 }
@@ -169,6 +171,26 @@ export function defaultStock(seed: number): CoverPalette {
 
 export const DEFAULT_STOCK_COUNT = DEFAULT_STOCKS.length;
 
+/**
+ * The composition a post gets when nobody chose one (D-146).
+ *
+ * The families gave the four layouts to authors, and almost no author uses
+ * them: the wall is mostly seeded posts, which choose nothing, so the wall was
+ * one composition drawn nine colours. Colour alone is what lisum had already
+ * called too simple once.
+ *
+ * Shifted off a different part of the id than the stock, so a card's colour
+ * and its composition are independent — pairing them would produce nine fixed
+ * card designs instead of thirty-six, and a reader would learn the pairing
+ * long before running out of feed.
+ */
+const DEFAULT_LAYOUTS: CoverLayout[] = ['journal', 'masthead', 'plate', 'journal', 'poster'];
+
+export function defaultLayout(seed: number): CoverLayout {
+  const shifted = Math.floor(seed / DEFAULT_STOCKS.length);
+  return DEFAULT_LAYOUTS[((shifted % DEFAULT_LAYOUTS.length) + DEFAULT_LAYOUTS.length) % DEFAULT_LAYOUTS.length];
+}
+
 /* ------------------------------------------------------------------ *
  * Template families (D-141)
  *
@@ -221,8 +243,34 @@ function mix(hex: string, target: string, t: number): string {
 
 export type CoverTemplateId = 'notebook' | 'bold' | 'night' | 'manuscript';
 
+/**
+ * How a cover is composed — where the words sit and what else is on the card.
+ *
+ * Colour was the first axis and it is not enough on its own: four families in
+ * four palettes still drew one picture four times, which is what lisum meant
+ * on 2026-09-15 by 只是加上 emoji 太过于简单了. Their template rail is not a
+ * colour rail — 优雅几何 and 黄昏手稿 and 逻辑结构 put the type in genuinely
+ * different places on the page.
+ *
+ *  - `journal`   the page of a notebook: rubric top left, the sentence set
+ *                from the top, a mark bleeding off the top right corner, a
+ *                stamp down in the margin. What every cover drew until now.
+ *  - `masthead`  a solid band across the head of the card carrying the rubric
+ *                in reversed type, the sentence below it. The band is the
+ *                graphic, so there is no watermark competing with it.
+ *  - `poster`    the sentence sits along the BOTTOM and the mark is enormous
+ *                above it — their inverted card, where the title is low and
+ *                the field above it is the design.
+ *  - `plate`     the sentence centred on both axes between two hairlines,
+ *                rubric centred above. No stamp: a plate is quiet or it is
+ *                not a plate.
+ */
+export type CoverLayout = 'journal' | 'masthead' | 'poster' | 'plate';
+
 export interface CoverTemplate {
   id: CoverTemplateId;
+  /** Where the words sit on the card. */
+  layout: CoverLayout;
   /** The colours an author may pick inside this family. */
   swatches: string[];
   /** Dots or a bare ground. Only the notebook keeps its dot field. */
@@ -256,10 +304,10 @@ const DUSK_SWATCHES = ['#FAE6C6', '#E2AAB2', '#7E8AC6', '#BAAA76'];
 const NOTEBOOK_SWATCHES = ['#BEE0F5', '#FCEEA0', '#F7D2B0', '#CDE8C4', '#DCCBF2', '#F3C6D6'];
 
 export const COVER_TEMPLATES: Record<CoverTemplateId, CoverTemplate> = {
-  notebook: { id: 'notebook', swatches: NOTEBOOK_SWATCHES, ground: 'dotted', scale: 1, highlight: true },
-  bold: { id: 'bold', swatches: BRIGHT_SWATCHES, ground: 'plain', scale: 1.16, highlight: true },
-  night: { id: 'night', swatches: BRIGHT_SWATCHES, ground: 'plain', scale: 1.16, highlight: true },
-  manuscript: { id: 'manuscript', swatches: DUSK_SWATCHES, ground: 'dotted', scale: 0.92, highlight: false },
+  notebook: { id: 'notebook', layout: 'journal', swatches: NOTEBOOK_SWATCHES, ground: 'dotted', scale: 1, highlight: true },
+  bold: { id: 'bold', layout: 'masthead', swatches: BRIGHT_SWATCHES, ground: 'plain', scale: 1.16, highlight: true },
+  night: { id: 'night', layout: 'poster', swatches: BRIGHT_SWATCHES, ground: 'plain', scale: 1.16, highlight: true },
+  manuscript: { id: 'manuscript', layout: 'plate', swatches: DUSK_SWATCHES, ground: 'dotted', scale: 0.92, highlight: false },
 };
 
 export const COVER_TEMPLATE_IDS = Object.keys(COVER_TEMPLATES) as CoverTemplateId[];
@@ -1025,6 +1073,7 @@ export function coverPlan(
     maxLines: rung.maxLines,
     ground: template ? COVER_TEMPLATES[template].ground : 'dotted',
     template,
+    layout: template ? COVER_TEMPLATES[template].layout : defaultLayout(seed),
     isBlank: keyLine.length === 0,
   };
 }

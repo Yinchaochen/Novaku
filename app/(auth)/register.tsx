@@ -26,6 +26,7 @@ import { useAppleLogin, useGoogleLogin } from '../../features/auth/useOAuth';
 import { oauthErrorMessage } from '../../features/auth/oauthErrorMessage';
 import { tap } from '../../lib/haptics';
 import { colors } from '../../theme/tokens';
+import { AUTH_FORM_MAX_WIDTH } from '../../theme/layout';
 import { GoogleSignInButton } from '../../components/GoogleSignInButton';
 import { Screen } from '../../components/Screen';
 import { AuthHeader } from '../../components/auth/AuthHeader';
@@ -185,7 +186,15 @@ export default function RegisterScreen() {
           }}
         />
       )}
-      contentStyle={{ paddingHorizontal: 22, paddingTop: 28, backgroundColor: '#FFFAF2' }}
+      contentStyle={{
+        paddingHorizontal: 22,
+        paddingTop: 28,
+        backgroundColor: '#FFFAF2',
+        // D-145: the form stops growing and centres on a wide window.
+        width: '100%',
+        maxWidth: AUTH_FORM_MAX_WIDTH,
+        alignSelf: 'center',
+      }}
     >
       <StatusBar style="light" />
 

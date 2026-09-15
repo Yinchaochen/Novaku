@@ -93,6 +93,60 @@ export function PostCover({
     color: palette.ink,
   };
 
+  const layout = plan.layout;
+  const centred = layout === 'plate';
+  /** The band a masthead wears, and the height the words then start below. */
+  const bandHeight = 3.4 * u;
+
+  const keyLineBlock = plan.isBlank ? null : (
+    <>
+      <Text
+        numberOfLines={plan.highlight ? Math.max(1, plan.maxLines - 1) : plan.maxLines}
+        style={[type, centred ? { textAlign: 'center' as const } : null]}
+      >
+        {plan.highlight ? plan.highlight.before.trimEnd() : plan.keyLine}
+      </Text>
+
+      {/* The rule. `wash` has been in every palette since the cover shipped
+          and was never drawn. It was a band behind the glyphs first, which is
+          all a nested run can paint: square, and the full height of the line.
+          The phrase gets a block of its own instead, and the block shrinks to
+          its own text, so the rule underneath is the width of the words and
+          nothing else. */}
+      {plan.highlight ? (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'flex-start',
+            justifyContent: centred ? 'center' : 'flex-start',
+          }}
+        >
+          <View style={{ flexShrink: 1 }}>
+            {/* Declared before the text, so it paints beneath it: the rule
+                rides up over the baseline and the glyphs stay on top of it,
+                which is a highlighter and not a strikethrough. Absolute so it
+                contributes no height. */}
+            <View
+              style={{
+                position: 'absolute',
+                left: -size * 0.04,
+                right: -size * 0.04,
+                bottom: (size * (plan.leading - 1)) / 2 + size * (DESCENDER + OVERLAP) - rule,
+                height: rule,
+                borderRadius: rule / 2,
+                backgroundColor: palette.wash,
+              }}
+            />
+            <Text numberOfLines={1} style={type}>
+              {plan.highlight.span}
+            </Text>
+          </View>
+          {plan.highlight.after ? <Text style={type}>{plan.highlight.after}</Text> : null}
+        </View>
+      ) : null}
+    </>
+  );
+
   return (
     <View style={{ width: '100%', aspectRatio: 1, backgroundColor: palette.paper }}>
       <Svg width="100%" height="100%" style={{ position: 'absolute' }}>
@@ -100,8 +154,7 @@ export function PostCover({
           <>
             <Defs>
               {/* Pitch u, dot 0.9dp. That is ~9% of the pitch, which is where
-                  Rhodia and Leuchtturm put it — visible as texture, gone as
-                  noise, and still a whole pixel on a 2x screen. */}
+                  Rhodia and Leuchtturm put it. */}
               <Pattern id="dots" width={u} height={u} patternUnits="userSpaceOnUse">
                 <Circle cx={u / 2} cy={u / 2} r={0.45} fill={palette.dot} />
               </Pattern>
@@ -110,42 +163,53 @@ export function PostCover({
           </>
         ) : null}
 
-        {/* The margin rule — the page's one accent, spent once. Held at a
-            third alpha because a 1dp rule at full strength beside 13dp type
-            stops reading as ruling and starts reading as a border, which is
-            the edge D-088 just finished removing from this card. */}
-        <Line
-          x1={(MARGIN_LEFT - 0.8) * u}
-          y1={0}
-          x2={(MARGIN_LEFT - 0.8) * u}
-          y2={18 * u}
-          stroke={palette.accent}
-          strokeWidth={1}
-          strokeOpacity={0.34}
-        />
+        {/* The margin rule belongs to the journal page and to nothing else: a
+            masthead has its band, a poster has its field, a plate has its two
+            hairlines. Held at a third alpha because a 1dp rule at full
+            strength beside 13dp type reads as a border. */}
+        {layout === 'journal' ? (
+          <Line
+            x1={(MARGIN_LEFT - 0.8) * u}
+            y1={0}
+            x2={(MARGIN_LEFT - 0.8) * u}
+            y2={18 * u}
+            stroke={palette.accent}
+            strokeWidth={1}
+            strokeOpacity={0.34}
+          />
+        ) : null}
       </Svg>
 
-      {/* The watermark. Before the rubric and the text in source order, so it
-          stacks underneath them — these are absolutely positioned siblings,
-          and RN has no z-index worth relying on across both platforms.
+      {/* The band is the masthead's whole graphic, which is why that layout
+          draws no watermark: two large marks on one small card is two things
+          asking to be looked at first. */}
+      {layout === 'masthead' ? (
+        <View
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 0,
+            height: bandHeight,
+            backgroundColor: palette.wash,
+          }}
+        />
+      ) : null}
 
-          It bleeds off the top right on purpose: a mark fully inside the frame
-          reads as a second piece of content competing with the sentence, and a
-          mark cropped by the edge reads as stock the page was printed on.
+      {/* The watermark, in `palette.dot` — the ground colour, already
+          specified as the one tone visible as texture and gone as noise. The
+          first attempt used the sticker emoji at a tenth opacity, and a faded
+          picture of a banknote is not a grey mark: it keeps its own hue and
+          sits behind the words arguing with them.
 
-          It takes `palette.dot` — the ground colour, already specified as the
-          one tone that is visible as texture and gone as noise. The first
-          attempt used the sticker emoji at a tenth opacity and a faded picture
-          of a banknote is not a grey mark: it keeps its own hue, stays legible
-          as an object, and sat behind the words arguing with them. */}
-      {plan.watermark ? (
+          On a journal page it bleeds off the top right, because a mark fully
+          inside the frame reads as a second piece of content and a mark
+          cropped by the edge reads as stock the page was printed on. */}
+      {plan.watermark && layout === 'journal' ? (
         <Text
           style={{
             position: 'absolute',
             right: -1.1 * u,
-            // Enough of the glyph has to survive the crop to still be the mark
-            // it is. A quotation mark sits at the top of its em box, so the
-            // deeper offset this started with left two grey slabs and no quote.
             top: -1.9 * u,
             fontSize: u * 12,
             lineHeight: u * 12,
@@ -157,121 +221,134 @@ export function PostCover({
         </Text>
       ) : null}
 
-      {/* Rubric. The type of post, set as a journal header would be: small,
-          tracked out, in the secondary ink. It replaces the pill the panel
-          used to carry, which had become one more rounded object on a screen
-          that already had plenty. */}
+      {plan.watermark && layout === 'poster' ? (
+        // Not cropped here: on a poster the mark is the field the words sit
+        // under, so it is whole, centred and enormous.
+        <Text
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 0.4 * u,
+            textAlign: 'center',
+            fontSize: u * 10,
+            lineHeight: u * 11,
+            fontWeight: '700',
+            color: palette.dot,
+          }}
+        >
+          {plan.watermark}
+        </Text>
+      ) : null}
+
+      {/* Rubric: the kind of post, set as a journal header would be. Reversed
+          out of the band on a masthead, centred over the sentence on a plate. */}
       <Text
         numberOfLines={1}
         style={{
           position: 'absolute',
-          left: MARGIN_LEFT * u,
-          top: MARGIN_TOP * u,
-          // 15u, not the 12u measure. Nothing else occupies this line, and
-          // "RECOMMENDATION" tracked out at a 320dp phone's rubric size needs
-          // 98 of the measure's 98.6dp — it was truncating to "RECOMMENDAT…".
-          width: 15 * u,
+          left: centred ? 0 : MARGIN_LEFT * u,
+          right: centred ? 0 : undefined,
+          top: layout === 'masthead' ? bandHeight / 2 - rubricSize : MARGIN_TOP * u,
+          // 15u, not the 12u measure: nothing else occupies this line, and
+          // "RECOMMENDATION" tracked out needs nearly all of it.
+          width: centred ? undefined : 15 * u,
+          textAlign: centred ? 'center' : 'left',
           fontSize: rubricSize,
           fontWeight: '700',
           letterSpacing: rubricSize * 0.1,
           textTransform: 'uppercase',
-          color: palette.secondary,
+          color: layout === 'masthead' ? palette.ink : palette.secondary,
         }}
       >
         {t.plaza[`type_${post.post_type}`]}
       </Text>
 
-      {/* What the post costs to read, on the rubric line opposite its type.
-          Xiaohongshu prints this on long notes and it is the cheapest honest
-          thing on the card: a reader learns what they are committing to before
-          they commit. Silent under three minutes, where the number would say
-          less than the two lines of the post already showing. */}
+      {/* What the post costs to read, opposite its kind. The cheapest honest
+          thing on the card: the reader learns what they are committing to
+          before they commit. Silent under three minutes. */}
       {minutes > 0 ? (
         <Text
           numberOfLines={1}
           style={{
             position: 'absolute',
             right: (18 - MARGIN_LEFT - 1) * u,
-            top: MARGIN_TOP * u,
+            top: layout === 'masthead' ? bandHeight / 2 - rubricSize : MARGIN_TOP * u,
             fontSize: rubricSize,
             fontWeight: '700',
             letterSpacing: rubricSize * 0.04,
-            color: palette.secondary,
+            color: layout === 'masthead' ? palette.ink : palette.secondary,
           }}
         >
           {t.plaza.cover_reading_time.replace('{minutes}', String(minutes))}
         </Text>
       ) : null}
 
-      {plan.isBlank ? null : (
+      {plan.isBlank ? null : layout === 'plate' ? (
+        // Centred on both axes between two hairlines. The rules are what make
+        // it a plate rather than a sentence that happens to be in the middle.
         <View
           style={{
             position: 'absolute',
             left: MARGIN_LEFT * u,
-            top: 4 * u,
+            top: 0,
+            bottom: 0,
             width: MEASURE * u,
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
-          <Text
-            numberOfLines={plan.highlight ? Math.max(1, plan.maxLines - 1) : plan.maxLines}
-            style={type}
-          >
-            {plan.highlight ? plan.highlight.before.trimEnd() : plan.keyLine}
-          </Text>
-
-          {/* The rule. `wash` has been in every palette since the cover shipped
-              and was never drawn — the accent was being spent entirely on a 1dp
-              margin rule. It was a band behind the glyphs first, which is all a
-              nested run can paint: square, and the full height of the line. The
-              phrase gets a block of its own instead, and the block shrinks to
-              its own text, so the rule underneath is the width of the words and
-              nothing else. */}
-          {plan.highlight ? (
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-              <View style={{ flexShrink: 1 }}>
-                {/* Declared before the text, so it paints beneath it: the rule
-                    rides up over the baseline and the glyphs stay on top of
-                    it, which is a highlighter and not a strikethrough. Absolute
-                    so it contributes no height — the block is still exactly as
-                    wide and as tall as the phrase. */}
-                <View
-                  style={{
-                    position: 'absolute',
-                    left: -size * 0.04,
-                    right: -size * 0.04,
-                    // Measured up from the bottom of the line box. Half the
-                    // leading plus the descender is where the baseline sits;
-                    // OVERLAP is how far above it the rule reaches.
-                    bottom:
-                      (size * (plan.leading - 1)) / 2 + size * (DESCENDER + OVERLAP) - rule,
-                    height: rule,
-                    borderRadius: rule / 2,
-                    backgroundColor: palette.wash,
-                  }}
-                />
-                <Text numberOfLines={1} style={type}>
-                  {plan.highlight.span}
-                </Text>
-              </View>
-              {plan.highlight.after ? (
-                <Text style={type}>{plan.highlight.after}</Text>
-              ) : null}
-            </View>
-          ) : null}
+          <View
+            style={{
+              alignSelf: 'stretch',
+              height: 1,
+              marginBottom: 1.1 * u,
+              backgroundColor: palette.secondary,
+              opacity: 0.35,
+            }}
+          />
+          {keyLineBlock}
+          <View
+            style={{
+              alignSelf: 'stretch',
+              height: 1,
+              marginTop: 1.1 * u,
+              backgroundColor: palette.secondary,
+              opacity: 0.35,
+            }}
+          />
+        </View>
+      ) : (
+        <View
+          style={{
+            position: 'absolute',
+            left: MARGIN_LEFT * u,
+            width: MEASURE * u,
+            ...(layout === 'poster'
+              ? { bottom: 2.2 * u }
+              : { top: layout === 'masthead' ? bandHeight + 1.2 * u : 4 * u }),
+          }}
+        >
+          {keyLineBlock}
         </View>
       )}
 
-      {/* The stamp. It sits in the bottom margin on purpose: the canon forbids
-          the text block borrowing from the margin, and a mark in the margin is
-          the one thing a margin has always been for. Set as text, so it comes
-          from the reader's own system emoji font and costs no asset — the same
-          reason the type is left on the system stack. */}
-      {plan.sticker ? (
+      {/* The stamp sits in the bottom margin on purpose: the canon forbids the
+          text block borrowing from the margin, and a mark in the margin is the
+          one thing a margin has always been for. Set as text, so it comes from
+          the reader's own system emoji font and costs no asset.
+
+          The plate does without one. Two rules, a centred rubric and a centred
+          sentence are a composition; an emoji in the corner of it is a sticker
+          somebody put on a printed card. */}
+      {plan.sticker && layout !== 'plate' ? (
         <Text
           style={{
             position: 'absolute',
             right: 1.4 * u,
-            bottom: 0.7 * u,
+            // A poster's words are already along the bottom, so its stamp goes
+            // up beside the mark instead of underneath the sentence.
+            ...(layout === 'poster' ? { top: 1.2 * u } : { bottom: 0.7 * u }),
             fontSize: u * 2.4,
             opacity: 0.92,
           }}

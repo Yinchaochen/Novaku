@@ -22,6 +22,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { getApiErrorCode, useForgotPassword } from '../../features/auth/useAuth';
 import { tap } from '../../lib/haptics';
 import { colors } from '../../theme/tokens';
+import { AUTH_FORM_MAX_WIDTH } from '../../theme/layout';
 
 const HERO_YELLOW = '#FFD17E';
 const INPUT_FILL = '#FFE9A8';
@@ -118,6 +119,10 @@ export default function ForgotPasswordScreen() {
         contentContainerStyle={{
           paddingHorizontal: 22,
           paddingTop: 28,
+          // D-145: stops growing and centres on a wide window.
+          width: '100%',
+          maxWidth: AUTH_FORM_MAX_WIDTH,
+          alignSelf: 'center',
           paddingBottom: Math.max(insets.bottom + 32, 48),
         }}
         keyboardShouldPersistTaps="handled"
