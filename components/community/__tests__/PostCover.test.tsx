@@ -108,12 +108,22 @@ function everyStyle(json: unknown): Record<string, unknown>[] {
 }
 
 describe('PostCover', () => {
-  it('never sets a fontFamily, because the brand face has no CJK', async () => {
-    const tree = await render(<PostCover post={makePost()} width={184.5} />);
-    const styles = everyStyle(tree.toJSON());
+  it('sets a face only where the bundled subset covers the words (D-148)', async () => {
+    // The prohibition used to be absolute and its reason was measured: a face
+    // with 721 codepoints would have boxed roughly 38 of 106 locales, silently.
+    // It is conditional now — the app bundles a subset whose coverage
+    // lib/displayFont.ts knows exactly — but the failure mode it guards has
+    // not changed, so the guard has not gone away, only moved.
+    const latin = await render(<PostCover post={makePost()} width={184.5} />);
+    const families = everyStyle(latin.toJSON())
+      .map((style) => style?.fontFamily)
+      .filter(Boolean);
+    expect(families).toEqual(['PosterviaDisplay-Bold']);
 
-    expect(styles.length).toBeGreaterThan(0);
-    for (const style of styles) {
+    const thai = await render(
+      <PostCover post={makePost({ title: 'การลงทะเบียนในเบอร์ลิน' })} width={184.5} />,
+    );
+    for (const style of everyStyle(thai.toJSON())) {
       expect(style?.fontFamily).toBeUndefined();
     }
   });

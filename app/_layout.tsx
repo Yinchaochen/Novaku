@@ -179,6 +179,10 @@ function AppBody() {
     PlusJakartaSans_600SemiBold,
     PlusJakartaSans_700Bold,
     PlusJakartaSans_800ExtraBold,
+    // The cover's display face (D-148). A 1.76 MB subset of Source Han Sans
+    // Bold, and lib/displayFont.ts knows exactly which codepoints are in it —
+    // a string with one character outside them keeps the system stack.
+    'PosterviaDisplay-Bold': require('../assets/fonts/PosterviaDisplay-Bold.otf'),
   });
 
   // IOS-LOGIN-114/116: Android-only native splash dismiss. AppBody mounting

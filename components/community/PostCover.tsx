@@ -3,6 +3,7 @@ import Svg, { Circle, Defs, Line, Pattern, Rect } from 'react-native-svg';
 
 import { useLanguage } from '../../context/LanguageContext';
 import { coverPlan, estimateEm, readingMinutes, type CoverPalette } from '../../lib/postCover';
+import { displayFontFor } from '../../lib/displayFont';
 import type { CommunityPost } from '../../features/community/useCommunity';
 
 /**
@@ -153,7 +154,10 @@ export function PostCover({
       style={{
         fontSize: titleSize,
         lineHeight: titleSize * 1.22,
-        fontWeight: '800',
+        // Set in the display face when every glyph of this title is in it, and
+        // in the system stack otherwise — never a mixture (D-148).
+        fontFamily: displayFontFor(titleText),
+        fontWeight: displayFontFor(titleText) ? '400' : '800',
         letterSpacing: titleSize > 18 ? -0.4 : 0,
         color: palette.ink,
         marginBottom: plan.isBlank ? 0 : 0.7 * u,
