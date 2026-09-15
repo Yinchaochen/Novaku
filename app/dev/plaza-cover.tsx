@@ -5,6 +5,8 @@ import { SectionLabel } from '../../components/SectionLabel';
 import { PostCover } from '../../components/community/PostCover';
 import type { CommunityPost } from '../../features/community/useCommunity';
 import { COVER_TEMPLATE_IDS, COVER_TEMPLATES } from '../../lib/postCover';
+import { paginateBody } from '../../lib/coverPages';
+import { PostCoverPage } from '../../components/community/PostCoverPage';
 import { colors } from '../../theme/tokens';
 
 /**
@@ -233,12 +235,55 @@ function FamilyRows() {
   );
 }
 
+const LONG = makePost({
+  id: 'pages',
+  post_type: 'guide',
+  odyssey_slug: 'de_residence_permit',
+  title: 'What you need before you can apply to a German university',
+  body: [
+    'Two requirements decide whether you can apply at all.',
+    'The first is your school-leaving certificate. It has to count in Germany as a higher education entrance qualification. If it does not, you can attend a Studienkolleg for a year and take the assessment examination at the end of it.',
+    'The second is the language. Most degrees taught in German ask for DSH-2 or TestDaF 4, and most taught in English ask for IELTS or TOEFL. A degree taught in English does not exempt you from needing German for everything outside the lecture hall.',
+    'Apply through uni-assist where the university asks for it, and directly where it does not. The deadlines are 15 July for the winter semester and 15 January for the summer one, and they are deadlines for documents arriving, not for you posting them.',
+    'Source: Make it in Germany',
+  ].join('\n\n'),
+});
+
+/** The stack a text post becomes (D-142) — cover, then the body poured. */
+function PagesRow() {
+  const pages = paginateBody(LONG.body, LONG.cover_template);
+  return (
+    <View>
+      <SectionLabel>
+        {`The stack (D-142) — cover + ${pages.length} body pages, credit block left out`}
+      </SectionLabel>
+      <ScrollView horizontal contentContainerStyle={{ gap: 10, paddingHorizontal: 10 }}>
+        <View style={{ width: 240, borderRadius: 12, overflow: 'hidden' }}>
+          <PostCover post={LONG} width={240} />
+        </View>
+        {pages.map((page, index) => (
+          <View key={index} style={{ width: 240, borderRadius: 12, overflow: 'hidden' }}>
+            <PostCoverPage
+              post={LONG}
+              page={page}
+              width={240}
+              pageNumber={index + 2}
+              pageCount={pages.length + 1}
+            />
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
 export default function PlazaCoverGallery() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={{ paddingBottom: 48 }}>
         <TheirColoursRow />
         <FamilyRows />
+        <PagesRow />
         {CASES.map((testCase) => (
           <View key={testCase.post.id}>
             <SectionLabel>{testCase.label}</SectionLabel>

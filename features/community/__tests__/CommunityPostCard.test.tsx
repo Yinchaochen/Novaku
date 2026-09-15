@@ -145,6 +145,26 @@ describe('CommunityPostCard', () => {
     expect(tree.queryByTestId('account.official-chip')).toBeNull();
   });
 
+  it('draws the post its own cover when the picture never arrives', async () => {
+    // lisum's wall, 2026-09-15: three cards were solid black rectangles with a
+    // title under them. The slot's near-black is the moment before a picture
+    // decodes; nothing turned it back into anything when the picture failed —
+    // a dead URL, an R2 host that is not wired up, an iPhone HEIC the browser
+    // cannot decode. A post always has words, so it always has a cover.
+    const { act } = require('@testing-library/react-native');
+    const tree = await render(<CommunityPostCard post={makePost()} />);
+
+    const cover = images(tree).find((node) => node.props.onError);
+    expect(cover).toBeTruthy();
+    await act(async () => {
+      cover!.props.onError();
+    });
+
+    // The photo is gone and the drawn cover is in its place: the rubric the
+    // drawn cover prints is the proof, since the photo branch has no rubric.
+    expect(images(tree).some((node) => node.props.onError)).toBe(false);
+  });
+
   it('shows no chip for a post by a real person', async () => {
     const post = makePost();
     const tree = await render(

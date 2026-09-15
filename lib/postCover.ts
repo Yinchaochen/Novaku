@@ -486,7 +486,7 @@ const OVERLAP_LIMIT = 0.6;
  * colon and a value. Matching that shape rather than the word "Source" is the
  * only reason the rule survives translation into 106 languages.
  */
-function isCreditBlock(paragraph: string): boolean {
+export function isCreditBlock(paragraph: string): boolean {
   const lines = paragraph.split('\n').map((line) => line.trim()).filter(Boolean);
   if (lines.length === 0) return false;
   return lines.every((line) => /^[^:]{1,40}:\s*\S/.test(line));
@@ -575,7 +575,7 @@ export function pickKeyLine(body: string, title: string): string {
  * ratio is independent of the canvas width, which is why a rung's capacity can
  * be a constant even though every device is a different size.
  */
-const MEASURE_UNITS = 12 / 18;
+export const MEASURE_UNITS = 12 / 18;
 
 /**
  * How much of a line's width word-wrap actually uses.
@@ -587,7 +587,7 @@ const MEASURE_UNITS = 12 / 18;
  * is measured against the seeded English and German bodies; German packs worse
  * than English and is what sets it.
  */
-const PACKING = 0.78;
+export const PACKING = 0.78;
 
 type Rung = {
   sizeRatio: number;

@@ -157,6 +157,10 @@ export function CommunityPostCard({ post, onPress, titleHighlight, columnWidth }
   // you scroll. A slot is reserved now, from what we already know, and the
   // image is fitted into it.
   const media = cardMediaFit(post.media_items[0], post.id);
+  const coverUrl =
+    resolveMediaUrl(post.media_items[0]?.thumb_url ?? post.media_items[0]?.media_url) ??
+    post.media_items[0]?.media_url ??
+    null;
   const hasEventCandidate = post.action_candidates.some(
     (candidate) => candidate.metadata_json?.['card_type'] === 'event'
   );
@@ -211,6 +215,13 @@ export function CommunityPostCard({ post, onPress, titleHighlight, columnWidth }
   // and D-078's rule is untouched. The seed is the real column width on a
   // 393dp phone, so the first frame is already close.
   const [coverWidth, setCoverWidth] = useState(184.5);
+  // A cover that will never arrive (D-143). The slot's background is a near
+  // black, which is right for the moment before a picture decodes and wrong
+  // forever after: a dead URL, an R2 host that is not wired up, or an iPhone
+  // HEIC that Chrome cannot decode all left a solid black rectangle sitting in
+  // the wall with a title underneath it. When the picture fails the post draws
+  // its own cover instead — the one every text post already gets.
+  const [coverFailed, setCoverFailed] = useState(false);
 
   // Card-level "..." menu: per-user hide so the post stops showing on this user's feed.
   // Own posts skip this entry — you can't hide yourself from yourself.
@@ -264,13 +275,15 @@ export function CommunityPostCard({ post, onPress, titleHighlight, columnWidth }
         // brand.
         style={{ borderRadius: 12, overflow: 'hidden' }}
       >
-        {post.media_items[0] ? (
+        {post.media_items[0] && !coverFailed ? (
           <View>
             <Image
-              source={
-                resolveMediaUrl(post.media_items[0].thumb_url ?? post.media_items[0].media_url) ??
-                post.media_items[0].media_url
-              }
+              source={coverUrl}
+              // FlashList hands this view to a different post rather than
+              // remounting it, so the previous post's failure has to be
+              // cleared here as well as recorded.
+              onLoad={() => setCoverFailed(false)}
+              onError={() => setCoverFailed(true)}
               // FlashList rebinds one card view to a different post instead of
               // mounting a new one, and expo-image's default on a changed
               // source is to hold the old picture until the new one decodes —

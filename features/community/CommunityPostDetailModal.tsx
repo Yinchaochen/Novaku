@@ -30,6 +30,9 @@ import ViewShot from 'react-native-view-shot';
 import { useLanguage } from '../../context/LanguageContext';
 import { detailMediaHeight, detailMediaHeightFor } from '../../lib/cardAspect';
 import { WIDE_LAYOUT_MIN_WIDTH } from '../../theme/layout';
+import { paginateBody } from '../../lib/coverPages';
+import { PostCover } from '../../components/community/PostCover';
+import { PostCoverPage } from '../../components/community/PostCoverPage';
 import { formatDisplayLocation } from '../../lib/displayLocation';
 import { formatEventTime } from '../../lib/eventTime';
 import { normalizeMapUrl } from '../../lib/maps';
@@ -114,6 +117,81 @@ interface Props {
  *  - It takes about 220ms, ease-out. I timed it across frames at 55fps: the
  *    sheet is a small translucent ghost at 4.92s and full size at 5.08s.
  */
+/**
+ * A text post's body, drawn as a swipeable stack of pages (D-142).
+ *
+ * Xiaohongshu's composer turns an article into a stack of cards and the stack
+ * IS the note. Ours cannot be: the body is translated per reader, carries
+ * links and has to stay selectable, so the pages are drawn at read time and
+ * the ordinary text stays underneath, untouched. The stack is a second way
+ * through the same post, not a replacement for the first.
+ *
+ * Which is also why it may quietly refuse. One page is a cover, not a stack,
+ * and a post with nothing to pour gets no pager at all rather than a pager
+ * with a single card in it.
+ */
+function PostCoverPager({ post, maxWidth }: { post: CommunityPost; maxWidth: number }) {
+  const [index, setIndex] = useState(0);
+  const pages = useMemo(
+    () => paginateBody(post.translated_body ?? post.body, post.cover_template),
+    [post.translated_body, post.body, post.cover_template],
+  );
+  const total = pages.length + 1;
+  if (total < 2) return null;
+
+  const width = Math.min(maxWidth, 520);
+  return (
+    <View style={{ alignItems: 'center', paddingTop: 12 }}>
+      <View style={{ width }}>
+        <ScrollView
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          decelerationRate="fast"
+          onMomentumScrollEnd={(event) => {
+            setIndex(Math.round(event.nativeEvent.contentOffset.x / width));
+          }}
+          testID="plaza.detail.cover-pager"
+        >
+          <View style={{ width, borderRadius: 16, overflow: 'hidden' }}>
+            <PostCover post={post} width={width} />
+          </View>
+          {pages.map((page, pageIndex) => (
+            <View key={pageIndex} style={{ width, borderRadius: 16, overflow: 'hidden' }}>
+              <PostCoverPage
+                post={post}
+                page={page}
+                width={width}
+                pageNumber={pageIndex + 2}
+                pageCount={total}
+              />
+            </View>
+          ))}
+        </ScrollView>
+
+        {/* The counter the photo pager already uses, so a text post and a
+            photo post report their length the same way. */}
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            right: 10,
+            top: 10,
+            borderRadius: 999,
+            paddingHorizontal: 9,
+            paddingVertical: 3,
+            backgroundColor: 'rgba(17, 17, 17, 0.45)',
+          }}
+        >
+          <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700', fontVariant: ['tabular-nums'] }}>
+            {`${index + 1}/${total}`}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 function DetailFrame({
   wide,
   origin,
@@ -1064,7 +1142,12 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
                   </View>
                 ) : null}
               </View>
-            ) : null}
+            ) : (
+              // No picture: the post's own words, drawn. Same slot, same
+              // vertical budget as a photo post -- which is the whole argument
+              // D-135 made for giving a text post a cover at all.
+              <PostCoverPager post={post} maxWidth={viewportWidth - 40} />
+            )}
 
             <View className="px-5 pb-6 pt-5">
               <TranslatedText
