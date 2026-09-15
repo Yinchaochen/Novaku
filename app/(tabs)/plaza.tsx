@@ -919,7 +919,16 @@ export default function PlazaScreen() {
             </View>
           ) : null
         }
+        // D-150: NOT on a wide layout. A pull is a deliberate gesture on a
+        // phone; in a browser it is what happens every single time the reader
+        // scrolls back up to the top with a wheel or a trackpad. And a refresh
+        // is not a cosmetic reload — it sends `refresh: true`, which the
+        // backend reads as "the reader asked for something else" and stops
+        // holding the top of the feed in place (D-079). lisum filmed the
+        // result: at 7.0s the wall is still, at 7.2s a card from further down
+        // is at the head and everything he was reading has slid down a row.
         refreshControl={
+          railed ? undefined : (
           <RefreshControl
             // isFetching alone is also true while the next page loads, which
             // put the top spinner on every scroll-to-load — and left it there,
@@ -929,6 +938,7 @@ export default function PlazaScreen() {
             tintColor={colors.brandCoral}
             progressViewOffset={40}
           />
+          )
         }
         onEndReached={() => {
           if (hasNextPage && !isFetchingNextPage) {

@@ -118,7 +118,12 @@ export function PostCover({
    */
   const titleText = (post.translated_title ?? post.title ?? '').trim();
   const titleEm = estimateEm(titleText);
-  const titleRatio = titleEm > 34 ? 0.072 : titleEm > 24 ? 0.082 : titleEm > 15 ? 0.096 : 0.112;
+  // Sized to FIT four lines rather than banded into four sizes. The bands put
+  // a 24em title on a rung that holds 22 and every other card in the wall
+  // ended in an ellipsis — which lisum saw before I did. A line at ratio r
+  // holds about 0.52/r em once wrapping slack is paid, so four of them hold
+  // 2.08/r; 1.85 is that with the slack the estimate itself can be wrong by.
+  const titleRatio = Math.max(0.052, Math.min(0.112, titleEm > 0 ? 1.85 / titleEm : 0.112));
   const titleSize = width * titleRatio;
   // The summary is the same size a body page sets at, so a cover and the
   // pages behind it are one object at two densities rather than two designs.
@@ -142,8 +147,6 @@ export function PostCover({
   const canStack = CJK_RE.test(plan.keyLine);
   const layout = plan.layout === 'vertical' && !canStack ? 'plate' : plan.layout;
   const centred = layout === 'plate' || layout === 'rules';
-  /** The band a masthead wears, and the height the words then start below. */
-  const bandHeight = 3.4 * u;
 
   // Room left under the title, in lines of the summary's own size.
   const excerptLines = 6;
@@ -250,22 +253,6 @@ export function PostCover({
         ) : null}
       </Svg>
 
-      {/* The band is the masthead's whole graphic, which is why that layout
-          draws no watermark: two large marks on one small card is two things
-          asking to be looked at first. */}
-      {layout === 'masthead' ? (
-        <View
-          style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            top: 0,
-            height: bandHeight,
-            backgroundColor: palette.wash,
-          }}
-        />
-      ) : null}
-
       {/* The watermark, in `palette.dot` — the ground colour, already
           specified as the one tone visible as texture and gone as noise. The
           first attempt used the sticker emoji at a tenth opacity, and a faded
@@ -311,9 +298,26 @@ export function PostCover({
         </Text>
       ) : null}
 
-      {/* 杂志先锋: a bracketed chapter mark and the rule under it are this
-          family's whole furniture, and they carry the rubric, so the ordinary
-          one is suppressed below. */}
+      {/* 黑白极简: one hairline above the words and nothing else at all. The
+          family's whole claim is that a page needs one rule and one size of
+          type; anything added here would be arguing with it. */}
+      {layout === 'mono' ? (
+        <View
+          style={{
+            position: 'absolute',
+            left: MARGIN_LEFT * u,
+            top: MARGIN_TOP * u,
+            width: MEASURE * u,
+            height: 1,
+            backgroundColor: palette.secondary,
+            opacity: 0.45,
+          }}
+        />
+      ) : null}
+
+      {/* 杂志先锋: the heavy rule the bracketed section mark used to sit under.
+          The mark went with the rubric — lisum, 2026-09-15: 封面只展示内容，
+          不要加任何标签. A rule is not a label; it is a piece of the page. */}
       {layout === 'magazine' ? (
         <View
           style={{
@@ -321,69 +325,8 @@ export function PostCover({
             left: MARGIN_LEFT * u,
             top: MARGIN_TOP * u,
             width: MEASURE * u,
-          }}
-        >
-          <Text
-            numberOfLines={1}
-            style={{
-              fontSize: rubricSize,
-              fontWeight: '700',
-              letterSpacing: rubricSize * 0.1,
-              textTransform: 'uppercase',
-              color: palette.accent,
-            }}
-          >
-            {`\u3010 ${t.plaza[`type_${post.post_type}`]} \u3011`}
-          </Text>
-          <View
-            style={{
-              marginTop: 0.5 * u,
-              height: Math.max(2, u * 0.14),
-              backgroundColor: palette.accent,
-            }}
-          />
-        </View>
-      ) : null}
-
-      {/* Rubric: the kind of post, set as a journal header would be. Reversed
-          out of the band on a masthead, centred over the sentence on a plate,
-          and left to the chapter mark on a magazine. */}
-      {layout === 'magazine' ? null : (
-      <Text
-        numberOfLines={1}
-        style={{
-          position: 'absolute',
-          left: centred ? 0 : MARGIN_LEFT * u,
-          right: centred ? 0 : undefined,
-          top: layout === 'masthead' ? bandHeight / 2 - rubricSize : MARGIN_TOP * u,
-          // 15u, not the 12u measure: nothing else occupies this line, and
-          // "RECOMMENDATION" tracked out needs nearly all of it.
-          width: centred ? undefined : 15 * u,
-          textAlign: centred ? 'center' : 'left',
-          fontSize: rubricSize,
-          fontWeight: '700',
-          letterSpacing: rubricSize * 0.1,
-          textTransform: 'uppercase',
-          color: layout === 'masthead' ? palette.ink : palette.secondary,
-        }}
-      >
-        {t.plaza[`type_${post.post_type}`]}
-      </Text>
-      )}
-
-      {/* 黑白极简: a hairline under the rubric and nothing else at all. The
-          family's whole claim is that a page needs one rule and one size of
-          type; anything else added here would be arguing with it. */}
-      {layout === 'mono' ? (
-        <View
-          style={{
-            position: 'absolute',
-            left: MARGIN_LEFT * u,
-            top: MARGIN_TOP * u + rubricSize * 1.9,
-            width: MEASURE * u,
-            height: 1,
-            backgroundColor: palette.secondary,
-            opacity: 0.45,
+            height: Math.max(2, u * 0.14),
+            backgroundColor: palette.accent,
           }}
         />
       ) : null}
@@ -397,11 +340,11 @@ export function PostCover({
           style={{
             position: 'absolute',
             right: (18 - MARGIN_LEFT - 1) * u,
-            top: layout === 'masthead' ? bandHeight / 2 - rubricSize : MARGIN_TOP * u,
+            top: MARGIN_TOP * u,
             fontSize: rubricSize,
             fontWeight: '700',
             letterSpacing: rubricSize * 0.04,
-            color: layout === 'masthead' ? palette.ink : palette.secondary,
+            color: palette.secondary,
           }}
         >
           {t.plaza.cover_reading_time.replace('{minutes}', String(minutes))}
@@ -553,9 +496,7 @@ export function PostCover({
             position: 'absolute',
             left: MARGIN_LEFT * u,
             width: MEASURE * u,
-            ...(layout === 'poster'
-              ? { bottom: 2.2 * u }
-              : { top: layout === 'masthead' ? bandHeight + 1.2 * u : 3.4 * u }),
+            ...(layout === 'poster' ? { bottom: 2.2 * u } : { top: 3.4 * u }),
           }}
         >
           {titleBlock}
@@ -571,7 +512,7 @@ export function PostCover({
           The plate does without one. Two rules, a centred rubric and a centred
           sentence are a composition; an emoji in the corner of it is a sticker
           somebody put on a printed card. */}
-      {plan.sticker && (layout === 'journal' || layout === 'masthead' || layout === 'poster') ? (
+      {plan.sticker && (layout === 'journal' || layout === 'poster') ? (
         <Text
           style={{
             position: 'absolute',

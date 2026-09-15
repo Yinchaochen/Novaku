@@ -190,10 +190,14 @@ describe('PostCover', () => {
     expect(rule.bottom + rule.height).toBeLessThan(baseline + type.fontSize * 0.7);
   });
 
-  it('shows the rubric but no sentence when the body has nothing to lift', async () => {
+  it('shows the title and no summary when the body has nothing to lift', async () => {
+    // The type label went with every other label on 2026-09-15 (lisum: 封面只
+    // 展示内容，不要加任何标签). A post too short to lift a sentence out of is
+    // therefore its title alone — which is still a card, and still true.
     const tree = await render(<PostCover post={makePost({ title: 'Kurz', body: 'Ja.' })} width={184.5} />);
 
-    expect(tree.getByText('Guide')).toBeTruthy();
+    expect(tree.getByText('Kurz')).toBeTruthy();
+    expect(tree.queryByText('Guide')).toBeNull();
     expect(tree.queryByText('Ja.')).toBeNull();
   });
 });

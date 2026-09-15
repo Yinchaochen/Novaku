@@ -184,7 +184,7 @@ export const DEFAULT_STOCK_COUNT = DEFAULT_STOCKS.length;
  * card designs instead of thirty-six, and a reader would learn the pairing
  * long before running out of feed.
  */
-const DEFAULT_LAYOUTS: CoverLayout[] = ['journal', 'masthead', 'plate', 'journal', 'poster'];
+const DEFAULT_LAYOUTS: CoverLayout[] = ['journal', 'mono', 'plate', 'journal', 'poster'];
 
 export function defaultLayout(seed: number): CoverLayout {
   const shifted = Math.floor(seed / DEFAULT_STOCKS.length);
@@ -264,9 +264,6 @@ export type CoverTemplateId =
  *  - `journal`   the page of a notebook: rubric top left, the sentence set
  *                from the top, a mark bleeding off the top right corner, a
  *                stamp down in the margin. What every cover drew until now.
- *  - `masthead`  a solid band across the head of the card carrying the rubric
- *                in reversed type, the sentence below it. The band is the
- *                graphic, so there is no watermark competing with it.
  *  - `poster`    the sentence sits along the BOTTOM and the mark is enormous
  *                above it — their inverted card, where the title is low and
  *                the field above it is the design.
@@ -276,7 +273,6 @@ export type CoverTemplateId =
  */
 export type CoverLayout =
   | 'journal'
-  | 'masthead'
   | 'poster'
   | 'plate'
   | 'mono'
@@ -342,7 +338,7 @@ const RULE_SWATCHES = ['#B3121F', '#A67C2A', '#1668C8'];
 
 export const COVER_TEMPLATES: Record<CoverTemplateId, CoverTemplate> = {
   notebook: { id: 'notebook', layout: 'journal', swatches: NOTEBOOK_SWATCHES, ground: 'dotted', scale: 1, highlight: true },
-  bold: { id: 'bold', layout: 'masthead', swatches: BRIGHT_SWATCHES, ground: 'plain', scale: 1.16, highlight: true },
+  bold: { id: 'bold', layout: 'journal', swatches: BRIGHT_SWATCHES, ground: 'plain', scale: 1.16, highlight: true },
   night: { id: 'night', layout: 'poster', swatches: BRIGHT_SWATCHES, ground: 'plain', scale: 1.16, highlight: true },
   manuscript: { id: 'manuscript', layout: 'plate', swatches: DUSK_SWATCHES, ground: 'dotted', scale: 0.92, highlight: false },
   mono: { id: 'mono', layout: 'mono', swatches: MONO_SWATCHES, ground: 'plain', scale: 1.08, highlight: false },
