@@ -101,7 +101,7 @@ export interface CoverPlan {
 }
 
 /**
- * Ten stocks, two per post type, sampled off Xiaohongshu's own covers.
+ * Nine stocks, spread across a post's id, measured off Xiaohongshu's wall.
  *
  * lisum asked twice whether their colours could simply be copied, and the
  * measured answer was no both times: cream #F7F3E6 sits ΔE 3.7 from our page,
@@ -135,43 +135,39 @@ export interface CoverPlan {
  * own paper and a genuinely different colour from it, dots ≥ 1.25:1 so the
  * structure that now carries the edge is actually visible.
  */
-const STOCKS: Record<CoverType, [CoverPalette, CoverPalette]> = {
-  guide: [
-    { paper: '#F7F3E6', dot: '#DAD6CA', secondary: '#6A6862',
-      ink: '#3A2E26', accent: '#7C7765', wash: '#BEE0F5' },
-    { paper: '#FBF8D8', dot: '#DEDBBC', secondary: '#6C6B5A',
-      ink: '#3A2E26', accent: '#7D7C4E', wash: '#C9D9F2' },
-  ],
-  question: [
-    { paper: '#F5F1E8', dot: '#D8D5CC', secondary: '#696763',
-      ink: '#3A2E26', accent: '#7C766A', wash: '#FCEEA0' },
-    { paper: '#FBFAF7', dot: '#DEDDDA', secondary: '#6D6C6B',
-      ink: '#3A2E26', accent: '#7D7C78', wash: '#D8C8F0' },
-  ],
-  recommendation: [
-    { paper: '#EAF3E4', dot: '#CED7C8', secondary: '#636860',
-      ink: '#3A2E26', accent: '#6C7964', wash: '#F7D2B0' },
-    { paper: '#F7F3E6', dot: '#DAD6CA', secondary: '#6A6862',
-      ink: '#3A2E26', accent: '#7C7765', wash: '#DCCBF2' },
-  ],
-  experience: [
-    { paper: '#F5F1E8', dot: '#D8D5CC', secondary: '#696763',
-      ink: '#3A2E26', accent: '#7C766A', wash: '#CDE8C4' },
-    { paper: '#FBF8D8', dot: '#DEDBBC', secondary: '#6C6B5A',
-      ink: '#3A2E26', accent: '#7D7C4E', wash: '#E7C9E8' },
-  ],
-  warning: [
-    { paper: '#EAF3E4', dot: '#CED7C8', secondary: '#636860',
-      ink: '#3A2E26', accent: '#6C7964', wash: '#F3C6D6' },
-    { paper: '#FBFAF7', dot: '#DEDDDA', secondary: '#6D6C6B',
-      ink: '#3A2E26', accent: '#7D7C78', wash: '#C6DDF5' },
-  ],
-};
+/** Warm near-black, the ink on every default stock. */
+const DEFAULT_INK = '#3A2E26';
 
-export function coverPalette(postType: string, variant = 0): CoverPalette {
-  const pair = STOCKS[(postType as CoverType)] ?? STOCKS.experience;
-  return pair[variant % pair.length];
+const DEFAULT_STOCKS: CoverPalette[] = [
+  { paper: '#DBFFD5', dot: '#C4E2BD', secondary: '#6C6F5C', ink: DEFAULT_INK, accent: '#7E8272', wash: '#DCCBF2' },
+  { paper: '#FFE1ED', dot: '#E3C8D1', secondary: '#736260', ink: DEFAULT_INK, accent: '#8A7674', wash: '#FCEEA0' },
+  { paper: '#FFFFDB', dot: '#E4E3C3', secondary: '#797160', ink: DEFAULT_INK, accent: '#8D8674', wash: '#E7C9E8' },
+  { paper: '#E7EDF9', dot: '#CFD2DB', secondary: '#6E6765', ink: DEFAULT_INK, accent: '#827B79', wash: '#FCEEA0' },
+  { paper: '#F9F3FF', dot: '#DFD8E2', secondary: '#756B69', ink: DEFAULT_INK, accent: '#8A7F7D', wash: '#FCE0A8' },
+  { paper: '#D5E7F3', dot: '#BFCDD6', secondary: '#65625F', ink: DEFAULT_INK, accent: '#787472', wash: '#F7D2B0' },
+  { paper: '#F9CFDB', dot: '#DCB7C0', secondary: '#6C5855', ink: DEFAULT_INK, accent: '#816A67', wash: '#CDE8C4' },
+  { paper: '#EDFFE7', dot: '#D4E2CC', secondary: '#716F62', ink: DEFAULT_INK, accent: '#85837A', wash: '#F3C6D6' },
+  { paper: '#EDE7DB', dot: '#D4CDC2', secondary: '#6C6259', ink: DEFAULT_INK, accent: '#80766C', wash: '#BEE0F5' },
+];
+
+/**
+ * The stock a post gets when nobody chose one, spread by the post's id.
+ *
+ * Not by post type any more, and that is the reversal lisum asked for on
+ * 2026-09-15 after seeing the finished wall: "他们的文字的背景色是不一样的,
+ * 更加五彩缤纷一些". He was right and the arithmetic says so. Two stocks per
+ * type sounds like variety until you look at a real feed: almost every seeded
+ * post is a `guide`, so almost every card drew one of two creams, and a wall
+ * of them is one colour. The type is still on the card -- it is printed as the
+ * rubric, and it still picks the mark and the sticker. What it no longer picks
+ * is the colour, because colour was carrying a signal nobody reads and hiding
+ * one everybody does.
+ */
+export function defaultStock(seed: number): CoverPalette {
+  return DEFAULT_STOCKS[((seed % DEFAULT_STOCKS.length) + DEFAULT_STOCKS.length) % DEFAULT_STOCKS.length];
 }
+
+export const DEFAULT_STOCK_COUNT = DEFAULT_STOCKS.length;
 
 /* ------------------------------------------------------------------ *
  * Template families (D-141)
@@ -935,7 +931,7 @@ export function coverPlan(
   const template = isCoverTemplateId(post.cover_template) ? post.cover_template : null;
   const palette = template
     ? templatePalette(template, post.cover_palette ?? 0)
-    : coverPalette(post.post_type, seed % 2);
+    : defaultStock(seed);
   const keyLine = pickKeyLine(displayBody || post.body, displayTitle || post.title);
   const em = keyLine ? estimateEm(keyLine) : 0;
 

@@ -1,7 +1,8 @@
 import {
   COVER_TEMPLATES,
   COVER_TEMPLATE_IDS,
-  coverPalette,
+  DEFAULT_STOCK_COUNT,
+  defaultStock,
   coverPlan,
   coverSticker,
   estimateEm,
@@ -330,14 +331,19 @@ describe('coverPlan', () => {
   });
 });
 
-describe('coverPalette', () => {
-  it('is chosen by post type, not by a hash', () => {
-    expect(coverPalette('guide').paper).not.toBe(coverPalette('warning').paper);
-    expect(coverPalette('guide')).toBe(coverPalette('guide'));
+describe('defaultStock', () => {
+  it('is chosen by the post, not by its type (D-144)', () => {
+    // The reversal: two stocks per type looked like variety and was not,
+    // because nearly every seeded post is a guide and drew one of two creams.
+    // The same post must still draw the same stock every time.
+    expect(defaultStock(3)).toBe(defaultStock(3));
+    expect(defaultStock(3).paper).not.toBe(defaultStock(4).paper);
   });
 
-  it('falls back rather than crashing on a type it has never seen', () => {
-    expect(coverPalette('something_new').paper).toBeTruthy();
+  it('wraps any seed rather than falling off the end of the table', () => {
+    expect(defaultStock(0).paper).toBeTruthy();
+    expect(defaultStock(DEFAULT_STOCK_COUNT * 7 + 2)).toBe(defaultStock(2));
+    expect(defaultStock(-1).paper).toBeTruthy();
   });
 });
 
@@ -482,10 +488,10 @@ function hueGap(a: string, b: string): number {
 }
 
 const TYPES = ['guide', 'question', 'recommendation', 'experience', 'warning'];
-const STOCKS = TYPES.flatMap((t) => [
-  { name: `${t}/0`, p: coverPalette(t, 0) },
-  { name: `${t}/1`, p: coverPalette(t, 1) },
-]);
+const STOCKS = Array.from({ length: DEFAULT_STOCK_COUNT }, (_, i) => ({
+  name: `stock/${i}`,
+  p: defaultStock(i),
+}));
 
 describe('the stocks', () => {
   it.each(STOCKS)('$name carries the structure that holds its edge', ({ p }) => {
@@ -538,14 +544,27 @@ describe('the stocks', () => {
     expect(contrast(p.paper, p.secondary)).toBeGreaterThanOrEqual(4.5);
   });
 
-  it('gives each post type two different stocks, so a feed does not repeat', () => {
-    for (const t of TYPES) expect(coverPalette(t, 0).paper).not.toBe(coverPalette(t, 1).paper);
+  it('gives every stock in the table its own paper, so a wall does not repeat', () => {
+    const papers = STOCKS.map((s) => s.p.paper);
+    expect(new Set(papers).size).toBe(papers.length);
   });
 
-  it('is papery rather than candied', () => {
+  it('is a wall of colours rather than a wall of cream (D-144)', () => {
+    // This test used to assert the opposite -- mean chroma under 10, "papery
+    // rather than candied" -- and lisum reversed it on 2026-09-15 looking at
+    // the finished wide feed: 他们的文字的背景色是不一样的,更加五彩缤纷一些.
+    // The numbers below are measured off their own wall, not invented: their
+    // text cards run chroma 6.5 to 25 at L* 87-99, and a set that averages
+    // under 10 cannot look like that no matter how it is arranged.
     const chroma = (hex: string) => Math.hypot(toLab(hex)[1], toLab(hex)[2]);
     const mean = STOCKS.reduce((sum, s) => sum + chroma(s.p.paper), 0) / STOCKS.length;
-    expect(mean).toBeLessThan(10); // the first stocks averaged 20.2
+    expect(mean).toBeGreaterThan(10);
+
+    // And spread over the wheel, not nine shades of one hue: a wall whose
+    // cards differ only in lightness is the cream wall with extra steps.
+    const hues = STOCKS.map((s) => hueAngle(s.p.paper));
+    const spread = Math.max(...hues) - Math.min(...hues);
+    expect(spread).toBeGreaterThan(180);
   });
 });
 
