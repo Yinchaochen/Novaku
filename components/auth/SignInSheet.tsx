@@ -33,6 +33,11 @@ export function SignInSheet() {
     if (visible && isAuthenticated) resolve();
   }, [visible, isAuthenticated, resolve]);
 
+  // Mounted only while open: on the web a Modal's layer is created when it
+  // mounts, so one mounted at app start sat under any sheet opened later —
+  // the post detail covered it and a guest's tap on "comment" did nothing.
+  if (!visible) return null;
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={close}>
       <View

@@ -226,8 +226,7 @@ function DetailFrame({
 
   if (!wide) return <>{children}</>;
 
-  const sheetWidth = Math.min(1120, windowWidth - 120);
-  const sheetHeight = Math.min(940, windowHeight - 72);
+  const { width: sheetWidth, height: sheetHeight } = wideSheetSize(windowWidth, windowHeight);
   const left = (windowWidth - sheetWidth) / 2;
   const top = (windowHeight - sheetHeight) / 2;
 
@@ -327,6 +326,13 @@ function Avatar({
 
 
 
+// The wide detail sheet's size. The media pager inside it pages by this width,
+// not the window's — sized by the window, each picture overflowed the sheet
+// and sat pushed to the right with its far edge cut off.
+function wideSheetSize(windowWidth: number, windowHeight: number) {
+  return { width: Math.min(1120, windowWidth - 120), height: Math.min(940, windowHeight - 72) };
+}
+
 function wrapMediaIndex(index: number, itemCount: number) {
   if (itemCount <= 0) return 0;
   return ((index % itemCount) + itemCount) % itemCount;
@@ -344,7 +350,10 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
   const activeSeed = postStack.length > 0 ? postStack[postStack.length - 1] : seedPost;
   const { t, langCode } = useLanguage();
   const insets = useSafeAreaInsets();
-  const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const { width: viewportWidth, height: viewportHeight } = wideDetail
+    ? wideSheetSize(windowWidth, windowHeight)
+    : { width: windowWidth, height: windowHeight };
   // Sized from the first picture once it loads. Event posters are mostly
   // words, and a fixed frame cut them off at both edges.
   const [measuredMediaHeight, setMeasuredMediaHeight] = useState<number | null>(null);

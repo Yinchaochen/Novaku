@@ -109,6 +109,9 @@ export default function TabsLayout() {
           headerShown: false,
           tabBarActiveTintColor: ACTIVE_TINT,
           tabBarInactiveTintColor: INACTIVE_TINT,
+          // The side rail otherwise fills the active row with the library's
+          // default blue; the bottom bar has no row background to replace.
+          tabBarActiveBackgroundColor: railed ? '#FFE8DA' : undefined,
           tabBarShowLabel: true,
           tabBarLabelStyle: {
             fontSize: 11,
