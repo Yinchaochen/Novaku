@@ -249,7 +249,16 @@ function AppBody() {
       // D-151: on the web a guest reads the Plaza and is asked to sign in only
       // when they try to write. Phones keep sign-in first.
       isGuestBrowsable(segments, Platform.OS);
-    if (!isAuthenticated && !isRootRoute && !inAuthGroup && !isPublicRoute) {
+    const isSignInPage = inAuthGroup && (segments[1] === 'login' || isWelcome);
+    if (!isAuthenticated && isSignInPage && Platform.OS === 'web') {
+      // D-151: the web has no sign-in page. A bookmarked /login, a sign-out,
+      // or an old link lands on the wall; /login still offers the sheet.
+      if (lastRedirect.current !== `wall:${pathname}`) {
+        lastRedirect.current = `wall:${pathname}`;
+        router.replace('/plaza');
+        if (!isWelcome) useSignInPromptStore.getState().open(() => undefined);
+      }
+    } else if (!isAuthenticated && !isRootRoute && !inAuthGroup && !isPublicRoute) {
       if (Platform.OS === 'web') {
         // D-151: on the web a protected route is a sheet over the wall, never
         // a redirect to a login page — whichever way the reader got here. A

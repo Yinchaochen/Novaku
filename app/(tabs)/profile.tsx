@@ -672,7 +672,8 @@ export default function ProfileScreen() {
     // the auth-store update and the route change, which can trigger
     // "Rendered fewer hooks than expected" if any hook path conditionally
     // branches on user existing.
-    router.replace('/(auth)/login');
+    // On the web a signed-out reader stays on the wall (D-151).
+    router.replace(Platform.OS === 'web' ? '/plaza' : '/(auth)/login');
     await logout();
   };
 

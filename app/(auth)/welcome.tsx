@@ -1,6 +1,8 @@
 import { Redirect } from 'expo-router';
+import { Platform } from 'react-native';
 
 import { BrandIntro } from '../../components/BrandIntro';
+import { signedOutLanding } from '../../lib/guestBrowsing';
 import { useAuthStore } from '../../store/authStore';
 
 export default function WelcomeScreen() {
@@ -11,6 +13,6 @@ export default function WelcomeScreen() {
     return <BrandIntro />;
   }
 
-  const target = isAuthenticated ? '/plaza' : '/login';
+  const target = isAuthenticated ? '/plaza' : signedOutLanding(Platform.OS);
   return <Redirect href={target} />;
 }
