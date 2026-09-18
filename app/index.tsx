@@ -1,7 +1,9 @@
 import { Redirect } from 'expo-router';
+import { Platform } from 'react-native';
 
 import { BrandIntro } from '../components/BrandIntro';
 import { useAuthStore } from '../store/authStore';
+import { signedOutLanding } from '../lib/guestBrowsing';
 
 // Single-hop routing from `/` to `/plaza` (authenticated) or `/login`. The
 // older double-hop `/ → /welcome → /plaza` chain caused navigation-state
@@ -14,5 +16,6 @@ export default function Index() {
     return <BrandIntro />;
   }
 
-  return <Redirect href={isAuthenticated ? '/plaza' : '/login'} />;
+  // A signed-out web visitor lands on the wall, not on a login form (D-151).
+  return <Redirect href={isAuthenticated ? '/plaza' : signedOutLanding(Platform.OS)} />;
 }

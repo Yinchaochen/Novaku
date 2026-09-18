@@ -30,6 +30,7 @@ import ViewShot from 'react-native-view-shot';
 import { useLanguage } from '../../context/LanguageContext';
 import { detailMediaHeight, detailMediaHeightFor } from '../../lib/cardAspect';
 import { WIDE_LAYOUT_MIN_WIDTH } from '../../theme/layout';
+import { requireSignIn } from '../../store/signInPromptStore';
 import { paginateBody } from '../../lib/coverPages';
 import { PostCover } from '../../components/community/PostCover';
 import { PostCoverPage } from '../../components/community/PostCoverPage';
@@ -1309,7 +1310,8 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
               />
 
               <Pressable
-                onPress={openCommentComposer}
+                // A guest is asked to sign in, then the composer opens (D-151).
+                onPress={() => requireSignIn(openCommentComposer)}
                 className="flex-1 flex-row items-center rounded-full bg-[#F5F5F7] px-4 py-3"
               >
                 <Text className="flex-1 text-[14px] text-[#9CA3AF]">{t.comments.say_something}</Text>
@@ -1320,14 +1322,16 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
             <View className="flex-row items-center justify-around">
               <Pressable
                 className="flex-row items-center py-2"
-                onPress={() => {
-                  if (post.viewer_marked_helpful) {
-                    unhelpful.mutate(post.id);
-                  } else {
-                    markDownstreamSignal();
-                    helpful.mutate(post.id);
-                  }
-                }}
+                onPress={() =>
+                  requireSignIn(() => {
+                    if (post.viewer_marked_helpful) {
+                      unhelpful.mutate(post.id);
+                    } else {
+                      markDownstreamSignal();
+                      helpful.mutate(post.id);
+                    }
+                  })
+                }
               >
                 <Ionicons
                   name={post.viewer_marked_helpful ? 'heart' : 'heart-outline'}
@@ -1339,13 +1343,15 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
 
               <Pressable
                 className="flex-row items-center py-2"
-                onPress={() => {
-                  if (post.viewer_saved) {
-                    unsavePost.mutate(post.id);
-                  } else {
-                    savePost.mutate(post.id);
-                  }
-                }}
+                onPress={() =>
+                  requireSignIn(() => {
+                    if (post.viewer_saved) {
+                      unsavePost.mutate(post.id);
+                    } else {
+                      savePost.mutate(post.id);
+                    }
+                  })
+                }
               >
                 <Ionicons
                   name={post.viewer_saved ? 'star' : 'star-outline'}
@@ -1451,14 +1457,14 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
           actions={{
             helpfulCount: post.helpful_count,
             viewerMarkedHelpful: post.viewer_marked_helpful,
-            onToggleHelpful: () => {
+            onToggleHelpful: () => requireSignIn(() => {
               if (post.viewer_marked_helpful) {
                 unhelpful.mutate(post.id);
               } else {
                 markDownstreamSignal();
                 helpful.mutate(post.id);
               }
-            },
+            }),
             commentCount: post.comment_count,
             onOpenComments: () => {
               // Comments live in the detail sheet below — close the player
@@ -1467,13 +1473,13 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
               scrollToComments();
             },
             viewerSaved: Boolean(post.viewer_saved),
-            onToggleSave: () => {
+            onToggleSave: () => requireSignIn(() => {
               if (post.viewer_saved) {
                 unsavePost.mutate(post.id);
               } else {
                 savePost.mutate(post.id);
               }
-            },
+            }),
             onShare: () => {
               setVideoPlayerUrl(null);
               setShareSheetVisible(true);

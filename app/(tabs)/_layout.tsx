@@ -1,5 +1,5 @@
 import { BlurView } from 'expo-blur';
-import { Tabs } from 'expo-router';
+import { router, Tabs } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
 import { Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -12,6 +12,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useMe } from '../../features/auth/useAuth';
 import { useProductGuideController } from '../../features/guide/useProductGuide';
 import { tap } from '../../lib/haptics';
+import { requireSignIn } from '../../store/signInPromptStore';
 import { useAuthStore } from '../../store/authStore';
 import {
   getTabBarHeight,
@@ -62,6 +63,7 @@ export default function TabsLayout() {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const user = useAuthStore((state) => state.user);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   // Revalidate the cached user (is_staff, is_vianter_plus, …) from /auth/me on
   // every authenticated mount, so server-side changes reflect without a full
   // re-login. The Settings admin gate reads user.is_staff from this store.
@@ -90,11 +92,19 @@ export default function TabsLayout() {
   return (
     <>
       <Tabs
-        screenListeners={{
-          tabPress: () => {
+        screenListeners={({ route }) => ({
+          tabPress: (event) => {
             tap('selection');
+            // D-151: a signed-out web reader can read the Plaza and nothing
+            // else. Pressing another tab asks them to sign in, then takes
+            // them there — rather than navigating to a screen that would
+            // only bounce them to a login page and lose where they were.
+            if (!isAuthenticated && route.name !== 'plaza') {
+              event.preventDefault();
+              requireSignIn(() => router.navigate(`/(tabs)/${route.name}` as never));
+            }
           },
-        }}
+        })}
         screenOptions={{
           headerShown: false,
           tabBarActiveTintColor: ACTIVE_TINT,

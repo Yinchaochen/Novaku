@@ -94,6 +94,15 @@ function isBestEffortTelemetry(url: string): boolean {
 
 let refreshInFlight: Promise<string> | null = null;
 
+/** Did this request go out with a bearer token? Headers may be a plain object
+ *  or an AxiosHeaders instance, so both shapes are read. */
+export function hasAuthHeader(headers: unknown): boolean {
+  if (!headers) return false;
+  const h = headers as { get?: (name: string) => unknown } & Record<string, unknown>;
+  const value = typeof h.get === 'function' ? h.get('Authorization') : h.Authorization ?? h.authorization;
+  return typeof value === 'string' && value.startsWith('Bearer ') && value.length > 'Bearer '.length;
+}
+
 async function refreshAccessToken(): Promise<string> {
   const refreshToken = await secureStore.getItemAsync('refresh_token');
   if (!refreshToken) throw new Error('no_refresh_token');
@@ -154,6 +163,14 @@ api.interceptors.response.use(
     // else: known/expected 4xx — breadcrumb already emitted above, no event capture
 
     if (!original || status !== 401) {
+      return Promise.reject(error);
+    }
+    // A request that carried no token was a guest's (D-151): its 401 says
+    // "this needs an account", not "your session died". Refreshing would fail
+    // for want of a refresh token and report token_refresh_rotation_failed —
+    // once per request, for every visitor — burying the real logouts that
+    // report exists to catch.
+    if (!hasAuthHeader(original.headers)) {
       return Promise.reject(error);
     }
     if (original._retry) {

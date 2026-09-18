@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import {
   InfiniteData,
   QueryClient,
@@ -364,6 +365,15 @@ type CommunityFeedUser = {
 
 export type CommunityFeedFilter = CommunityPost['post_type'] | null;
 
+/**
+ * May this reader fetch the public Plaza? Signed in anywhere, or signed out on
+ * the web, where the wall is readable without an account (D-151). Only for
+ * the read-only queries — anything that is about "me" stays behind sign-in.
+ */
+function canRead(user: unknown): boolean {
+  return Boolean(user) || Platform.OS === 'web';
+}
+
 export function communityFeedQueryKey(
   user: CommunityFeedUser | null | undefined,
   langCode: string,
@@ -425,7 +435,7 @@ export function useCommunityFeed(postType: CommunityFeedFilter = null) {
     },
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
-    enabled: Boolean(user),
+    enabled: canRead(user),
     // The key carries the locale, so switching language is a brand-new query.
     // Without this the screen goes blank (or straight to the error state) for
     // the duration of the refetch, which is exactly when a deploy blip hurts.
@@ -512,7 +522,7 @@ export function useSearchCommunityPosts(params: CommunitySearchParams | null) {
     },
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
-    enabled: Boolean(user) && Boolean(params && params.q.trim().length >= 2),
+    enabled: canRead(user) && Boolean(params && params.q.trim().length >= 2),
     retry: 1,
     staleTime: 30_000,
   });
@@ -529,7 +539,7 @@ export function useSearchDiscover(enabled = true) {
       const res = await api.get('/community/search-discover');
       return (res.data.data.items ?? []) as string[];
     },
-    enabled: Boolean(user) && enabled,
+    enabled: canRead(user) && enabled,
     staleTime: 60 * 60 * 1000,
     retry: 1,
   });

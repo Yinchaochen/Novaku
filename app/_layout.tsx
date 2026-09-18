@@ -51,6 +51,9 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { LanguageProvider, useLanguage } from '../context/LanguageContext';
 import { NetworkHealthBanner } from '../components/NetworkHealthBanner';
+import { SignInSheet } from '../components/auth/SignInSheet';
+import { isGuestBrowsable } from '../lib/guestBrowsing';
+import { useSignInPromptStore } from '../store/signInPromptStore';
 import { PendingDeletionBanner } from '../components/PendingDeletionBanner';
 import { asyncStoragePersister, CHAT_SEND_MUTATION_KEY } from '../lib/queryPersister';
 import { SafeModeScreen } from '../components/SafeModeScreen';
@@ -240,9 +243,26 @@ function AppBody() {
     const isRootRoute = pathname === '/';
     const inAuthGroup = segments[0] === '(auth)';
     const isWelcome = inAuthGroup && segments[1] === 'welcome';
-    const isPublicRoute = segments[0] === 'legal' || segments[0] === 'dev';
+    const isPublicRoute =
+      segments[0] === 'legal' ||
+      segments[0] === 'dev' ||
+      // D-151: on the web a guest reads the Plaza and is asked to sign in only
+      // when they try to write. Phones keep sign-in first.
+      isGuestBrowsable(segments, Platform.OS);
     if (!isAuthenticated && !isRootRoute && !inAuthGroup && !isPublicRoute) {
-      if (lastRedirect.current !== 'login') {
+      if (Platform.OS === 'web') {
+        // D-151: on the web a protected route is a sheet over the wall, never
+        // a redirect to a login page — whichever way the reader got here. A
+        // tab press is intercepted before it navigates, but a cmd-click, a
+        // middle-click, a typed URL or a shared deep link all load the route
+        // directly and land here; this is the one place that sees all of them.
+        if (lastRedirect.current !== `sheet:${pathname}`) {
+          lastRedirect.current = `sheet:${pathname}`;
+          const target = pathname;
+          router.replace('/plaza');
+          useSignInPromptStore.getState().open(() => router.navigate(target as never));
+        }
+      } else if (lastRedirect.current !== 'login') {
         lastRedirect.current = 'login';
         rememberAuthReturnPath(pathname);
         router.replace('/login');
@@ -283,6 +303,9 @@ function AppBody() {
       {isAuthenticated ? <PendingDeletionBanner /> : null}
       <NetworkHealthBanner />
       <Stack screenOptions={{ headerShown: false }} />
+      {/* One sign-in sheet for the whole app, opened by requireSignIn() from
+          whatever control a guest reached for (D-151). */}
+      <SignInSheet />
     </PersistQueryClientProvider>
   );
 }

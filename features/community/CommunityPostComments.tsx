@@ -24,6 +24,7 @@ import {
 } from './useCommunity';
 import { OfficialChip, isOfficialAuthor } from '../../components/OfficialChip';
 import { VerifiedBadge } from '../../components/VerifiedBadge';
+import { requireSignIn } from '../../store/signInPromptStore';
 
 interface Props {
   post: CommunityPost;
@@ -144,13 +145,15 @@ export function CommunityPostComments({ post, onReplyToComment, onEditComment }:
   // Optimistic updates flip comment.viewer_marked_helpful in cache the moment
   // the tap fires, so we branch on the cached flag directly without waiting on
   // the in-flight request.
-  const handleToggleHelpful = (comment: CommunityComment) => {
-    if (comment.viewer_marked_helpful) {
-      unmarkHelpful.mutate(comment.id);
-    } else {
-      markHelpful.mutate(comment.id);
-    }
-  };
+  const handleToggleHelpful = (comment: CommunityComment) =>
+    // A guest reads the thread; liking a comment asks them to sign in (D-151).
+    requireSignIn(() => {
+      if (comment.viewer_marked_helpful) {
+        unmarkHelpful.mutate(comment.id);
+      } else {
+        markHelpful.mutate(comment.id);
+      }
+    });
 
   const toggleTranslate = (commentId: string) => {
     setTranslateOverrides((prev) => ({ ...prev, [commentId]: !prev[commentId] }));
@@ -192,7 +195,7 @@ export function CommunityPostComments({ post, onReplyToComment, onEditComment }:
               isOwn={isOwn}
               langCode={langCode}
               translateOverridden={translateOverrides[comment.id] ?? false}
-              onPressReply={() => onReplyToComment?.(comment)}
+              onPressReply={() => requireSignIn(() => onReplyToComment?.(comment))}
               onPressHelpful={() => handleToggleHelpful(comment)}
               onPressTranslate={() => toggleTranslate(comment.id)}
               onPressMore={() =>
@@ -215,7 +218,7 @@ export function CommunityPostComments({ post, onReplyToComment, onEditComment }:
                     parentCommentId={comment.id}
                     currentUserId={user?.id ?? null}
                     langCode={langCode}
-                    onPressReply={(reply) => onReplyToComment?.(reply)}
+                    onPressReply={(reply) => requireSignIn(() => onReplyToComment?.(reply))}
                     onPressHelpful={(reply) => handleToggleHelpful(reply)}
                     onPressTranslate={(reply) => toggleTranslate(reply.id)}
                     translateOverrides={translateOverrides}

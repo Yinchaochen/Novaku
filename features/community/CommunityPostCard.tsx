@@ -10,6 +10,7 @@ import { cardMediaFit } from '../../lib/cardAspect';
 import { formatEventTime } from '../../lib/eventTime';
 import { resolveMediaUrl } from '../../lib/media';
 import { useAuthStore } from '../../store/authStore';
+import { requireSignIn } from '../../store/signInPromptStore';
 import { ActionSheet } from '../../components/ActionSheet';
 import { TranslatedText } from './TranslatedText';
 import {
@@ -268,7 +269,7 @@ export function CommunityPostCard({ post, onPress, titleHighlight, columnWidth }
           the author's name on every single card. */}
       <Pressable
         onPress={openDetail}
-        onLongPress={openCardActions}
+        onLongPress={() => requireSignIn(openCardActions)}
         // The card's one and only outline. 12 rather than Xiaohongshu's ~4:
         // their product is square-cornered throughout and ours is not, and
         // dropping the plate is meant to remove an edge, not to restyle the
@@ -395,7 +396,7 @@ export function CommunityPostCard({ post, onPress, titleHighlight, columnWidth }
           white rectangle's corner; without it the byline row — the thing that
           was squeezing the author's name out — gets 20dp back. */}
       <View style={{ paddingHorizontal: 2, paddingTop: 10, paddingBottom: 0 }}>
-        <Pressable onPress={openDetail} onLongPress={openCardActions}>
+        <Pressable onPress={openDetail} onLongPress={() => requireSignIn(openCardActions)}>
           {titleHighlight ? (
             <HighlightedCardTitle
               text={post.translated_title ?? post.title}
@@ -485,7 +486,8 @@ export function CommunityPostCard({ post, onPress, titleHighlight, columnWidth }
           <Pressable
             style={{ marginLeft: 8, flexDirection: 'row', alignItems: 'center', paddingVertical: 6, paddingLeft: 10 }}
             hitSlop={10}
-            onPress={handleToggleHelpful}
+            // A guest is asked to sign in, then the heart lands (D-151).
+            onPress={() => requireSignIn(handleToggleHelpful)}
           >
             <Ionicons
               name={post.viewer_marked_helpful ? 'heart' : 'heart-outline'}

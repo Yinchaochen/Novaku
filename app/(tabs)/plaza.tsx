@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { fieldErrorText } from '../../lib/formErrors';
 import { feedGrid } from '../../lib/feedGrid';
+import { requireSignIn } from '../../store/signInPromptStore';
 import { isCoverTemplateId, type CoverTemplateId } from '../../lib/postCover';
 import { CoverTemplatePicker } from '../../components/community/CoverTemplatePicker';
 import { PostCover } from '../../components/community/PostCover';
@@ -782,7 +783,8 @@ export default function PlazaScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             {/* Permanent walkthrough entry (D-050): re-runnable any time. */}
             <FeedbackPressable
-              onPress={() => guide.startWalkthrough({ composerOpen: false })}
+              // The walkthrough ends in the composer, so it needs an account too.
+              onPress={() => requireSignIn(() => guide.startWalkthrough({ composerOpen: false }))}
               accessibilityLabel={t.guide.take_the_tour}
               testID="plaza.guide-entry"
               hitSlop={8}
@@ -1058,7 +1060,8 @@ export default function PlazaScreen() {
           </Text>
           <Pressable
             testID="plaza.composer.open"
-            onPress={openComposerForCreate}
+            // Writing a post needs an account; a guest is asked first (D-151).
+            onPress={() => requireSignIn(openComposerForCreate)}
             accessibilityRole="button"
             accessibilityLabel={t.plaza.publish_note}
             style={StyleSheet.absoluteFill}

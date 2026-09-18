@@ -348,9 +348,13 @@ export function useUploadProfileBackground() {
 
 export function useMe() {
   const setUser = useAuthStore((s) => s.setUser);
+  // A guest has no /me to fetch (D-151). Unguarded, this fired on every page
+  // load for every signed-out visitor and came back 401 each time.
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   return useQuery({
     queryKey: ['me'],
+    enabled: isAuthenticated,
     queryFn: async () => {
       const res = await api.get('/auth/me');
       const user = res.data.data as AuthUser;

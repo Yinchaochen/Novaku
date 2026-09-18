@@ -45,6 +45,7 @@ import { resolveMediaUrl } from '../../lib/media';
 import { useAuthStore } from '../../store/authStore';
 import { OfficialChip, isOfficialAuthor } from '../../components/OfficialChip';
 import { VerifiedBadge } from '../../components/VerifiedBadge';
+import { requireSignIn } from '../../store/signInPromptStore';
 
 function showCopiedToast(message: string) {
   if (Platform.OS === 'android') {
@@ -398,7 +399,8 @@ export default function UserProfileScreen() {
 
           <View className="mt-4 flex-row gap-2">
             <Pressable
-              onPress={handleToggleFollow}
+              // Following needs an account; a guest is asked first (D-151).
+              onPress={() => requireSignIn(handleToggleFollow)}
               className="flex-1 items-center justify-center rounded-full py-2.5"
               style={{
                 backgroundColor: profileData.viewer_is_following ? '#F5F5F7' : '#F47C7C',
@@ -415,7 +417,7 @@ export default function UserProfileScreen() {
               onPress={() => {
                 switch (profileData.relationship_state) {
                   case 'none':
-                    openFriendRequest();
+                    requireSignIn(openFriendRequest);
                     break;
                   case 'incoming_pending':
                     void handleAcceptFriendRequest();
@@ -425,7 +427,7 @@ export default function UserProfileScreen() {
                     break;
                   case 'friends':
                   default:
-                    handleMessage();
+                    requireSignIn(handleMessage);
                     break;
                 }
               }}
