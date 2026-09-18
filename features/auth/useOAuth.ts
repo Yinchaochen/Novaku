@@ -5,119 +5,24 @@ import {
   statusCodes,
 } from '@react-native-google-signin/google-signin';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { isAxiosError } from 'axios';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Platform } from 'react-native';
 
 import { useLanguage } from '../../context/LanguageContext';
-import { api } from '../../lib/api';
 import { env } from '../../lib/env';
 import PosterviaGoogleSignin from '../../modules/postervia-google-signin';
 import { useAuthStore } from '../../store/authStore';
-import { getApiErrorCode, type AuthUser } from './useAuth';
+import { getApiErrorCode } from './useAuth';
 import {
-  resolveAgeAssuranceDecision,
-  requestPlatformAgeSignal,
-} from './ageAssurance';
-import {
-  clearOAuthRegistrationSession,
-  setOAuthRegistrationSession,
-  type OAuthRegistrationSession,
-} from './oauthRegistrationSession';
-import { requiredOAuthRegistrationConsents } from './oauthRegistrationLegal';
+  exchangeOAuthContinue,
+  OAuthFlowError,
+  retryOAuthNetworkFailure,
+} from './oauthExchange';
+import { clearOAuthRegistrationSession } from './oauthRegistrationSession';
 
 const GOOGLE_WEB_CLIENT_ID = env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
 const GOOGLE_IOS_CLIENT_ID = env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '';
-
-type OAuthContinueResponse =
-  | {
-      status: 'authenticated';
-      access_token: string;
-      refresh_token: string;
-      token_type: 'bearer';
-      registration_ticket: null;
-      profile: null;
-    }
-  | {
-      status: 'registration_required';
-      access_token: null;
-      refresh_token: null;
-      token_type: null;
-      registration_ticket: string;
-      profile: {
-        provider: 'google' | 'apple';
-        email: string;
-        display_name: string;
-        avatar_url: string | null;
-      };
-    };
-
-type OAuthMutationResult =
-  | { status: 'authenticated'; user: AuthUser }
-  | { status: 'registration_required' };
-
-class OAuthFlowError extends Error {
-  constructor(readonly code: string) {
-    super(code);
-  }
-}
-
-function retryOAuthNetworkFailure(failureCount: number, error: unknown): boolean {
-  return failureCount < 1 && isAxiosError(error) && !error.response;
-}
-
-async function exchangeOAuthContinue(
-  endpoint: string,
-  payload: Record<string, unknown>,
-  locale: string,
-  setTokens: (access: string, refresh: string) => Promise<void>,
-  setUser: (user: AuthUser) => void,
-): Promise<OAuthMutationResult> {
-  const response = await api.post(endpoint, { ...payload, locale });
-  const result = response.data.data as OAuthContinueResponse;
-  if (result.status === 'registration_required') {
-    const session: OAuthRegistrationSession = {
-      registrationTicket: result.registration_ticket,
-      profile: {
-        provider: result.profile.provider,
-        email: result.profile.email,
-        displayName: result.profile.display_name,
-        avatarUrl: result.profile.avatar_url,
-      },
-    };
-    const ageDecision = resolveAgeAssuranceDecision(await requestPlatformAgeSignal());
-    if (ageDecision.kind === 'underage') {
-      throw new OAuthFlowError('auth.underage');
-    }
-    if (ageDecision.kind === 'fallback') {
-      setOAuthRegistrationSession(session);
-      return { status: 'registration_required' };
-    }
-
-    const completed = await api.post('/auth/oauth/complete-registration', {
-      registration_ticket: session.registrationTicket,
-      locale,
-      age_assurance: ageDecision.assurance,
-      consents: requiredOAuthRegistrationConsents(),
-    });
-    const tokens = completed.data.data as {
-      access_token: string;
-      refresh_token: string;
-    };
-    await setTokens(tokens.access_token, tokens.refresh_token);
-    const me = await api.get('/auth/me');
-    const user = me.data.data as AuthUser;
-    setUser(user);
-    return { status: 'authenticated', user };
-  }
-
-  await setTokens(result.access_token, result.refresh_token);
-  const me = await api.get('/auth/me');
-  const user = me.data.data as AuthUser;
-  setUser(user);
-  return { status: 'authenticated', user };
-}
 
 let googleConfigured = false;
 function ensureGoogleConfigured() {
@@ -231,6 +136,12 @@ export function useGoogleLogin() {
   return {
     request: Boolean(GOOGLE_WEB_CLIENT_ID),
     signIn,
+    // Used by the browser build's Google button (useOAuth.web.ts); same shape here.
+    exchangeIdToken: (idToken: string) => {
+      setClientErrorCode(null);
+      mutation.mutate(idToken);
+    },
+    reportError: (code: string) => setClientErrorCode(code),
     isPending: mutation.isPending,
     isError: mutation.isError || clientErrorCode !== null,
     error: mutation.error,
@@ -303,6 +214,7 @@ export function useAppleLogin() {
   };
 
   return {
+    available: Platform.OS === 'ios',
     signIn,
     isPending: mutation.isPending,
     isError: mutation.isError || clientErrorCode !== null,

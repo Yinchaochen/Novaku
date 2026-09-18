@@ -38,6 +38,8 @@ import {
 } from '../../lib/rememberedEmail';
 import { colors } from '../../theme/tokens';
 import { GoogleSignInButton } from '../GoogleSignInButton';
+import { AppleWebButton } from './AppleWebButton';
+import { GoogleWebButton } from './GoogleWebButton';
 import { OAuthLegalDisclosure } from './OAuthLegalDisclosure';
 import { oauthErrorMessage } from '../../features/auth/oauthErrorMessage';
 
@@ -162,13 +164,27 @@ export function LoginForm({
                 void apple.signIn();
               }}
             />
+          ) : Platform.OS === 'web' && apple.available ? (
+            <AppleWebButton
+              label={t.auth.continue_with_apple}
+              onPress={() => void apple.signIn()}
+              loading={apple.isPending}
+            />
           ) : null}
-          <GoogleSignInButton
-            label={t.auth.continue_with_google}
-            onPress={() => void google.signIn()}
-            disabled={!google.request || google.isPending}
-            loading={google.isPending}
-          />
+          {Platform.OS === 'web' ? (
+            <GoogleWebButton
+              onIdToken={google.exchangeIdToken}
+              onError={google.reportError}
+              disabled={google.isPending}
+            />
+          ) : (
+            <GoogleSignInButton
+              label={t.auth.continue_with_google}
+              onPress={() => void google.signIn()}
+              disabled={!google.request || google.isPending}
+              loading={google.isPending}
+            />
+          )}
           {google.isError || apple.isError ? (
             <Text style={{ marginTop: 10, fontSize: 12, color: colors.danger, textAlign: 'center' }}>
               {oauthErrorMessage(oauthErrorCode, t.auth.errors)}

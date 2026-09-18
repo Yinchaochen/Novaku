@@ -28,6 +28,8 @@ import { tap } from '../../lib/haptics';
 import { colors } from '../../theme/tokens';
 import { AUTH_FORM_MAX_WIDTH } from '../../theme/layout';
 import { GoogleSignInButton } from '../../components/GoogleSignInButton';
+import { AppleWebButton } from '../../components/auth/AppleWebButton';
+import { GoogleWebButton } from '../../components/auth/GoogleWebButton';
 import { Screen } from '../../components/Screen';
 import { AuthHeader } from '../../components/auth/AuthHeader';
 import { OAuthLegalDisclosure } from '../../components/auth/OAuthLegalDisclosure';
@@ -207,13 +209,27 @@ export default function RegisterScreen() {
               style={{ width: '100%', height: 52, marginBottom: 12 }}
               onPress={() => void apple.signIn()}
             />
+          ) : Platform.OS === 'web' && apple.available ? (
+            <AppleWebButton
+              label={t.auth.continue_with_apple}
+              onPress={() => void apple.signIn()}
+              loading={apple.isPending}
+            />
           ) : null}
-          <GoogleSignInButton
-            label={t.auth.continue_with_google}
-            onPress={() => void google.signIn()}
-            disabled={!google.request || google.isPending}
-            loading={google.isPending}
-          />
+          {Platform.OS === 'web' ? (
+            <GoogleWebButton
+              onIdToken={google.exchangeIdToken}
+              onError={google.reportError}
+              disabled={google.isPending}
+            />
+          ) : (
+            <GoogleSignInButton
+              label={t.auth.continue_with_google}
+              onPress={() => void google.signIn()}
+              disabled={!google.request || google.isPending}
+              loading={google.isPending}
+            />
+          )}
           {google.isError || apple.isError ? (
             <Text style={{ marginTop: 10, fontSize: 12, color: colors.danger, textAlign: 'center' }}>
               {oauthErrorMessage(oauthErrorCode, t.auth.errors)}

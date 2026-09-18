@@ -44,6 +44,8 @@ const EnvSchema = z.object({
   /** Google OAuth client IDs (per platform). Empty = OAuth disabled. */
   EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: z.string().optional(),
   EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: z.string().optional(),
+  /** Sign in with Apple on the web: the Services ID, not the bundle ID. Unset hides the button. */
+  EXPO_PUBLIC_APPLE_WEB_SERVICES_ID: z.string().optional(),
   EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID: z.string().optional(),
 });
 
@@ -57,6 +59,7 @@ function _parseEnv() {
     EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_ANDROID: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_ANDROID,
     EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
     EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    EXPO_PUBLIC_APPLE_WEB_SERVICES_ID: process.env.EXPO_PUBLIC_APPLE_WEB_SERVICES_ID,
     EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
   };
   const parsed = EnvSchema.safeParse(raw);
