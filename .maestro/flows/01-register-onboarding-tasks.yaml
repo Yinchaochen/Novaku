@@ -69,6 +69,8 @@ tags:
 - tapOn:
     id: onboarding.intent.work
 - tapOn:
+    id: onboarding.intent.continue
+- tapOn:
     id: onboarding.stage.just_arrived
 - tapOn:
     id: onboarding.finish

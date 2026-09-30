@@ -2,6 +2,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { Image as RNImage, Text, View } from 'react-native';
 
 import { CommunityPost } from '../features/community/useCommunity';
+import { formatDisplayLocation } from '../lib/displayLocation';
 import { resolveMediaUrl } from '../lib/media';
 
 const WIDTH = 360;
@@ -21,6 +22,9 @@ function formatDate(value: string, langCode: string) {
 export function StoryShareCard({ post, langCode }: { post: CommunityPost; langCode: string }) {
   const image = post.media_items[0] ? resolveMediaUrl(post.media_items[0].media_url) : null;
   const avatar = resolveMediaUrl(post.author.avatar_url);
+  // The post's city, not the author's: a Berlin account's post from Shanghai
+  // is a Shanghai post (D-153).
+  const city = formatDisplayLocation(post.city);
 
   return (
     <View
@@ -50,9 +54,9 @@ export function StoryShareCard({ post, langCode }: { post: CommunityPost; langCo
             <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: '700', color: '#1F2937' }}>
               {post.author.display_name}
             </Text>
-            {post.author.city ? (
+            {city ? (
               <Text numberOfLines={1} style={{ fontSize: 12, color: '#9CA3AF' }}>
-                {post.author.city}
+                {city}
               </Text>
             ) : null}
           </View>

@@ -24,7 +24,8 @@ import {
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { useAuthStore } from '../store/authStore';
 
-type Step = 'city' | 'persona';
+// One question per screen: where, why, how long.
+type Step = 'city' | 'intent' | 'stage';
 type Mode = 'required' | 'edit';
 
 type SelectedCity = {
@@ -34,6 +35,7 @@ type SelectedCity = {
   longitude: number | null;
 };
 
+const STEPS: Step[] = ['city', 'intent', 'stage'];
 const INTENT_TAGS: OnboardingIntentTag[] = ['study', 'work', 'travel', 'settle'];
 const ARRIVAL_STAGES: OnboardingArrivalStage[] = ['just_arrived', 'settled', 'local'];
 
@@ -111,6 +113,7 @@ export function OnboardingModal({
   const canDismiss = mode === 'edit';
   const isBusy = updateProfile.isPending || resolveCity.isPending;
   const canContinueFromCity = Boolean(selectedCity?.name);
+  const canContinueFromIntent = selectedIntents.length > 0;
   const canSubmit = Boolean(selectedCity?.name && selectedIntents.length > 0 && selectedStage && !isBusy);
 
   const selectedCityLabel = useMemo(() => {
@@ -146,7 +149,7 @@ export function OnboardingModal({
       setCityQuery(city.name);
       setDeepQuery('');
       setLocationSource('device');
-      setStep('persona');
+      setStep('intent');
     } catch {
       setLocationSource('manual');
       setFeedback(t.onboarding.location_failed);
@@ -196,9 +199,7 @@ export function OnboardingModal({
   };
 
   const handleBack = () => {
-    if (step === 'persona') {
-      setStep('city');
-    }
+    setStep(step === 'stage' ? 'intent' : 'city');
   };
 
   return (
@@ -234,7 +235,7 @@ export function OnboardingModal({
           </View>
 
           <View className="mb-4 flex-row gap-2">
-            {(['city', 'persona'] as Step[]).map((item) => (
+            {STEPS.map((item) => (
               <View
                 key={item}
                 className={`h-2 flex-1 rounded-full ${step === item ? 'bg-primary' : 'bg-gray-200'}`}
@@ -338,7 +339,7 @@ export function OnboardingModal({
                 <View className="mt-5">
                   <Pressable
                     testID="onboarding.city.continue"
-                    onPress={() => setStep('persona')}
+                    onPress={() => setStep('intent')}
                     disabled={!canContinueFromCity}
                     accessibilityRole="button"
                     accessibilityState={{ disabled: !canContinueFromCity }}
@@ -354,7 +355,7 @@ export function OnboardingModal({
               </View>
             ) : null}
 
-            {step === 'persona' ? (
+            {step === 'intent' ? (
               <View>
                 <View className="mb-4 rounded-3xl bg-primary/5 px-4 py-3">
                   <Text className="text-xs font-bold uppercase tracking-[1px] text-primary/70">
@@ -379,7 +380,7 @@ export function OnboardingModal({
                   {t.onboarding.intent_hint}
                 </Text>
 
-                <View className="mb-5 flex-row flex-wrap gap-3">
+                <View className="flex-row flex-wrap gap-3">
                   {INTENT_TAGS.map((intent) => {
                     const active = selectedIntents.includes(intent);
                     return (
@@ -399,6 +400,30 @@ export function OnboardingModal({
                   })}
                 </View>
 
+                <View className="mt-5 flex-row gap-3">
+                  <Pressable onPress={handleBack} className="flex-1 rounded-3xl bg-gray-100 px-4 py-3">
+                    <Text className="text-center text-base font-semibold text-gray-600">{t.common.back}</Text>
+                  </Pressable>
+                  <Pressable
+                    testID="onboarding.intent.continue"
+                    onPress={() => setStep('stage')}
+                    disabled={!canContinueFromIntent}
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: !canContinueFromIntent }}
+                    className={`flex-1 rounded-3xl px-4 py-3 ${canContinueFromIntent ? 'bg-primary' : 'bg-gray-200'}`}
+                  >
+                    <Text
+                      className={`text-center text-base font-bold ${canContinueFromIntent ? 'text-white' : 'text-gray-500'}`}
+                    >
+                      {t.guide.continue_step}
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : null}
+
+            {step === 'stage' ? (
+              <View>
                 <Text className="mb-2 text-base font-semibold text-gray-900">
                   {t.onboarding.stage_prompt}
                 </Text>

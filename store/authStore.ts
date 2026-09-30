@@ -20,6 +20,10 @@ interface AuthState {
   markHydrated: () => void;
 }
 
+// Counts sign-ins. A sign-out that is still talking to the server when the
+// next sign-in lands must not delete the tokens that sign-in just wrote.
+let sessionEpoch = 0;
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
@@ -34,11 +38,18 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   setTokens: async (access, refresh) => {
+    sessionEpoch += 1;
     await secureStore.setItemAsync('access_token', access);
     await secureStore.setItemAsync('refresh_token', refresh);
   },
 
   logout: async () => {
+    // Signed out on screen before anything is awaited. The caller has already
+    // navigated to the sign-in screen, and the root guard reads a signed-in
+    // store there as "just signed in" and sends the user to the Plaza — where
+    // they used to sit for as long as the two server calls below took.
+    const epoch = sessionEpoch;
+    set({ user: null, isAuthenticated: false });
     try {
       // Drop this device's push token first — needs the access token still
       // present to authenticate the DELETE. Best-effort.
@@ -48,7 +59,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       // ignore — server prunes dead tokens on send
     }
     try {
-      const refreshToken = await secureStore.getItemAsync('refresh_token');
+      // Read after the call above, which can rotate it — and not at all once
+      // a new sign-in owns the slot.
+      const refreshToken =
+        epoch === sessionEpoch ? await secureStore.getItemAsync('refresh_token') : null;
       if (refreshToken) {
         const { api } = await import('../lib/api');
         await api.post('/auth/logout', { refresh_token: refreshToken });
@@ -61,9 +75,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       // errors like SecureStore failures.)
       reportToSentry(err, { source: 'authStore.logout' });
     }
+    if (epoch !== sessionEpoch) return;
     await secureStore.deleteItemAsync('access_token');
     await secureStore.deleteItemAsync('refresh_token');
-    set({ user: null, isAuthenticated: false });
   },
 
   hydrate: async () => {
