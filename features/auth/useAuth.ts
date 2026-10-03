@@ -260,8 +260,12 @@ export function useUpdateProfile() {
       if (user.locale) {
         await setLangCode(user.locale);
       }
-      await queryClient.invalidateQueries({ queryKey: ['community'] });
-      await queryClient.invalidateQueries({ queryKey: ['odyssey'] });
+      // Not awaited: invalidateQueries resolves only once the active feed and
+      // odyssey queries have refetched, and a changed city or stage makes the
+      // odyssey regenerate server-side. The setup modal sat on its spinner for
+      // 12 seconds waiting for screens the person was not looking at.
+      void queryClient.invalidateQueries({ queryKey: ['community'] });
+      void queryClient.invalidateQueries({ queryKey: ['odyssey'] });
     },
   });
 }

@@ -964,7 +964,7 @@ export default function ProfileScreen() {
                   </Pressable>
                 </View>
                 <Text style={{ marginTop: 2, fontSize: 11.5, color: 'rgba(255,255,255,0.7)' }}>
-                  {t.profile.ip_label}：{displayBaseCityOrPrompt}
+                  {t.profile.base_in_label} {displayBaseCityOrPrompt}
                 </Text>
                 {displayOriginCity ? (
                   <Text style={{ marginTop: 2, fontSize: 11.5, color: 'rgba(255,255,255,0.7)' }}>

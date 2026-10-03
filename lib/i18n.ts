@@ -862,7 +862,6 @@ export type Translations = {
     tab_likes: string;
     notes_public: string;
     bio_placeholder: string;
-    ip_label: string;
     odyssey_shortcut: string;
     posts_section: string;
     posts_archive_hint: string;
