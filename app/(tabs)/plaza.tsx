@@ -48,6 +48,7 @@ import { FeedbackPressable } from '../../components/FeedbackPressable';
 import { GlassCard } from '../../components/GlassCard';
 import { LangPill } from '../../components/PageHeader';
 import { useLanguage } from '../../context/LanguageContext';
+import { getPostingLocation, type PostingLocation } from '../../features/community/postingLocation';
 import { captureSentryMessage } from '../../lib/sentry';
 import { colors, shadows } from '../../theme/tokens';
 import { compressImageForUpload } from '../../lib/imageCompression';
@@ -70,6 +71,7 @@ import { CommunityPostCard } from '../../features/community/CommunityPostCard';
 import { FeedFilterRow } from '../../components/community/FeedFilterRow';
 import { CommunityPostDetailModal, type CardOrigin } from '../../features/community/CommunityPostDetailModal';
 import {
+  type CommunityPostCreateInput,
   CommunityPost,
   CommunitySelectedPlaceInput,
   CommunityPostMedia,
@@ -183,6 +185,12 @@ function LocationPickerSuspenseFallback() {
       <ActivityIndicator size="large" color={colors.brandCoral} />
     </View>
   );
+}
+
+function locationFields(location: PostingLocation | null) {
+  return location
+    ? { posted_latitude: location.latitude, posted_longitude: location.longitude }
+    : {};
 }
 
 export default function PlazaScreen() {
@@ -644,7 +652,16 @@ export default function PlazaScreen() {
     // resetComposerState() on success.
     setComposerVisible(false);
     setPlazaBanner({ tone: 'info', message: t.plaza.publishing });
-    createPost.mutate(payload, {
+    void publishWithLocation(payload);
+  };
+
+  // D-153: the device's position goes with a new post so the server can name
+  // the city it was written in. Read after the composer has closed; a missing
+  // or slow fix costs nothing but the city, which the server then reads from
+  // the text.
+  const publishWithLocation = async (payload: CommunityPostCreateInput) => {
+    const location = await getPostingLocation();
+    createPost.mutate({ ...payload, ...locationFields(location) }, {
       onSuccess: (post) => {
         resetComposerState();
         // D-033 XHS model: a pending video post is live for its author right

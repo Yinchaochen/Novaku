@@ -270,6 +270,10 @@ export interface CommunityPostCreateInput {
   // start with no end is a single time; a start-of-day with no time is all-day.
   event_starts_at?: string | null;
   event_ends_at?: string | null;
+  // D-153: where the device was at publish time, two decimals, only when
+  // location is already granted. The server names the city and keeps nothing.
+  posted_latitude?: number;
+  posted_longitude?: number;
 }
 
 export interface CommunityPostUpdateInput extends CommunityPostCreateInput {}
