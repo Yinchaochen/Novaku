@@ -916,15 +916,24 @@ const WRAP_UNIT = /[぀-ヿ㐀-䶿一-鿿豈-﫿가-힯]|[^぀-ヿ㐀-䶿一-鿿
  * lines set in four and pushed its summary off the card).
  */
 export function wrappedLines(text: string, family: string | null, fontPx: number, widthPx: number, track = 0): number {
+  if (fontPx <= 0 || widthPx <= 0) return 0;
+  return wrapCount(
+    text,
+    (unit) => textEm(unit, family, track),
+    textEm(' ', family, track),
+    (widthPx * LINE_SLACK) / fontPx,
+  );
+}
+
+/** The wrap itself, in ems: `measure` gives a unit's width, `spaceEm` the gap between words. */
+export function wrapCount(text: string, measure: (unit: string) => number, spaceEm: number, lineEm: number): number {
   const words = text.trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0 || fontPx <= 0 || widthPx <= 0) return 0;
-  const lineEm = (widthPx * LINE_SLACK) / fontPx;
-  const spaceEm = textEm(' ', family, track);
+  if (words.length === 0 || lineEm <= 0) return 0;
   let lines = 1;
   let used = 0;
   for (const word of words) {
     (word.match(WRAP_UNIT) ?? []).forEach((unit, index) => {
-      const em = textEm(unit, family, track);
+      const em = measure(unit);
       const gap = index === 0 && used > 0 ? spaceEm : 0;
       if (used > 0 && used + gap + em > lineEm) {
         lines += 1;
@@ -944,6 +953,19 @@ export function wrappedLines(text: string, family: string | null, fontPx: number
   }
   return lines;
 }
+
+/**
+ * A cut-out scrap's width, in ems of the scrap's size: its glyph in the system
+ * bold at nine tenths, plus the scrap's padding and margins. "Registering"
+ * averages 0.75 a glyph; the 0.64 it was once assumed to be let its last
+ * scrap run off a 148dp card.
+ */
+export function ransomScrapEm(text: string): number {
+  return textEm(text, null) * 0.9 + Array.from(text).length * 0.28;
+}
+
+/** How much of the cover a row of scraps may take: the page's column, less a little for their tilt. */
+export const RANSOM_LINE = 0.78;
 
 /** The longest unbreakable run — German compounds decide the size on their own. */
 function longestTokenEm(text: string): number {

@@ -14,6 +14,7 @@ import {
   readingMinutes,
   templatePalette,
   pickCutout,
+  ransomScrapEm,
   textEm,
   wordsGround,
   wrappedLines,
@@ -1023,6 +1024,12 @@ describe('measuring and wrapping (D-166)', () => {
     const text = 'aaaaaaaaaaa aaaaaaaaaaa aaaaaaaaaaa';
     expect(Math.ceil(textEm(text, null) / ((100 * 0.97) / 10))).toBe(2);
     expect(wrappedLines(text, null, 10, 100)).toBe(3);
+  });
+
+  it('measures a cut-out scrap with its padding, not at the 0.64 a glyph that let "Registering" run off the card', () => {
+    const pitch = ransomScrapEm('Registering') / 'Registering'.length;
+    expect(pitch).toBeGreaterThan(0.7);
+    expect(pitch).toBeLessThan(0.8);
   });
 
   it('breaks a word wider than the line where it has to, and Han between any two glyphs', () => {

@@ -18,7 +18,7 @@ import Svg, {
 import { CoverSticker } from './CoverSticker';
 import { COVER_FACES, faceText, type CoverFace } from '../../lib/coverFonts';
 import type { CoverCutout } from '../../lib/coverCutouts';
-import { COLLAGE_SLIP, type CoverDoodle, type CoverGround, type CoverPalette } from '../../lib/postCover';
+import { COLLAGE_SLIP, type CoverDoodle, type CoverGround, type CoverPalette, RANSOM_LINE, ransomScrapEm } from '../../lib/postCover';
 
 /**
  * A prefix that makes this svg root's defs its own. Ids live in one document
@@ -504,10 +504,7 @@ export function RansomTitle({
   // never cut short.
   const letters = Array.from(title).filter((ch) => !/\s/.test(ch)).length;
   const s = size * Math.max(0.66, Math.min(1, 40 / Math.max(1, letters)));
-  // A scrap's pitch is ~0.64 of the size and the page's text column ~0.8 of
-  // the cover: eleven scraps of "Registering" span 115 of a 148dp card
-  // (measured in the dev gallery, 2026-10-05).
-  const perLine = Math.max(4, Math.floor((width * 0.8) / (s * 0.64)));
+  const line = width * RANSOM_LINE;
   const words = title.split(/(\s+)/).filter(Boolean);
   let n = 0;
   const tile = (ch: string, key: string | number) => {
@@ -535,7 +532,7 @@ export function RansomTitle({
       {words.map((word, w) => {
         if (/^\s+$/.test(word)) return <View key={`s${w}`} style={{ width: s * 0.35 }} />;
         const chars = Array.from(word);
-        if (chars.length > perLine || RANSOM_FLOWS_PER_GLYPH.test(word)) {
+        if (ransomScrapEm(word) * s > line || RANSOM_FLOWS_PER_GLYPH.test(word)) {
           return chars.map((ch, i) => tile(ch, `${w}-${i}`));
         }
         return (

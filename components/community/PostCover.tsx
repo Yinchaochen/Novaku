@@ -23,8 +23,11 @@ import { COVER_FACES, faceText } from '../../lib/coverFonts';
 import {
   coverPlan,
   estimateEm,
+  RANSOM_LINE,
+  ransomScrapEm,
   readingMinutes,
   textEm,
+  wrapCount,
   wrappedLines,
   type CoverLayout,
   type CoverPalette,
@@ -277,8 +280,7 @@ export function PostCover({
     if (!titleDrawn) return 0;
     if (ransom) {
       const s = titleSizePx * 0.9 * Math.max(0.66, Math.min(1, 40 / Math.max(1, glyphCount)));
-      const perLine = Math.max(4, Math.floor((width * 0.8) / (s * 0.64)));
-      return (Math.ceil(glyphCount / perLine) * s * 1.17) / u + 0.5;
+      return (wrapCount(titleText, ransomScrapEm, 0.35, (width * RANSOM_LINE) / s) * s * 1.17) / u + 0.5;
     }
     const lines = Math.min(4, titleLinesAt(titleSizePx));
     const textU = (lines * titleSizePx * titleBox * titleLead) / u;
