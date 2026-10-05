@@ -13,7 +13,10 @@ import {
   splitSentences,
   readingMinutes,
   templatePalette,
+  pickCutout,
+  wordsGround,
 } from '../postCover';
+import { COVER_CUTOUTS } from '../coverCutouts';
 
 // The bodies below are the real ones from app/dev/_seededPosts.json. Every
 // failure this file pins was found in that data, not imagined.
@@ -661,12 +664,13 @@ const FAMILY_SWATCHES = COVER_TEMPLATE_IDS.flatMap((id) =>
 );
 
 describe('the template families', () => {
-  it.each(FAMILY_SWATCHES)('$name keeps the sentence readable on its own ground', ({ p }) => {
+  it.each(FAMILY_SWATCHES)('$name keeps the sentence readable on its own ground', ({ id, p }) => {
     // The wash sits behind the words; the paper is around them. Both are read
     // through, so both take the same 7:1 the stocks take. A pack whose wash
     // is a tape label or a sticky note writes on it in its own ink (D-164),
     // and that ink is the one read through the wash.
-    expect(contrast(p.ink, p.paper)).toBeGreaterThanOrEqual(7);
+    // A collage writes on its slip, not on the ground around it.
+    expect(contrast(p.ink, wordsGround(id, p))).toBeGreaterThanOrEqual(7);
     expect(contrast(p.washInk ?? p.ink, p.wash)).toBeGreaterThanOrEqual(7);
   });
 
@@ -680,7 +684,7 @@ describe('the template families', () => {
       // rather than a wash behind them, so the accent is what has to clear
       // the paper there.
       const mark = COVER_TEMPLATES[id].highlightOn === 'accent' ? p.accent : p.wash;
-      expect(deltaE(p.paper, mark)).toBeGreaterThanOrEqual(8);
+      expect(deltaE(wordsGround(id, p), mark)).toBeGreaterThanOrEqual(8);
     },
   );
 
@@ -703,8 +707,8 @@ describe('the template families', () => {
     expect(plan.highlight).toBeNull();
   });
 
-  it.each(FAMILY_SWATCHES)('$name keeps its rubric legible', ({ p }) => {
-    expect(contrast(p.paper, p.secondary)).toBeGreaterThanOrEqual(4.5);
+  it.each(FAMILY_SWATCHES)('$name keeps its rubric legible', ({ id, p }) => {
+    expect(contrast(wordsGround(id, p), p.secondary)).toBeGreaterThanOrEqual(4.5);
   });
 
   it('makes every swatch in a family produce a different card', () => {
@@ -943,3 +947,45 @@ describe('the name tag (2026-10-05)', () => {
     expect(plan.layout).toBe('plate');
   });
 });
+
+describe('the collage (2026-10-05)', () => {
+  const post = {
+    id: 'collage-1',
+    post_type: 'guide',
+    title: 'Registering your address in Berlin',
+    body: 'Bring your passport and the rental contract. The office opens at eight, and the queue is shortest then.',
+    theme: 'bureaucracy',
+    cover_template: 'collage' as const,
+  };
+
+  it('puts one plate on the card and no drawn sticker', () => {
+    const plan = coverPlan({ ...post, cover_palette: 0 }, '', '');
+    expect(COVER_PACK_IDS).toContain('collage');
+    expect(plan.cutout).not.toBeNull();
+    expect(plan.stickers).toEqual([]);
+    expect(plan.watermark).toBeNull();
+    expect(['topRight', 'bottomLeft']).toContain(plan.cutoutCorner);
+  });
+
+  it('never picks a plate the ground would swallow', () => {
+    // Brown fungi on kraft, a fern on sage, butterflies on blue-grey: the
+    // tutorial's whole point is that the top piece is the strongest colour.
+    const avoid = ['brown', 'green', 'blue', null];
+    for (let palette = 0; palette < avoid.length; palette += 1) {
+      for (let seed = 0; seed < 200; seed += 1) {
+        expect(pickCutout(seed, palette)?.hue).not.toBe(avoid[palette]);
+      }
+    }
+  });
+
+  it('carries only public-domain or CC0 plates, each traceable to its Commons page', () => {
+    expect(COVER_CUTOUTS.length).toBeGreaterThanOrEqual(12);
+    for (const c of COVER_CUTOUTS) {
+      expect(['Public domain', 'CC0']).toContain(c.licence);
+      expect(c.page).toMatch(/^https:\/\/commons\.wikimedia\.org\/wiki\/File:/);
+      expect(Math.max(c.width, c.height)).toBeLessThanOrEqual(560);
+    }
+    expect(new Set(COVER_CUTOUTS.map((c) => c.id)).size).toBe(COVER_CUTOUTS.length);
+  });
+});
+

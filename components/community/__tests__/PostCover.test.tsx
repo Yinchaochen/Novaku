@@ -26,6 +26,10 @@ jest.mock('react-native-svg', () => {
   const names = ['Svg', 'Circle', 'Defs', 'Line', 'Pattern', 'Rect', 'Path', 'Polygon', 'Polyline', 'Ellipse', 'G', 'RadialGradient', 'LinearGradient', 'Stop'];
   return { __esModule: true, default: Stub, ...Object.fromEntries(names.map((n) => [n, Stub])) };
 });
+jest.mock('expo-image', () => {
+  const { View } = require('react-native');
+  return { Image: (props: object) => <View testID="expo-image" {...props} /> };
+});
 jest.mock('../../../context/LanguageContext', () => ({
   useLanguage: () => ({ langCode: 'en', t: { plaza: { type_guide: 'Guide', type_question: 'Question' } } }),
 }));
@@ -218,6 +222,16 @@ describe('the name tag', () => {
     expect(tree.getByText('HELLO')).toBeTruthy();
     expect(tree.getByText("I'M")).toBeTruthy();
     expect(tree.getAllByText('Founder, CEO and also the intern').length).toBeGreaterThan(0);
+  });
+});
+
+describe('the collage', () => {
+  it('lays the words on a slip and one plate on top', async () => {
+    const tree = await render(
+      <PostCover post={makePost({ cover_template: 'collage', cover_palette: 0 })} width={184.5} />,
+    );
+    expect(tree.getAllByTestId('expo-image')).toHaveLength(1);
+    expect(tree.getAllByText('Getting from BER into the city').length).toBeGreaterThan(0);
   });
 });
 

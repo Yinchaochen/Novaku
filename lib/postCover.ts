@@ -27,6 +27,7 @@
  * not: the card's geometry has to be known before layout, not after it.
  */
 
+import { COVER_CUTOUTS, type CoverCutout, type CutoutHue } from './coverCutouts';
 import { pickFace, type CoverFace } from './coverFonts';
 
 export type CoverType = 'guide' | 'question' | 'recommendation' | 'experience' | 'warning';
@@ -126,13 +127,17 @@ export interface CoverPlan {
   labelFace: CoverFace | null;
   /** The pack's own data, for the renderer. Null for the families and the default. */
   pack: CoverTemplate | null;
+  /** The collage pack's one public-domain plate cut out of its paper; null elsewhere. */
+  cutout: CoverCutout | null;
+  /** Where the cutout sits: the tutorial's two places for a page's visual centre. */
+  cutoutCorner: 'topRight' | 'bottomLeft';
 }
 
 export type CoverGround = 'dotted' | 'plain' | 'grid' | 'ruled' | 'crumpled' | 'toned' | 'motif';
 export type CoverHighlightStyle = 'bar' | 'block' | 'brush' | 'scribble' | 'tape' | 'sticky';
 export type CoverStickerStyle = 'emoji' | 'puffy' | 'diecut' | 'ink' | 'crayon';
 /** The decorations a pack's reference page carries, each drawn by the renderer. */
-export type CoverDecor = 'grain' | 'spiral' | 'splash' | 'ransom' | 'stamps' | 'scrap' | 'tab' | 'nametag';
+export type CoverDecor = 'grain' | 'spiral' | 'splash' | 'ransom' | 'stamps' | 'scrap' | 'tab' | 'nametag' | 'collage';
 
 export interface CoverStickerPlacement {
   id: string;
@@ -313,7 +318,9 @@ export type CoverTemplateId =
   | 'sketch_chloe'
   | 'sketch_sean'
   // A HELLO-I'M badge with the title written on it. Authors pick it; no persona wears it.
-  | 'nametag';
+  | 'nametag'
+  // A journaling collage: kraft, a taped slip, one public-domain plate on top. Authors pick it.
+  | 'collage';
 
 /**
  * How a cover is composed — where the words sit and what else is on the card.
@@ -532,6 +539,34 @@ const NAMETAG_PAPERS: CoverPalette[] = (
   washInk: NAMETAG_INK,
 }));
 
+/**
+ * The collage grounds (2026-10-05, after the journaling tutorial lisum sent).
+ * The author picks the ground; the words always sit on the same cream slip,
+ * so ink and highlighter only have to work on one colour. `accent` is the
+ * washi tape, `wash` the highlighter on the slip.
+ */
+const COLLAGE_INK = '#4A2F1E';
+const COLLAGE_PAPERS: CoverPalette[] = (
+  [
+    ['#C49A6C', '#B0885C', '#D9B26A'],
+    ['#AEB79B', '#9CA588', '#D59B8E'],
+    ['#A7B7C2', '#94A5B1', '#E0B25C'],
+    ['#3B3531', '#4A433E', '#C98F7A'],
+  ] as const
+).map(([paper, dot, tape]) => ({
+  paper,
+  dot,
+  secondary: mix(COLLAGE_INK, '#F7F1E3', 0.2),
+  ink: COLLAGE_INK,
+  accent: tape,
+  wash: '#EFD27E',
+  washInk: COLLAGE_INK,
+}));
+/** The cream slip a collage writes on, whatever the ground around it. */
+export const COLLAGE_SLIP = '#F7F1E3';
+/** The hue a cutout must not have on each ground, by stock: brown on kraft vanishes, and so on. */
+const COLLAGE_AVOID: (CutoutHue | null)[] = ['brown', 'green', 'blue', null];
+
 export const COVER_PACK_IDS: CoverTemplateId[] = [
   'journal',
   'candy',
@@ -542,6 +577,7 @@ export const COVER_PACK_IDS: CoverTemplateId[] = [
   'sketch_chloe',
   'sketch_sean',
   'nametag',
+  'collage',
 ];
 
 export function isCoverPack(id: CoverTemplateId | null | undefined): boolean {
@@ -629,9 +665,28 @@ export const COVER_TEMPLATES: Record<CoverTemplateId, CoverTemplate> = {
     ground: 'plain', scale: 1, measure: 0.6, highlight: true, layouts: ['plate'], highlightStyle: 'bar',
     stickerStyle: 'ink', fonts: ['caveat', 'kalam', 'patrick'], decor: ['nametag'], watermark: false,
   },
+  // A journaling collage, after the tutorial lisum sent (Bilibili BV1CJ411D7US): flat
+  // materials underneath, one heavy colour on top at a third of the page, nothing
+  // lined up. The heavy piece is a public-domain botanical plate cut out of its paper
+  // (lib/coverCutouts.ts); the words sit on a cream slip held by washi tape, in brown
+  // ink rather than black. Authors pick it in the composer; no persona wears it.
+  collage: {
+    id: 'collage', layout: 'journal', swatches: COLLAGE_PAPERS.map((p) => p.paper), papers: COLLAGE_PAPERS,
+    ground: 'plain', scale: 1, highlight: true, layouts: ['journal'], highlightStyle: 'bar',
+    stickerStyle: 'ink', fonts: ['caveat', 'kalam', 'patrick'], decor: ['collage', 'grain'], watermark: false,
+  },
 };
 
 export const COVER_TEMPLATE_IDS = Object.keys(COVER_TEMPLATES) as CoverTemplateId[];
+
+/**
+ * The colour the words are read against: the page for every family, the
+ * slip on a collage. The contrast rules are about what is behind the text,
+ * so they are measured against this and not against the ground.
+ */
+export function wordsGround(id: CoverTemplateId, palette: CoverPalette): string {
+  return COVER_TEMPLATES[id].decor?.includes('collage') ? COLLAGE_SLIP : palette.paper;
+}
 
 export function isCoverTemplateId(value: unknown): value is CoverTemplateId {
   return typeof value === 'string' && value in COVER_TEMPLATES;
@@ -1479,6 +1534,18 @@ export function readingMinutes(body: string): number {
   return rounded >= READING_TIME_MIN_MINUTES ? rounded : 0;
 }
 
+/**
+ * The plate a collage card wears: rotated by the post's seed through the cutouts
+ * whose hue does not disappear into the chosen ground.
+ */
+export function pickCutout(seed: number, paletteIndex: number): CoverCutout | null {
+  const n = COLLAGE_PAPERS.length;
+  const avoid = COLLAGE_AVOID[((paletteIndex % n) + n) % n];
+  const pool = COVER_CUTOUTS.filter((c) => c.hue !== avoid);
+  if (pool.length === 0) return null;
+  return pool[Math.abs(seed | 0) % pool.length];
+}
+
 export function coverPlan(
   post: {
     id: string;
@@ -1641,10 +1708,16 @@ export function coverPlan(
     isBlank: keyLine.length === 0,
     highlightStyle,
     stickerStyle,
-    stickers: pack && !pack.decor?.includes('nametag') ? autoStickers(post.post_type, post.odyssey_slug, post.theme, seed) : [],
+    stickers:
+      pack && !pack.decor?.includes('nametag') && !pack.decor?.includes('collage')
+        ? autoStickers(post.post_type, post.odyssey_slug, post.theme, seed)
+        : [],
     doodles: pack ? autoDoodles(pack, palette, seed) : [],
     face,
     labelFace,
     pack,
+    cutout: pack?.decor?.includes('collage') ? pickCutout(seed, post.cover_palette ?? 0) : null,
+    // Shifted off the colour and the cutout so the three vary independently.
+    cutoutCorner: Math.floor(seed / 5) % 2 === 0 ? 'topRight' : 'bottomLeft',
   };
 }

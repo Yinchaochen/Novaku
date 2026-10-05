@@ -406,6 +406,7 @@ export type Translations = {
     cover_template_sketch_chloe: string;
     cover_template_sketch_sean: string;
     cover_template_nametag: string;
+    cover_template_collage: string;
     cover_nametag_hello: string;
     cover_nametag_im: string;
     cover_palette_label: string;

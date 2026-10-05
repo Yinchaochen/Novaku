@@ -4,6 +4,7 @@ import Svg, { Line } from 'react-native-svg';
 import { CoverSticker } from './CoverSticker';
 import {
   BrushMark,
+  CollageScene,
   CoverGround,
   DoodleLayer,
   PhraseLabel,
@@ -133,6 +134,8 @@ export function PostCover({
    * less than the emptiness did.
    */
   const pack = plan.pack;
+  // The collage sets its words on a slip about three fifths of the card wide.
+  const collage = Boolean(pack?.decor?.includes('collage') && plan.cutout);
   const face = plan.face ? COVER_FACES[plan.face] : null;
   const seed = post.id.split('').reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) >>> 0, 7);
   const titleText = faceText(plan.face, (post.translated_title ?? post.title ?? '').trim());
@@ -145,7 +148,18 @@ export function PostCover({
   const titleRatio = Math.max(0.052, Math.min(0.112, titleEm > 0 ? 1.85 / titleEm : 0.112));
   // A pack's hand face sets larger or smaller than the system face at the
   // same size; `scale` is that correction, measured in the prototype.
-  const titleSize = width * titleRatio * (face?.scale ?? 1);
+  // On the collage's slip a long word has less room than the line it was
+  // sized for: "Architekturführung" broke mid-word with no hyphen. The longest
+  // Latin word is held to the slip's line; Han, kana and Hangul wrap per glyph
+  // and need no such cap.
+  const longestWordEm = Math.max(
+    0,
+    ...titleText.split(/\s+/).filter((w) => w && !CJK_RE.test(w)).map((w) => estimateEm(w)),
+  );
+  const titleSize = Math.min(
+    width * titleRatio * (face?.scale ?? 1) * (collage ? 0.78 : 1),
+    collage && longestWordEm > 0 ? ((9.0 * u) / longestWordEm) * (face?.scale ?? 1) : Infinity,
+  );
   // The summary is the same size a body page sets at, so a cover and the
   // pages behind it are one object at two densities rather than two designs.
   const size = width * Math.min(plan.sizeRatio, 0.052);
@@ -178,7 +192,7 @@ export function PostCover({
   const onPage = layout === 'zine' || layout === 'journalpage';
 
   // Room left under the title, in lines of the summary's own size.
-  const excerptLines = 6;
+  const excerptLines = collage ? 3 : 6;
 
   const titleStyle = {
     fontSize: titleSize,
@@ -429,7 +443,8 @@ export function PostCover({
       {/* What the post costs to read, opposite its kind. The cheapest honest
           thing on the card: the reader learns what they are committing to
           before they commit. Silent under three minutes. */}
-      {minutes > 0 ? (
+      {/* The collage's top right belongs to the plate, so it goes without. */}
+      {minutes > 0 && !collage ? (
         <Text
           numberOfLines={1}
           style={{
@@ -446,7 +461,12 @@ export function PostCover({
         </Text>
       ) : null}
 
-      {layout === 'vertical' ? (
+      {collage && plan.cutout ? (
+        <CollageScene u={u} palette={palette} cutout={plan.cutout} corner={plan.cutoutCorner} seed={seed}>
+          {titleBlock}
+          {keyLineBlock}
+        </CollageScene>
+      ) : layout === 'vertical' ? (
         // 札记集尘. RN has no vertical writing mode, so the columns are built
         // rather than declared: the glyphs are split into fixed runs and each
         // run is set one per line, laid out right to left. That is also how

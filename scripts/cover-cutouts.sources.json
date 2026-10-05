@@ -1,0 +1,121 @@
+[
+  {
+    "id": "rosa-gallica-purpuro-violacea",
+    "file": "File:Redoute - Rosa gallica purpuro-violacea magna.jpg",
+    "hue": "red",
+    "crop": null
+  },
+  {
+    "id": "rosa-indica-stelligera",
+    "file": "File:Henry Joseph Redouté - Rosa Indica Stelligera - 1943.140 - Cleveland Museum of Art.jpg",
+    "hue": "red",
+    "crop": null
+  },
+  {
+    "id": "rosa-gallica-pontiana",
+    "file": "File:Redoute - Rosa gallica pontiana.jpg",
+    "hue": "red",
+    "crop": null
+  },
+  {
+    "id": "rosa-centifolia-foliacea",
+    "file": "File:Rosa centifolia foliacea 17.jpg",
+    "hue": "pink",
+    "crop": null
+  },
+  {
+    "id": "rosa-gallica-aurelianensis",
+    "file": "File:Rosa gallica aurelianensis.jpg",
+    "hue": "pink",
+    "crop": null
+  },
+  {
+    "id": "rosa-gallica-flore-giganteo",
+    "file": "File:Redoute - Rosa gallica flore giganteo - brighter.jpg",
+    "hue": "pink",
+    "crop": null
+  },
+  {
+    "id": "rosa-kamtschatica",
+    "file": "File:Chapuy, after Pierre- Joseph Redouté - Kamtschatka Rose (Rosa Kamtschatica), from Redouté, \" Les Roses\", Paris, 1817–1824) - Google Art Project.jpg",
+    "hue": "pink",
+    "crop": null
+  },
+  {
+    "id": "rosa-bifera-macrocarpa",
+    "file": "File:Pierre-Joseph Redouté - Rosa Bifera Macrocarpa - WGA19030.jpg",
+    "hue": "pink",
+    "crop": null
+  },
+  {
+    "id": "punica-granatum",
+    "file": "File:Illustration Punica granatum2.jpg",
+    "hue": "red",
+    "crop": null
+  },
+  {
+    "id": "daphne-mezereum",
+    "file": "File:Daphne mezereum, Thomé-347.png",
+    "hue": "red",
+    "crop": null
+  },
+  {
+    "id": "tulipa-agenensis",
+    "file": "File:Tulipa agenensis in Les liliacees.jpg",
+    "hue": "red",
+    "crop": null
+  },
+  {
+    "id": "tulipa-suaveolens",
+    "file": "File:Tulipa suaveolens in Les liliacees.jpg",
+    "hue": "orange",
+    "crop": null
+  },
+  {
+    "id": "tulipa-sylvestris",
+    "file": "File:Tulipa sylvestris in Les liliacees.jpg",
+    "hue": "yellow",
+    "crop": null
+  },
+  {
+    "id": "ananas-merian-ii",
+    "file": "File:Rype ananas Maria Sibylla Merian 1705 plate II.png",
+    "hue": "yellow",
+    "crop": null
+  },
+  {
+    "id": "musa-flower-merian",
+    "file": "File:Maria Sibylla Merian Banana Flower and Fruit, from Metamorphosis insectorum Surinamensium 1705.jpg",
+    "hue": "red",
+    "crop": null
+  },
+  {
+    "id": "butterflies-merian-ix",
+    "file": "File:Plate 9, Maria Sibylla Merian's Metamorphosis Insectorum Surinamensium (1730).tif",
+    "hue": "blue",
+    "crop": null
+  },
+  {
+    "id": "fern-plate-xxx",
+    "file": "File:The ferns of Great Britain and Ireland (Plate XXX) BHL273805.jpg",
+    "hue": "green",
+    "crop": [
+      0.045,
+      0.03,
+      0.92,
+      0.95
+    ]
+  },
+  {
+    "id": "potamogeton-perfoliatus",
+    "file": "File:Potamogeton perfoliatus Thomé-034.png",
+    "hue": "green",
+    "crop": null
+  },
+  {
+    "id": "fungi-sowerby-184",
+    "file": "File:Coloured Figures of English Fungi or Mushrooms - t. 184.jpg",
+    "hue": "brown",
+    "crop": null
+  }
+]

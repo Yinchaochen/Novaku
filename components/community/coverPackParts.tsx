@@ -1,16 +1,7 @@
-import { useId } from 'react';
+import { useId, type ReactNode } from 'react';
+import { Image } from 'expo-image';
 import { Text, View, type TextStyle } from 'react-native';
 
-/**
- * A prefix that makes this svg root's defs its own. Ids live in one document
- * on web, so `url(#grid)` in the fortieth card resolved to the first card's
- * pattern: every stamp card drew the journal stock's pale green grid, bright
- * on the black stock (2026-10-05, dev gallery). Native scopes defs per root
- * and is unaffected either way.
- */
-function svgScope(): string {
-  return useId().replace(/[^a-zA-Z0-9]/g, '');
-}
 import Svg, {
   Circle,
   Defs,
@@ -26,7 +17,19 @@ import Svg, {
 
 import { CoverSticker } from './CoverSticker';
 import { COVER_FACES, faceText, type CoverFace } from '../../lib/coverFonts';
-import type { CoverDoodle, CoverGround, CoverPalette } from '../../lib/postCover';
+import type { CoverCutout } from '../../lib/coverCutouts';
+import { COLLAGE_SLIP, type CoverDoodle, type CoverGround, type CoverPalette } from '../../lib/postCover';
+
+/**
+ * A prefix that makes this svg root's defs its own. Ids live in one document
+ * on web, so `url(#grid)` in the fortieth card resolved to the first card's
+ * pattern: every stamp card drew the journal stock's pale green grid, bright
+ * on the black stock (2026-10-05, dev gallery). Native scopes defs per root
+ * and is unaffected either way.
+ */
+function svgScope(): string {
+  return useId().replace(/[^a-zA-Z0-9]/g, '');
+}
 
 /**
  * The parts of a cover pack that are not words (D-164): the ground the page
@@ -543,3 +546,153 @@ export function RansomTitle({
     </View>
   );
 }
+
+/* ---- the collage ----------------------------------------------------------- */
+
+type TapeKind = 'stripe' | 'grid' | 'dot';
+
+/** A strip of washi tape: translucent, patterned, a little longer than it needs to be. */
+export function WashiTape({
+  u,
+  colour,
+  kind,
+  rotate,
+  style,
+}: {
+  u: number;
+  colour: string;
+  kind: TapeKind;
+  rotate: number;
+  style: object;
+}) {
+  const uid = svgScope();
+  const step = 0.55 * u;
+  return (
+    <View
+      pointerEvents="none"
+      style={[{ position: 'absolute', width: 3.6 * u, height: 1.05 * u, opacity: 0.86, transform: [{ rotate: `${rotate}deg` }] }, style]}
+    >
+      <Svg width="100%" height="100%">
+        <Defs>
+          <Pattern id={`${uid}tape`} width={step} height={step} patternUnits="userSpaceOnUse">
+            {kind === 'stripe' ? (
+              <Path d={`M0 ${step} L${step} 0`} stroke="#FFFFFF" strokeOpacity={0.55} strokeWidth={step * 0.28} />
+            ) : kind === 'grid' ? (
+              <>
+                <Line x1={0} y1={0.5} x2={step} y2={0.5} stroke="#FFFFFF" strokeOpacity={0.55} strokeWidth={1} />
+                <Line x1={0.5} y1={0} x2={0.5} y2={step} stroke="#FFFFFF" strokeOpacity={0.55} strokeWidth={1} />
+              </>
+            ) : (
+              <Circle cx={step / 2} cy={step / 2} r={step * 0.16} fill="#FFFFFF" fillOpacity={0.7} />
+            )}
+          </Pattern>
+        </Defs>
+        <Rect x={0} y={0} width="100%" height="100%" fill={colour} />
+        <Rect x={0} y={0} width="100%" height="100%" fill={`url(#${uid}tape)`} />
+      </Svg>
+    </View>
+  );
+}
+
+/** The flat layer: a scrap of ledger paper that only shows where the slip does not cover it. */
+function LedgerScrap({ u, rotate, style }: { u: number; rotate: number; style: object }) {
+  const rows = Array.from({ length: 7 }, (_, i) => i);
+  return (
+    <View
+      pointerEvents="none"
+      style={[
+        {
+          position: 'absolute',
+          width: 9.4 * u,
+          height: 6.2 * u,
+          backgroundColor: '#ECE4CF',
+          transform: [{ rotate: `${rotate}deg` }],
+          overflow: 'hidden',
+        },
+        style,
+      ]}
+    >
+      {rows.map((i) => (
+        <View key={i} style={{ position: 'absolute', left: 0, right: 0, top: (0.9 + i * 0.8) * u, height: 1, backgroundColor: '#9DB3CC', opacity: 0.55 }} />
+      ))}
+      <View style={{ position: 'absolute', top: 0, bottom: 0, left: 1.4 * u, width: 1, backgroundColor: '#C4574F', opacity: 0.6 }} />
+    </View>
+  );
+}
+
+/**
+ * The collage card (2026-10-05). The tutorial lisum sent has three rules and
+ * this is all three: grey, flat material goes underneath and only peeks out;
+ * one piece of heavy colour sits on top, top right or bottom left, where the
+ * eye lands; nothing is lined up. The words get a cream slip of their own so
+ * they read on any ground, and the slip is held by tape, as it would be.
+ */
+export function CollageScene({
+  u,
+  palette,
+  cutout,
+  corner,
+  seed,
+  children,
+}: {
+  u: number;
+  palette: CoverPalette;
+  cutout: CoverCutout;
+  corner: 'topRight' | 'bottomLeft';
+  seed: number;
+  children: ReactNode;
+}) {
+  const topRight = corner === 'topRight';
+  const s = Math.abs(seed | 0);
+  // As tall as 10.6u, no wider than 8u, in the plate's own proportion.
+  const scale = Math.min((10.6 * u) / cutout.height, (8 * u) / cutout.width);
+  const kinds: TapeKind[] = ['stripe', 'grid', 'dot'];
+  return (
+    <>
+      <LedgerScrap
+        u={u}
+        rotate={topRight ? -6 : 5}
+        style={topRight ? { left: 0.4 * u, top: 6.2 * u } : { right: 0.4 * u, top: 0.5 * u }}
+      />
+      <View
+        style={[
+          {
+            position: 'absolute',
+            width: 11.2 * u,
+            paddingHorizontal: 0.9 * u,
+            paddingTop: 1.0 * u,
+            paddingBottom: 0.8 * u,
+            backgroundColor: COLLAGE_SLIP,
+            transform: [{ rotate: `${topRight ? 1.3 : -1.3}deg` }],
+            shadowColor: '#000000',
+            shadowOpacity: 0.16,
+            shadowRadius: 3,
+            shadowOffset: { width: 0, height: 1 },
+            elevation: 2,
+          },
+          // Pushed to the edge opposite the plate, so the plate overlaps the slip's margin and not its words.
+          topRight ? { left: 0.8 * u, bottom: 1.3 * u } : { right: 0.6 * u, top: 1.4 * u },
+        ]}
+      >
+        {children}
+        <WashiTape u={u} colour={palette.accent} kind={kinds[s % 3]} rotate={-32} style={{ top: -0.45 * u, left: -1.2 * u }} />
+        <WashiTape u={u} colour={palette.accent} kind={kinds[(s + 1) % 3]} rotate={28} style={{ top: -0.45 * u, right: -1.2 * u }} />
+      </View>
+      <Image
+        source={cutout.image}
+        contentFit="contain"
+        accessibilityIgnoresInvertColors
+        style={[
+          {
+            position: 'absolute',
+            width: cutout.width * scale,
+            height: cutout.height * scale,
+            transform: [{ rotate: `${((s % 9) - 4) * 1.4}deg` }],
+          },
+          topRight ? { right: -0.9 * u, top: 0.4 * u } : { left: -0.9 * u, bottom: 0.3 * u },
+        ]}
+      />
+    </>
+  );
+}
+
