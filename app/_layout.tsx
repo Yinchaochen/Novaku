@@ -40,15 +40,17 @@ import {
   PlusJakartaSans_800ExtraBold,
   useFonts,
 } from '@expo-google-fonts/plus-jakarta-sans';
-import { AmaticSC_700Bold } from '@expo-google-fonts/amatic-sc';
-import { Caveat_700Bold } from '@expo-google-fonts/caveat';
-import { CoveredByYourGrace_400Regular } from '@expo-google-fonts/covered-by-your-grace';
-import { Kalam_700Bold } from '@expo-google-fonts/kalam';
-import { Lobster_400Regular } from '@expo-google-fonts/lobster';
-import { PatrickHand_400Regular } from '@expo-google-fonts/patrick-hand';
-import { PermanentMarker_400Regular } from '@expo-google-fonts/permanent-marker';
-import { PlayfairDisplay_800ExtraBold } from '@expo-google-fonts/playfair-display';
-import { RockSalt_400Regular } from '@expo-google-fonts/rock-salt';
+// The per-weight entry points: a package's index requires every weight it ships
+// (Playfair alone is twelve files), and Metro bundles whatever is required.
+import { AmaticSC_700Bold } from '@expo-google-fonts/amatic-sc/700Bold';
+import { Caveat_700Bold } from '@expo-google-fonts/caveat/700Bold';
+import { CoveredByYourGrace_400Regular } from '@expo-google-fonts/covered-by-your-grace/400Regular';
+import { Kalam_700Bold } from '@expo-google-fonts/kalam/700Bold';
+import { Lobster_400Regular } from '@expo-google-fonts/lobster/400Regular';
+import { PatrickHand_400Regular } from '@expo-google-fonts/patrick-hand/400Regular';
+import { PermanentMarker_400Regular } from '@expo-google-fonts/permanent-marker/400Regular';
+import { PlayfairDisplay_800ExtraBold } from '@expo-google-fonts/playfair-display/800ExtraBold';
+import { RockSalt_400Regular } from '@expo-google-fonts/rock-salt/400Regular';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { StyleSheet } from 'nativewind';
 import { StatusBar } from 'expo-status-bar';
