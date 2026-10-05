@@ -7,6 +7,7 @@ import {
   CoverGround,
   DoodleLayer,
   PhraseLabel,
+  NameTag,
   RansomTitle,
   ScribbleMark,
   Scrap,
@@ -193,7 +194,19 @@ export function PostCover({
 
   // Cut-out letters past ~60 glyphs are a wall of scraps, not a title.
   const ransom = Boolean(pack?.decor?.includes('ransom')) && onPage && Array.from(titleText).length <= 60;
-  const titleBlock = !titleText ? null : ransom ? (
+  const titleBlock = !titleText ? null : pack?.decor?.includes('nametag') ? (
+    // The badge: the title is the one line written on it, so it is set a
+    // size down to fit the badge's own measure rather than the page's.
+    <NameTag
+      hello={t.plaza.cover_nametag_hello ?? 'HELLO'}
+      im={t.plaza.cover_nametag_im ?? "I'M"}
+      title={titleText}
+      titleStyle={{ ...titleStyle, fontSize: titleSize * 0.74, lineHeight: titleStyle.lineHeight * 0.74 }}
+      palette={palette}
+      u={u}
+      seed={seed}
+    />
+  ) : ransom ? (
     <View style={{ marginBottom: plan.isBlank ? 0 : 0.5 * u }}>
       <RansomTitle title={titleText} size={titleSize * 0.9} seed={seed} width={width} />
     </View>

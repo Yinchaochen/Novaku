@@ -205,6 +205,22 @@ describe('PostCover', () => {
   });
 });
 
+describe('the name tag', () => {
+  it('writes the title on a HELLO badge and greets in the locale, falling back to English', async () => {
+    // The strings come from the locale; the test mock carries none, so the
+    // English fallback is what must appear.
+    const tree = await render(
+      <PostCover
+        post={makePost({ cover_template: 'nametag', cover_palette: 0, title: 'Founder, CEO and also the intern' })}
+        width={184.5}
+      />,
+    );
+    expect(tree.getByText('HELLO')).toBeTruthy();
+    expect(tree.getByText("I'M")).toBeTruthy();
+    expect(tree.getAllByText('Founder, CEO and also the intern').length).toBeGreaterThan(0);
+  });
+});
+
 describe('cover defs', () => {
   it('gives every cover its own pattern ids, so a wall of cards does not share the first card\'s ground', async () => {
     // Ids live in one document on web: forty `url(#grid)` all resolved to the

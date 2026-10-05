@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import { Text, View } from 'react-native';
+import { Text, View, type TextStyle } from 'react-native';
 
 /**
  * A prefix that makes this svg root's defs its own. Ids live in one document
@@ -403,6 +403,81 @@ const RANSOM_SCRAPS: [string, string][] = [
   ['#F2E7D6', '#1A1A1A'],
   ['#FFFFFF', '#C8102E'],
 ];
+
+/** The three colours a packet of HELLO-I'M badges comes in; the stock's accent is the one in front. */
+const NAMETAG_COLOURS = ['#1F4FD8', '#D5232B', '#1C8A4F'];
+const NAMETAG_PAPER = '#F7F3EA';
+
+export function NameTag({
+  hello,
+  im,
+  title,
+  titleStyle,
+  palette,
+  u,
+  seed,
+}: {
+  hello: string;
+  im: string;
+  title: string;
+  titleStyle: TextStyle;
+  palette: CoverPalette;
+  u: number;
+  seed: number;
+}) {
+  const front = palette.accent;
+  const behind = NAMETAG_COLOURS.filter((c) => c.toLowerCase() !== front.toLowerCase()).slice(0, 2);
+  const w = 12.6 * u;
+  const tilt = ((Math.abs(seed) % 5) - 2) * 0.9;
+  const edge = { borderRadius: 0.7 * u, borderWidth: 0.16 * u, borderColor: NAMETAG_PAPER };
+  return (
+    <View style={{ alignSelf: 'center', width: w, marginTop: 1.3 * u, marginBottom: 1.1 * u }}>
+      {/* The two badges behind, in the colours the author did not pick. */}
+      <View
+        style={[
+          edge,
+          {
+            position: 'absolute', top: -0.6 * u, left: 0.7 * u, width: w, height: '100%',
+            backgroundColor: behind[0], transform: [{ rotate: `${tilt + 6}deg` }],
+          },
+        ]}
+      />
+      <View
+        style={[
+          edge,
+          {
+            position: 'absolute', top: -0.25 * u, left: -0.6 * u, width: w, height: '100%',
+            backgroundColor: behind[1], transform: [{ rotate: `${tilt - 4}deg` }],
+          },
+        ]}
+      />
+      <View
+        style={[
+          edge,
+          {
+            overflow: 'hidden', transform: [{ rotate: `${tilt}deg` }],
+            shadowColor: '#000000', shadowOpacity: 0.18, shadowRadius: 3, shadowOffset: { width: 0, height: 2 }, elevation: 2,
+          },
+        ]}
+      >
+        <View style={{ backgroundColor: front, alignItems: 'center', paddingTop: 0.5 * u, paddingBottom: 0.3 * u }}>
+          <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 1.7 * u, lineHeight: 1.95 * u, letterSpacing: 0.08 * u }}>
+            {hello}
+          </Text>
+          <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 0.85 * u, lineHeight: 1.05 * u, letterSpacing: 0.05 * u }}>
+            {im}
+          </Text>
+        </View>
+        <View style={{ backgroundColor: NAMETAG_PAPER, paddingHorizontal: 0.8 * u, paddingVertical: 0.9 * u, minHeight: 4.6 * u, justifyContent: 'center' }}>
+          <Text numberOfLines={4} style={[titleStyle, { textAlign: 'center' }]}>
+            {title}
+          </Text>
+        </View>
+        <View style={{ height: 0.9 * u, backgroundColor: front }} />
+      </View>
+    </View>
+  );
+}
 
 const RANSOM_FLOWS_PER_GLYPH = /[぀-ヿ㐀-䶿一-鿿가-힯]/;
 

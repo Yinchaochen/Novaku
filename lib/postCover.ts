@@ -132,7 +132,7 @@ export type CoverGround = 'dotted' | 'plain' | 'grid' | 'ruled' | 'crumpled' | '
 export type CoverHighlightStyle = 'bar' | 'block' | 'brush' | 'scribble' | 'tape' | 'sticky';
 export type CoverStickerStyle = 'emoji' | 'puffy' | 'diecut' | 'ink' | 'crayon';
 /** The decorations a pack's reference page carries, each drawn by the renderer. */
-export type CoverDecor = 'grain' | 'spiral' | 'splash' | 'ransom' | 'stamps' | 'scrap' | 'tab';
+export type CoverDecor = 'grain' | 'spiral' | 'splash' | 'ransom' | 'stamps' | 'scrap' | 'tab' | 'nametag';
 
 export interface CoverStickerPlacement {
   id: string;
@@ -311,7 +311,9 @@ export type CoverTemplateId =
   | 'mixtape'
   | 'sketch_max'
   | 'sketch_chloe'
-  | 'sketch_sean';
+  | 'sketch_sean'
+  // A HELLO-I'M badge with the title written on it. Authors pick it; no persona wears it.
+  | 'nametag';
 
 /**
  * How a cover is composed — where the words sit and what else is on the card.
@@ -510,6 +512,26 @@ const SEAN_PAPERS: CoverPalette[] = (
 
 const SECOND_MARK_IDS = ['mark-star', 'mark-sparkle', 'mark-heart', 'mark-arrow', 'mark-circle', 'mark-wave'];
 
+/**
+ * A packet of HELLO-I'M badges (after the betahaus posts lisum sent on
+ * 2026-10-05). The paper is the same cream on every stock; what the author
+ * picks is the colour of the front badge, so the swatch IS the badge.
+ */
+const NAMETAG_INK = '#161616';
+const NAMETAG_PAPERS: CoverPalette[] = (
+  [['#F3F0E8', '#1F4FD8'], ['#F3F0E8', '#D5232B'], ['#F3F0E8', '#1C8A4F']] as const
+).map(([paper, badge]) => ({
+  paper,
+  dot: mix(paper, NAMETAG_INK, 0.1),
+  secondary: mix(paper, NAMETAG_INK, 0.7),
+  ink: NAMETAG_INK,
+  accent: badge,
+  // The sentence under the badge is marked in a tint of the badge's own colour;
+  // the badge body itself is drawn in its own cream (coverPackParts).
+  wash: mix(paper, badge, 0.3),
+  washInk: NAMETAG_INK,
+}));
+
 export const COVER_PACK_IDS: CoverTemplateId[] = [
   'journal',
   'candy',
@@ -519,6 +541,7 @@ export const COVER_PACK_IDS: CoverTemplateId[] = [
   'sketch_max',
   'sketch_chloe',
   'sketch_sean',
+  'nametag',
 ];
 
 export function isCoverPack(id: CoverTemplateId | null | undefined): boolean {
@@ -596,6 +619,15 @@ export const COVER_TEMPLATES: Record<CoverTemplateId, CoverTemplate> = {
     ground: 'toned', scale: 1, highlight: true, layouts: ['journalpage'], highlightStyle: 'bar',
     stickerStyle: 'ink', fonts: ['patrick', 'kalam', 'caveat'], labelFont: 'patrick',
     doodles: { colours: ['ink'], count: [4, 8], opacity: 0.8 }, decor: ['grain'], watermark: false,
+  },
+  // A packet of HELLO-I'M badges: the title is the one line written on the
+  // front badge, two more fan out behind it in the other colours. The badge
+  // is the sticker, so the pack draws none, and the only picture is the words.
+  // Authors pick it in the composer (lisum, 2026-10-05); no persona wears it.
+  nametag: {
+    id: 'nametag', layout: 'plate', swatches: NAMETAG_PAPERS.map((p) => p.accent), papers: NAMETAG_PAPERS,
+    ground: 'plain', scale: 1, measure: 0.6, highlight: true, layouts: ['plate'], highlightStyle: 'bar',
+    stickerStyle: 'ink', fonts: ['caveat', 'kalam', 'patrick'], decor: ['nametag'], watermark: false,
   },
 };
 
@@ -1609,7 +1641,7 @@ export function coverPlan(
     isBlank: keyLine.length === 0,
     highlightStyle,
     stickerStyle,
-    stickers: pack ? autoStickers(post.post_type, post.odyssey_slug, post.theme, seed) : [],
+    stickers: pack && !pack.decor?.includes('nametag') ? autoStickers(post.post_type, post.odyssey_slug, post.theme, seed) : [],
     doodles: pack ? autoDoodles(pack, palette, seed) : [],
     face,
     labelFace,

@@ -916,3 +916,30 @@ describe('the packs', () => {
     expect(plan.pack).toBeNull();
   });
 });
+
+describe('the name tag (2026-10-05)', () => {
+  const post = {
+    id: 'tag-1',
+    post_type: 'guide',
+    title: 'Founder, CEO and also the intern',
+    body: 'The badge says what the day is for. Bring a notebook and a question for the speakers.',
+    theme: 'startup',
+    cover_template: 'nametag' as const,
+  };
+
+  it('is a pack the author picks, whose swatches are the badge colours', () => {
+    expect(COVER_PACK_IDS).toContain('nametag');
+    expect(COVER_TEMPLATES.nametag.swatches).toEqual(['#1F4FD8', '#D5232B', '#1C8A4F']);
+    expect(templatePalette('nametag', 1).accent).toBe('#D5232B');
+    // Same cream paper on every stock: the choice is the badge, not the page.
+    expect(templatePalette('nametag', 1).paper).toBe(templatePalette('nametag', 0).paper);
+  });
+
+  it('draws no sticker and no watermark: the badge is the picture', () => {
+    const plan = coverPlan({ ...post, cover_palette: 2 }, '', '');
+    expect(plan.pack?.decor).toContain('nametag');
+    expect(plan.stickers).toEqual([]);
+    expect(plan.watermark).toBeNull();
+    expect(plan.layout).toBe('plate');
+  });
+});
