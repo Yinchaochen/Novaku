@@ -292,7 +292,22 @@ export function PostCover({
   for (let i = 0; i < 4 && overflows(); i += 1) titleSize *= 0.92;
   if (overflows()) bodyBudget = 0;
   for (let i = 0; i < 3 && overflows(); i += 1) titleSize *= 0.9;
-  const textBottomU = startU + titleHeightU(titleSize) + bodyHeightU(bodyBudget);
+  const contentU = titleHeightU(titleSize) + bodyHeightU(bodyBudget);
+  const textBottomU = startU + contentU;
+  // The block the words occupy, in u, for the marks that must keep off it.
+  const textLeftU = layout === 'journalpage' ? 2.4 : layout === 'zine' ? 1.4 : MARGIN_LEFT;
+  const [textTopU, textEndU] =
+    layout === 'poster'
+      ? [15.8 - contentU, 15.8]
+      : layout === 'plate' || layout === 'rules'
+        ? [9 - contentU / 2, 9 + contentU / 2]
+        : [startU, textBottomU];
+  const doodles = plan.doodles.filter((d) => {
+    const half = d.sizeU / 2 + 0.2;
+    const x = d.x * 18;
+    const y = d.y * 18;
+    return x + half < textLeftU || x - half > textLeftU + columnU || y + half < textTopU || y - half > textEndU;
+  });
   /** Does a corner sticker this far from the bottom, this tall, stay clear of the words? */
   const clearOfWords = (bottomU: number, sizeU: number) => textBottomU + 0.3 <= 18 - bottomU - sizeU;
 
@@ -809,8 +824,8 @@ export function PostCover({
 
       {pack?.decor?.includes('stamps') && clearOfWords(0.7, 2.2) ? <StampsStrip u={u} palette={palette} /> : null}
       {pack?.decor?.includes('tab') ? <Tab u={u} /> : null}
-      {pack && plan.doodles.length > 0 ? (
-        <DoodleLayer doodles={plan.doodles} u={u} ink={palette.ink} opacity={pack.doodles?.opacity ?? 0.9} />
+      {pack && doodles.length > 0 ? (
+        <DoodleLayer doodles={doodles} u={u} ink={palette.ink} opacity={pack.doodles?.opacity ?? 0.9} />
       ) : null}
     </View>
   );
