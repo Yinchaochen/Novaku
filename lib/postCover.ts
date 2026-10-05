@@ -27,6 +27,8 @@
  * not: the card's geometry has to be known before layout, not after it.
  */
 
+import { pickFace, type CoverFace } from './coverFonts';
+
 export type CoverType = 'guide' | 'question' | 'recommendation' | 'experience' | 'warning';
 
 export interface CoverPalette {
@@ -42,6 +44,12 @@ export interface CoverPalette {
   accent: string;
   /** The highlighter swipe: the accent, already composited over the paper. */
   wash: string;
+  /**
+   * The ink written ON the wash when it is not the body ink: a tape label or
+   * a sticky note carries dark writing whatever the page's ink is (D-164).
+   * Absent means the body ink, which is every family before the packs.
+   */
+  washInk?: string;
 }
 
 /**
@@ -87,19 +95,63 @@ export interface CoverPlan {
   /**
    * Which stationery ground to draw. Stable per post.
    *
-   * Dots or nothing. A ruled variant was drawn first and rejected on sight:
-   * without measuring the text there is no way to land the rules on the
-   * baselines, so they struck through the words instead of sitting under them.
-   * A dot field is the ground you can write over precisely because it does not
-   * assert a baseline — which is why dotted notebooks exist.
+   * Dots or nothing, for the families. A ruled variant was drawn first and
+   * rejected on sight: without measuring the text there is no way to land the
+   * rules on the baselines, so they struck through the words instead of
+   * sitting under them. A dot field is the ground you can write over precisely
+   * because it does not assert a baseline — which is why dotted notebooks
+   * exist. The packs (D-164) add the grounds their references actually have —
+   * a grid, a crumpled sheet, a toned sketch paper, a patterned field — and the
+   * ruled one comes back only on the Chloe page, where the lines sit under a
+   * title set at the page's own pitch and never under a measured paragraph.
    */
-  ground: 'dotted' | 'plain';
+  ground: CoverGround;
   /** The family the author chose, or null when nobody chose (D-141). */
   template: CoverTemplateId | null;
   /** Where the words sit on the card (D-146). */
   layout: CoverLayout;
   /** A cover with no sentence worth lifting: header and paper, nothing false. */
   isBlank: boolean;
+  /** How the marked phrase is drawn (D-164). 'bar' is the rounded rule every family drew. */
+  highlightStyle: CoverHighlightStyle;
+  /** How stickers are drawn. 'emoji' is the system glyph the families set; the packs draw their own. */
+  stickerStyle: CoverStickerStyle;
+  /** The drawn stickers a pack places when the author placed none. Empty for the families. */
+  stickers: CoverStickerPlacement[];
+  /** Small marker doodles scattered in the margins (packs only). */
+  doodles: CoverDoodle[];
+  /** The bundled face the title is set in, when the pack has one that covers it. */
+  face: CoverFace | null;
+  /** The face for tape labels and sticky notes, same rule. */
+  labelFace: CoverFace | null;
+  /** The pack's own data, for the renderer. Null for the families and the default. */
+  pack: CoverTemplate | null;
+}
+
+export type CoverGround = 'dotted' | 'plain' | 'grid' | 'ruled' | 'crumpled' | 'toned' | 'motif';
+export type CoverHighlightStyle = 'bar' | 'block' | 'brush' | 'scribble' | 'tape' | 'sticky';
+export type CoverStickerStyle = 'emoji' | 'puffy' | 'diecut' | 'ink' | 'crayon';
+/** The decorations a pack's reference page carries, each drawn by the renderer. */
+export type CoverDecor = 'grain' | 'spiral' | 'splash' | 'ransom' | 'stamps' | 'scrap' | 'tab';
+
+export interface CoverStickerPlacement {
+  id: string;
+  /** Side, in canvas units (u = W/18). */
+  sizeU: number;
+  /** Degrees. */
+  rot: number;
+  /** The small second mark, placed on the opposite corner. */
+  second: boolean;
+}
+
+export interface CoverDoodle {
+  id: string;
+  /** Centre, as fractions of the card. */
+  x: number;
+  y: number;
+  colour: string;
+  sizeU: number;
+  rot: number;
 }
 
 /**
@@ -250,7 +302,16 @@ export type CoverTemplateId =
   | 'rules'
   | 'blocks'
   | 'magazine'
-  | 'vertical';
+  | 'vertical'
+  // The packs (D-164): whole looks rather than colour rails. See COVER_PACKS.
+  | 'journal'
+  | 'candy'
+  | 'stamp'
+  | 'crayon'
+  | 'mixtape'
+  | 'sketch_max'
+  | 'sketch_chloe'
+  | 'sketch_sean';
 
 /**
  * How a cover is composed — where the words sit and what else is on the card.
@@ -279,7 +340,13 @@ export type CoverLayout =
   | 'rules'
   | 'blocks'
   | 'magazine'
-  | 'vertical';
+  | 'vertical'
+  // The mixtape sheet: a tilted title on a saturated field, the phrase on a
+  // torn label held by tape (D-164).
+  | 'zine'
+  // A page out of a journal: a red margin rule, a tilted hand-set title, the
+  // phrase on a sticky note or tape; the sketchbook packs' only layout.
+  | 'journalpage';
 
 export interface CoverTemplate {
   id: CoverTemplateId;
@@ -287,8 +354,33 @@ export interface CoverTemplate {
   layout: CoverLayout;
   /** The colours an author may pick inside this family. */
   swatches: string[];
-  /** Dots or a bare ground. Only the notebook keeps its dot field. */
-  ground: 'dotted' | 'plain';
+  /** Dots or a bare ground. Only the notebook keeps its dot field; the packs add theirs. */
+  ground: CoverGround;
+  /* ---- the packs (D-164); every field below is absent on the families ---- */
+  /** Whole stocks, one per swatch, when the pack's colours are a measurement rather than a tint rule. */
+  papers?: CoverPalette[];
+  /** Compositions rotated across a pack's cards by the post's seed. */
+  layouts?: CoverLayout[];
+  /** How the marked phrase is drawn. */
+  highlightStyle?: CoverHighlightStyle;
+  /** Whether the mark is painted with the wash (behind the words) or the accent (a stroke beneath them). */
+  highlightOn?: 'wash' | 'accent';
+  /** How the stickers are drawn. */
+  stickerStyle?: CoverStickerStyle;
+  /** Faces the title may be set in, rotated by the seed; see lib/coverFonts.ts. */
+  fonts?: CoverFace[];
+  /** The face for labels and notes. */
+  labelFont?: CoverFace;
+  /** Marker doodles in the margins: colours ('ink' means the page's ink), how many, how strong. */
+  doodles?: { colours: string[]; count: [number, number]; opacity: number };
+  /** What else the reference page carries. */
+  decor?: CoverDecor[];
+  /** White edge around a die-cut or puffy sticker, in canvas units. */
+  halo?: number;
+  /** Stickers set this much larger than the families' stamp. */
+  stickerBoost?: number;
+  /** Whether the big faint mark behind the words is drawn. Families: yes. */
+  watermark?: boolean;
   /**
    * Multiplier on the type size. A family that fills the card with colour has
    * to fill it with type as well, or the colour is just a large empty panel.
@@ -336,6 +428,103 @@ const MONO_SWATCHES = ['#FBFAF7', '#F2EDE2', '#1A1A1A'];
 /** 逻辑结构 — the swatch is the RULE, not the ground: crimson, bronze, blue. */
 const RULE_SWATCHES = ['#B3121F', '#A67C2A', '#1668C8'];
 
+/* ------------------------------------------------------------------ *
+ * The packs (D-164)
+ *
+ * A family is a colour rail over one composition. A pack is a whole look —
+ * paper, ground, type, how a phrase is marked, how a sticker is drawn, what
+ * else lies on the page — reproduced from a reference: our own notebook, the
+ * Xiaohongshu candy and crayon rails, makeyourownmixtape.com, and the three
+ * Life is Strange journals. lisum reviewed them in
+ * outputs/cover-asset-library-prototype on 2026-10-03 and on 2026-10-05 asked
+ * for them as the post style, spread across the editorial accounts. Each
+ * persona wears one pack (app/community/seeding.py), so a wall of seeded
+ * posts reads as several hands rather than one template nine ways.
+ *
+ * The stocks are measurements and are tested as such (postCover.test.ts):
+ * body ink 7:1 on the paper, the label ink 7:1 on the tape or note it is
+ * written on, the rubric 4.5:1, the mark 8 ΔE clear of its ground.
+ * ------------------------------------------------------------------ */
+
+const PEN = '#1E1E1E';
+const BALLPOINT = '#2B4C9B';
+const TAPE = '#F2E7D6';
+const TAPE_INK = '#2A1F1A';
+
+/** The mixtape site's own red (#A01800, #8E1400 as the pattern tone), sampled; the others in its key. */
+const MIXTAPE_FIELDS: CoverPalette[] = (
+  [
+    ['#A01800', '#8E1400', '#FFF4E6', '#F2B134'],
+    ['#E8B030', '#D9A226', '#2A1F1A', '#A01800'],
+    ['#135653', '#0F4A47', '#FFF4E6', '#F2B134'],
+    ['#223A8C', '#1B2F78', '#FFF4E6', '#F26B5B'],
+    ['#1A1A1A', '#2A2A2A', '#FFF4E6', '#F2B134'],
+  ] as const
+).map(([paper, pattern, ink, accent]) => ({
+  paper,
+  dot: pattern,
+  secondary: mix(paper, ink, 0.85),
+  ink,
+  accent,
+  wash: TAPE,
+  washInk: TAPE_INK,
+}));
+
+/** Max's diary: cream paper, black pen, blue ballpoint, a yellow sticky note. */
+const MAX_PAPERS: CoverPalette[] = (
+  [['#F1E6CF', '#D9C9A8'], ['#EFE4D2', '#D6C7AC'], ['#F4EBD9', '#DCCDB0']] as const
+).map(([paper, rule]) => ({
+  paper,
+  dot: rule,
+  secondary: mix(paper, PEN, 0.72),
+  ink: PEN,
+  accent: BALLPOINT,
+  wash: '#F6D34A',
+  washInk: PEN,
+}));
+
+/** Chloe's journal: lined paper, a red margin rule, labels on white tape. */
+const CHLOE_PAPERS: CoverPalette[] = (
+  [['#EFE7C9', '#CFC4A0'], ['#EDE3C6', '#C9BC97'], ['#F0E9D2', '#D3C8A6']] as const
+).map(([paper, rule]) => ({
+  paper,
+  dot: rule,
+  secondary: mix(paper, '#2A2A2A', 0.72),
+  ink: '#2A2A2A',
+  accent: '#C8102E',
+  wash: '#FFFFFF',
+  washInk: '#2A2A2A',
+}));
+
+/** Sean's sketchbook: grey toned paper and graphite, nothing else. */
+const SEAN_PAPERS: CoverPalette[] = (
+  [['#D6D2CA', '#BFBBB3'], ['#DCD8D0', '#C5C1B9'], ['#CFCBC3', '#B8B4AC']] as const
+).map(([paper, rule]) => ({
+  paper,
+  dot: rule,
+  secondary: mix(paper, '#262626', 0.72),
+  ink: '#262626',
+  accent: '#262626',
+  wash: mix(paper, '#262626', 0.16),
+}));
+
+const SECOND_MARK_IDS = ['mark-star', 'mark-sparkle', 'mark-heart', 'mark-arrow', 'mark-circle', 'mark-wave'];
+
+export const COVER_PACK_IDS: CoverTemplateId[] = [
+  'journal',
+  'candy',
+  'stamp',
+  'crayon',
+  'mixtape',
+  'sketch_max',
+  'sketch_chloe',
+  'sketch_sean',
+];
+
+export function isCoverPack(id: CoverTemplateId | null | undefined): boolean {
+  return !!id && COVER_PACK_IDS.includes(id);
+}
+
 export const COVER_TEMPLATES: Record<CoverTemplateId, CoverTemplate> = {
   notebook: { id: 'notebook', layout: 'journal', swatches: NOTEBOOK_SWATCHES, ground: 'dotted', scale: 1, highlight: true },
   bold: { id: 'bold', layout: 'journal', swatches: BRIGHT_SWATCHES, ground: 'plain', scale: 1.16, highlight: true },
@@ -346,6 +535,68 @@ export const COVER_TEMPLATES: Record<CoverTemplateId, CoverTemplate> = {
   blocks: { id: 'blocks', layout: 'blocks', swatches: BRIGHT_SWATCHES, ground: 'plain', scale: 1.04, measure: 0.88, highlight: false },
   magazine: { id: 'magazine', layout: 'magazine', swatches: DUSK_SWATCHES, ground: 'plain', scale: 1, highlight: true },
   vertical: { id: 'vertical', layout: 'vertical', swatches: DUSK_SWATCHES, ground: 'dotted', scale: 1, highlight: false },
+
+  // The notebook we already draw, finished: the nine stocks, the dot field,
+  // the trailing highlighter, and stickers that are drawn rather than typed.
+  journal: {
+    id: 'journal', layout: 'journal', swatches: DEFAULT_STOCKS.map((p) => p.paper), papers: DEFAULT_STOCKS,
+    ground: 'dotted', scale: 1, highlight: true, layouts: ['journal', 'plate', 'mono', 'journal', 'poster'],
+    highlightStyle: 'bar', stickerStyle: 'puffy', halo: 0.3, watermark: true,
+  },
+  // Their candy rail: a strong colour given its quiet tint, the title on a
+  // block of the colour itself, a tall display face where the script allows.
+  candy: {
+    id: 'candy', layout: 'poster', swatches: BRIGHT_SWATCHES, ground: 'plain', scale: 1.16, highlight: true,
+    layouts: ['poster', 'blocks', 'journal', 'mono'], highlightStyle: 'block', stickerStyle: 'puffy',
+    fonts: ['amatic', 'lobster'], halo: 0.3, watermark: false,
+  },
+  // One ink, grid paper, a serif. Stickers lose their fill and become line
+  // work, stamped rather than stuck; the phrase gets a brush stroke.
+  stamp: {
+    id: 'stamp', layout: 'plate', swatches: ['#FBFAF7', '#F2EDE2', '#EDE7DB', '#1A1A1A'], ground: 'grid', scale: 1.08,
+    highlight: true, layouts: ['plate', 'rules', 'mono', 'plate'], highlightStyle: 'brush', stickerStyle: 'ink',
+    fonts: ['playfair'], watermark: false,
+  },
+  // The dusk rail at mid-tone, with a crayon's misregistered second colour on
+  // every sticker and a scribble under the phrase instead of a wash.
+  crayon: {
+    id: 'crayon', layout: 'journal', swatches: [...DUSK_SWATCHES, '#F6CE72'], ground: 'plain', scale: 0.92, highlight: true,
+    highlightOn: 'accent', layouts: ['journal', 'magazine', 'blocks', 'journal'], highlightStyle: 'scribble',
+    stickerStyle: 'crayon', fonts: ['kalam', 'patrick'], decor: ['grain'], watermark: false,
+  },
+  // After makeyourownmixtape.com: one saturated field with a tone-on-tone
+  // pattern, white painted capitals, cut-outs with a white edge, the phrase
+  // on a torn label held by tape.
+  mixtape: {
+    id: 'mixtape', layout: 'zine', swatches: MIXTAPE_FIELDS.map((p) => p.paper), papers: MIXTAPE_FIELDS,
+    ground: 'motif', scale: 1, highlight: true, layouts: ['zine'], highlightStyle: 'tape', stickerStyle: 'diecut',
+    fonts: ['rocksalt', 'marker', 'caveat', 'lobster'], labelFont: 'grace', halo: 0.45, stickerBoost: 1.35,
+    doodles: { colours: ['#FFF4E6'], count: [2, 4], opacity: 0.22 }, watermark: false,
+  },
+  // Max's diary (Life is Strange): crumpled cream paper, a black pen, blue
+  // ballpoint drawings, a strip of stamps, a torn scrap at the edge, a tab.
+  sketch_max: {
+    id: 'sketch_max', layout: 'journalpage', swatches: MAX_PAPERS.map((p) => p.paper), papers: MAX_PAPERS,
+    ground: 'crumpled', scale: 1, highlight: true, layouts: ['journalpage'], highlightStyle: 'sticky',
+    stickerStyle: 'ink', fonts: ['kalam', 'patrick', 'caveat'], labelFont: 'kalam',
+    doodles: { colours: [BALLPOINT], count: [3, 6], opacity: 0.85 }, decor: ['stamps', 'scrap', 'tab'], watermark: false,
+  },
+  // Chloe's journal (Before the Storm): spiral-bound lined paper, watercolour
+  // splashes, a title cut out of magazines, neon stars, die-cut stickers.
+  sketch_chloe: {
+    id: 'sketch_chloe', layout: 'journalpage', swatches: CHLOE_PAPERS.map((p) => p.paper), papers: CHLOE_PAPERS,
+    ground: 'ruled', scale: 1, highlight: true, layouts: ['journalpage'], highlightStyle: 'tape',
+    stickerStyle: 'puffy', fonts: ['patrick', 'caveat', 'kalam'], labelFont: 'patrick', halo: 0.4,
+    doodles: { colours: ['#19E3FF', '#F7A6C9', '#6B6B6B'], count: [4, 7], opacity: 0.95 },
+    decor: ['spiral', 'splash', 'ransom'], watermark: false,
+  },
+  // Sean's sketchbook (Life is Strange 2): grey toned paper, graphite only.
+  sketch_sean: {
+    id: 'sketch_sean', layout: 'journalpage', swatches: SEAN_PAPERS.map((p) => p.paper), papers: SEAN_PAPERS,
+    ground: 'toned', scale: 1, highlight: true, layouts: ['journalpage'], highlightStyle: 'bar',
+    stickerStyle: 'ink', fonts: ['patrick', 'kalam', 'caveat'], labelFont: 'patrick',
+    doodles: { colours: ['ink'], count: [4, 8], opacity: 0.8 }, decor: ['grain'], watermark: false,
+  },
 };
 
 export const COVER_TEMPLATE_IDS = Object.keys(COVER_TEMPLATES) as CoverTemplateId[];
@@ -367,7 +618,14 @@ const DAY_INK = '#3A2E26';
  */
 export function templatePalette(id: CoverTemplateId, swatchIndex: number): CoverPalette {
   const template = COVER_TEMPLATES[id];
-  const swatch = template.swatches[((swatchIndex % template.swatches.length) + template.swatches.length) % template.swatches.length];
+  const n = template.swatches.length;
+  const index = ((swatchIndex % n) + n) % n;
+  const swatch = template.swatches[index];
+
+  // A pack whose stocks are measurements carries them whole (D-164).
+  if (template.papers) return template.papers[index];
+  // The candy pack is the bold family's tint rule under a different look.
+  if (id === 'candy') return templatePalette('bold', swatchIndex);
 
   if (id === 'notebook') {
     // The ground stays paper and the swatch is the highlighter — the existing
@@ -378,10 +636,10 @@ export function templatePalette(id: CoverTemplateId, swatchIndex: number): Cover
     };
   }
 
-  if (id === 'mono') {
+  if (id === 'mono' || id === 'stamp') {
     // 黑白极简: the swatch IS the stock, black included. Everything else is
     // the same colour at different strengths -- a family with a second hue in
-    // it is not this family.
+    // it is not this family. The stamp pack is this rule on grid paper.
     const dark = swatch === '#1A1A1A';
     const ink = dark ? '#F2EDE2' : '#111111';
     return {
@@ -1020,6 +1278,127 @@ const SLUG_MARKS: [RegExp, string][] = [
 
 const TYPE_MARKS: Record<string, string> = { question: '?', warning: '!' };
 
+/* ------------------------------------------------------------------ *
+ * Drawn stickers (D-164)
+ *
+ * The packs draw their own stickers — lib/coverStickers.ts, our geometry
+ * under our standard — instead of setting a system emoji. Which one a card
+ * wears is chosen the same way the emoji was: from the slug first, then the
+ * backend's theme, then the post type, so it is identical in every locale.
+ * Candidates rather than one id, rotated by the seed, so a column of `places`
+ * guides is not a column of identical pins. Faces reach a card only through
+ * its type: an experience or a question has a person in it, a museum guide
+ * does not.
+ * ------------------------------------------------------------------ */
+const SLUG_STICKER_IDS: [RegExp, string[]][] = [
+  [/recognition|qualification/, ['obj-stamp', 'obj-cap']],
+  [/study|graduate|university|school|kita/, ['obj-cap', 'mark-check', 'obj-speech']],
+  [/vocational|training|ausbildung/, ['obj-signpost', 'obj-cap']],
+  [/blue_card|opportunity|visa|residence|permit|anmeldung|einbuergerung/, ['obj-envelope', 'obj-stamp', 'mark-check']],
+  [/family|reunification|child/, ['obj-people', 'mark-heart']],
+  [/salary|tax|bank|money|schufa|gez|insurance|wise/, ['obj-coin', 'mark-bang', 'obj-bag']],
+  [/job|application|work|employment|contract|business/, ['obj-signpost', 'obj-lamp', 'mark-arrow']],
+  [/health|doctor|medical|checkup/, ['obj-cross', 'mark-check']],
+  [/language|german|vhs|exchange/, ['obj-speech', 'mark-sparkle', 'obj-cap']],
+  [/housing|apartment|ummeldung|sim|bvg|ticket|airport|transit/, ['obj-key', 'obj-house', 'obj-tram']],
+  [/food|market|museum|flea|boat|tour|sight|sport|volunteer/, ['obj-pin', 'obj-ticket', 'obj-coffee']],
+];
+
+const THEME_STICKER_IDS: Record<string, string[]> = {
+  places: ['obj-pin', 'obj-tower', 'mark-star', 'obj-ticket'],
+  language: ['obj-speech', 'mark-sparkle', 'obj-cap'],
+  culture: ['obj-ticket', 'mark-star', 'obj-coffee'],
+  startup: ['obj-lamp', 'mark-arrow', 'obj-signpost'],
+  education: ['obj-cap', 'mark-check', 'obj-speech'],
+  health: ['obj-cross', 'mark-check'],
+  transport: ['obj-tram', 'obj-bike', 'mark-arrow'],
+  food_drink: ['obj-coffee', 'obj-pretzel', 'mark-heart'],
+  housing: ['obj-key', 'obj-house', 'mark-check'],
+  bureaucracy: ['obj-stamp', 'obj-envelope', 'mark-bang'],
+  money: ['obj-coin', 'mark-bang', 'obj-bag'],
+  social: ['obj-people', 'mark-heart', 'obj-coffee'],
+  shopping: ['obj-bag', 'obj-coin', 'mark-sparkle'],
+  career: ['obj-signpost', 'obj-cap', 'mark-arrow'],
+};
+
+const TYPE_STICKER_IDS: Record<string, string[]> = {
+  question: ['face-wow', 'mark-circle', 'obj-speech'],
+  warning: ['mark-bang', 'face-sweat', 'mark-arrow'],
+  experience: ['face-grin', 'mark-heart', 'face-wink', 'obj-coffee', 'mark-sparkle', 'obj-tram', 'face-love'],
+  recommendation: ['mark-star', 'face-love', 'obj-pin'],
+  guide: ['obj-signpost', 'mark-check', 'obj-lamp'],
+};
+
+function stickerCandidates(postType: string, odysseySlug?: string | null, theme?: string | null): string[] {
+  const slug = (odysseySlug || '').toLowerCase();
+  if (slug) {
+    for (const [pattern, ids] of SLUG_STICKER_IDS) {
+      if (pattern.test(slug)) return ids;
+    }
+  }
+  return THEME_STICKER_IDS[(theme || '').toLowerCase()] ?? TYPE_STICKER_IDS[postType] ?? [];
+}
+
+/**
+ * What a pack's card wears when the author placed nothing: one sticker from
+ * the candidates at a size and tilt that vary with the seed, and a small
+ * second mark on every third card. Two is the ceiling the author also has.
+ */
+export function autoStickers(
+  postType: string,
+  odysseySlug: string | null | undefined,
+  theme: string | null | undefined,
+  seed: number,
+): CoverStickerPlacement[] {
+  const list = stickerCandidates(postType, odysseySlug, theme);
+  if (list.length === 0) return [];
+  const s = Math.abs(seed | 0);
+  const out: CoverStickerPlacement[] = [
+    { id: list[s % list.length], sizeU: 2.9 + (s % 3) * 0.45, rot: ((s * 7) % 21) - 10, second: false },
+  ];
+  if (s % 3 === 0) {
+    out.push({
+      id: SECOND_MARK_IDS[(s * 5 + 1) % SECOND_MARK_IDS.length],
+      sizeU: 1.7 + (s % 2) * 0.3,
+      rot: ((s * 11) % 31) - 15,
+      second: true,
+    });
+  }
+  return out;
+}
+
+/**
+ * Slots in the margins the text block never reaches. Which slots, which marks
+ * and which colours come from the seed, so no two cards on a wall scatter
+ * alike — this is what their 涂鸦马克 template does and a corner emoji never will.
+ */
+const DOODLE_SLOTS: [number, number][] = [
+  [0.08, 0.07], [0.3, 0.05], [0.55, 0.06], [0.78, 0.09], [0.94, 0.3], [0.93, 0.52],
+  [0.9, 0.74], [0.12, 0.93], [0.42, 0.95], [0.68, 0.94], [0.05, 0.5], [0.06, 0.74],
+];
+
+export function autoDoodles(template: CoverTemplate, palette: CoverPalette, seed: number): CoverDoodle[] {
+  const spec = template.doodles;
+  if (!spec) return [];
+  const s = Math.abs(seed | 0);
+  const [lo, hi] = spec.count;
+  const n = lo + (s % (hi - lo + 1));
+  const out: CoverDoodle[] = [];
+  for (let i = 0; i < n; i += 1) {
+    const [x, y] = DOODLE_SLOTS[(s * 3 + i * 5) % DOODLE_SLOTS.length];
+    const colour = spec.colours[(s + i) % spec.colours.length];
+    out.push({
+      id: SECOND_MARK_IDS[(s + i * 2) % SECOND_MARK_IDS.length],
+      x,
+      y,
+      colour: colour === 'ink' ? palette.ink : colour,
+      sizeU: 1.0 + ((s + i * 7) % 5) * 0.2,
+      rot: ((s * 13 + i * 29) % 61) - 30,
+    });
+  }
+  return out;
+}
+
 export function coverMark(postType: string, odysseySlug?: string | null): string {
   const slug = (odysseySlug || '').toLowerCase();
   if (slug) {
@@ -1173,9 +1552,14 @@ export function coverPlan(
   // rung the sentence already sits on and stopping there left the mark only on
   // short sentences, because a sentence that fills its rung has no spare line
   // by definition, and those are most of them.
+  const pack = template && isCoverPack(template) ? COVER_TEMPLATES[template] : null;
+  const highlightStyle: CoverHighlightStyle = pack?.highlightStyle ?? 'bar';
+
   let rung = plain;
   let highlight: CoverHighlight | null = null;
-  if (!clips && (!template || COVER_TEMPLATES[template].highlight)) {
+  // A block highlight is the TITLE on a block of colour (the candy pack); the
+  // sentence under it is left unmarked, so no phrase is cut out of it.
+  if (!clips && (!template || COVER_TEMPLATES[template].highlight) && highlightStyle !== 'block') {
     for (const r of RUNGS) {
       if (emFit > r.capacityEm || longestFit > r.lineEm) continue;
       // Nine tenths of the line, because estimateEm is an estimate: a wrapped
@@ -1195,18 +1579,40 @@ export function coverPlan(
 
   const sticker = coverSticker(post.post_type, post.odyssey_slug, post.theme);
 
+  // A pack rotates its compositions by the seed the way the default does,
+  // shifted so colour and composition stay independent.
+  const packLayouts = pack?.layouts;
+  const layout = packLayouts
+    ? packLayouts[Math.floor(seed / 7) % packLayouts.length]
+    : template
+      ? COVER_TEMPLATES[template].layout
+      : defaultLayout(seed);
+  const stickerStyle: CoverStickerStyle = pack?.stickerStyle ?? 'emoji';
+  // The title decides the face: a pack's hand-drawn face is used only when it
+  // can draw every glyph of this title in this reader's language (D-148).
+  const titleText = (displayTitle || post.title || '').trim();
+  const face = pack ? pickFace(pack.fonts, seed, titleText) : null;
+  const labelFace = pack?.labelFont && pickFace([pack.labelFont], 0, highlight?.span ?? titleText) ? pack.labelFont : face;
+
   return {
     palette,
     keyLine,
     highlight,
     sticker,
-    watermark: coverMark(post.post_type, post.odyssey_slug),
+    watermark: pack && pack.watermark === false ? null : coverMark(post.post_type, post.odyssey_slug),
     sizeRatio,
     leading: rung.leading,
     maxLines: rung.maxLines,
     ground: template ? COVER_TEMPLATES[template].ground : 'dotted',
     template,
-    layout: template ? COVER_TEMPLATES[template].layout : defaultLayout(seed),
+    layout,
     isBlank: keyLine.length === 0,
+    highlightStyle,
+    stickerStyle,
+    stickers: pack ? autoStickers(post.post_type, post.odyssey_slug, post.theme, seed) : [],
+    doodles: pack ? autoDoodles(pack, palette, seed) : [],
+    face,
+    labelFace,
+    pack,
   };
 }

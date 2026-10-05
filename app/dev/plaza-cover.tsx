@@ -4,7 +4,7 @@ import { Screen } from '../../components/Screen';
 import { SectionLabel } from '../../components/SectionLabel';
 import { PostCover } from '../../components/community/PostCover';
 import type { CommunityPost } from '../../features/community/useCommunity';
-import { COVER_TEMPLATE_IDS, COVER_TEMPLATES } from '../../lib/postCover';
+import { COVER_PACK_IDS, COVER_TEMPLATE_IDS, COVER_TEMPLATES } from '../../lib/postCover';
 import { paginateBody } from '../../lib/coverPages';
 import { PostCoverPage } from '../../components/community/PostCoverPage';
 import { colors } from '../../theme/tokens';
@@ -235,6 +235,79 @@ function FamilyRows() {
   );
 }
 
+/**
+ * The packs (D-164) on the posts the editorial accounts actually publish:
+ * an English guide with a bureaucracy theme (stamp, envelope), a German event
+ * (compound words, a time), a Chinese experience (faces, no spaces), and a
+ * startup question — each pack in its own composition and sticker render, at
+ * the two widths. The phone wall is the 184.5 column.
+ */
+const PACK_POSTS = [
+  makePost({
+    id: 'pk-en-guide-1',
+    post_type: 'guide',
+    theme: 'bureaucracy',
+    title: 'Registering your address in Berlin',
+    body:
+      'Bring your passport and the rental contract.\n\n' +
+      'The office opens at eight, and the queue is shortest then, so go early and bring something to read.',
+  } as Partial<CommunityPost> & { id: string }),
+  makePost({
+    id: 'pk-de-event-7',
+    post_type: 'recommendation',
+    theme: 'culture',
+    title: 'Architekturführung im Mies van der Rohe Haus',
+    body:
+      'Eine Führung durch das letzte Wohnhaus, das Mies in Deutschland gebaut hat.\n\n' +
+      'Beginn um 15:00 Uhr am Oberseestraße 60, die Teilnahme kostet 6 Euro.',
+  } as Partial<CommunityPost> & { id: string }),
+  makePost({
+    id: 'pk-zh-exp-3',
+    post_type: 'experience',
+    theme: 'social',
+    title: '我在柏林参加的第一次语言交换',
+    body: '一开始很紧张，但大家都很友好。\n\n两个小时后我已经敢用德语点咖啡了，下周还会再去。',
+  } as Partial<CommunityPost> & { id: string }),
+  makePost({
+    id: 'pk-en-startup-5',
+    post_type: 'question',
+    theme: 'startup',
+    title: 'Which Berlin founder meetups are worth a first visit?',
+    body:
+      'I have been here three weeks and have not met another founder yet.\n\n' +
+      'Thursday gatherings seem to be the usual answer, but I would rather hear which one people actually return to.',
+  } as Partial<CommunityPost> & { id: string }),
+];
+
+function PackRows() {
+  return (
+    <View>
+      <SectionLabel>The packs (D-164) — one look per editorial account, on real post shapes</SectionLabel>
+      {COVER_PACK_IDS.map((id) => (
+        <View key={id} style={{ paddingBottom: 6 }}>
+          <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textMuted, paddingHorizontal: 10, paddingBottom: 4 }}>
+            {id}
+          </Text>
+          <ScrollView horizontal contentContainerStyle={{ gap: 10, paddingHorizontal: 10 }}>
+            {PACK_POSTS.map((post, index) => (
+              <View key={post.id} style={{ flexDirection: 'row', gap: 6, alignItems: 'flex-start' }}>
+                {WIDTHS.map((width) => (
+                  <View key={width} style={{ width, borderRadius: 12, overflow: 'hidden' }}>
+                    <PostCover
+                      post={{ ...post, cover_template: id, cover_palette: index } as CommunityPost}
+                      width={width}
+                    />
+                  </View>
+                ))}
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 const LONG = makePost({
   id: 'pages',
   post_type: 'guide',
@@ -281,6 +354,7 @@ export default function PlazaCoverGallery() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={{ paddingBottom: 48 }}>
+        <PackRows />
         <TheirColoursRow />
         <FamilyRows />
         <PagesRow />

@@ -397,6 +397,14 @@ export type Translations = {
     cover_template_blocks: string;
     cover_template_magazine: string;
     cover_template_vertical: string;
+    cover_template_journal: string;
+    cover_template_candy: string;
+    cover_template_stamp: string;
+    cover_template_crayon: string;
+    cover_template_mixtape: string;
+    cover_template_sketch_max: string;
+    cover_template_sketch_chloe: string;
+    cover_template_sketch_sean: string;
     cover_palette_label: string;
     ai_summary_toggle: string;
     ai_summary_toggle_desc: string;

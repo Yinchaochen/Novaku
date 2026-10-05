@@ -21,7 +21,10 @@ import type { CommunityPost } from '../../../features/community/useCommunity';
 jest.mock('react-native-svg', () => {
   const { View } = require('react-native');
   const Stub = (props: object) => <View {...props} />;
-  return { __esModule: true, default: Stub, Svg: Stub, Circle: Stub, Defs: Stub, Line: Stub, Pattern: Stub, Rect: Stub };
+  // Every element the cover and its pack parts draw; a missing one renders as
+  // `undefined` and fails on displayName rather than on the thing under test.
+  const names = ['Svg', 'Circle', 'Defs', 'Line', 'Pattern', 'Rect', 'Path', 'Polygon', 'Polyline', 'Ellipse', 'G', 'RadialGradient', 'LinearGradient', 'Stop'];
+  return { __esModule: true, default: Stub, ...Object.fromEntries(names.map((n) => [n, Stub])) };
 });
 jest.mock('../../../context/LanguageContext', () => ({
   useLanguage: () => ({ langCode: 'en', t: { plaza: { type_guide: 'Guide', type_question: 'Question' } } }),
@@ -199,5 +202,38 @@ describe('PostCover', () => {
     expect(tree.getByText('Kurz')).toBeTruthy();
     expect(tree.queryByText('Guide')).toBeNull();
     expect(tree.queryByText('Ja.')).toBeNull();
+  });
+});
+
+describe('cover defs', () => {
+  it('gives every cover its own pattern ids, so a wall of cards does not share the first card\'s ground', async () => {
+    // Ids live in one document on web: forty `url(#grid)` all resolved to the
+    // first card's pattern, and every stamp card drew the journal stock's pale
+    // green grid, bright on the black stock (2026-10-05, dev gallery).
+    const ids: string[] = [];
+    const refs: string[] = [];
+    const walk = (node: unknown): void => {
+      if (!node || typeof node !== 'object') return;
+      const el = node as { props?: Record<string, unknown>; children?: unknown[] };
+      if (el.props) {
+        if (typeof el.props.id === 'string') ids.push(el.props.id);
+        if (typeof el.props.fill === 'string' && el.props.fill.startsWith('url(#')) refs.push(el.props.fill.slice(5, -1));
+      }
+      (el.children ?? []).forEach(walk);
+    };
+    const result = await render(
+      <>
+        <PostCover post={makePost({ id: 'a1', cover_template: 'stamp', cover_palette: 3 })} width={160} />
+        <PostCover post={makePost({ id: 'b2', cover_template: 'stamp', cover_palette: 0 })} width={160} />
+        <PostCover post={makePost({ id: 'c3', cover_template: 'sketch_chloe' })} width={160} />
+      </>,
+    );
+    const tree = result.toJSON();
+    (Array.isArray(tree) ? tree : [tree]).forEach(walk);
+
+    expect(ids.length).toBeGreaterThan(8);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(refs.length).toBeGreaterThan(0);
+    for (const ref of refs) expect(ids).toContain(ref);
   });
 });

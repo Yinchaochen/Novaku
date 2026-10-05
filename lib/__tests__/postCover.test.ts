@@ -1,4 +1,5 @@
 import {
+  COVER_PACK_IDS,
   COVER_TEMPLATES,
   COVER_TEMPLATE_IDS,
   DEFAULT_STOCK_COUNT,
@@ -662,18 +663,24 @@ const FAMILY_SWATCHES = COVER_TEMPLATE_IDS.flatMap((id) =>
 describe('the template families', () => {
   it.each(FAMILY_SWATCHES)('$name keeps the sentence readable on its own ground', ({ p }) => {
     // The wash sits behind the words; the paper is around them. Both are read
-    // through, so both take the same 7:1 the stocks take.
+    // through, so both take the same 7:1 the stocks take. A pack whose wash
+    // is a tape label or a sticky note writes on it in its own ink (D-164),
+    // and that ink is the one read through the wash.
     expect(contrast(p.ink, p.paper)).toBeGreaterThanOrEqual(7);
-    expect(contrast(p.ink, p.wash)).toBeGreaterThanOrEqual(7);
+    expect(contrast(p.washInk ?? p.ink, p.wash)).toBeGreaterThanOrEqual(7);
   });
 
   it.each(FAMILY_SWATCHES.filter((f) => COVER_TEMPLATES[f.id].highlight))(
     '$name draws a highlighter you can actually see',
-    ({ p }) => {
+    ({ id, p }) => {
       // A wash that matches its own ground is not a highlighter, which is the
       // exact failure the papery stocks were rebuilt to fix. On a coloured
       // ground the wash is the same hue, so the test is lightness, not hue.
-      expect(deltaE(p.paper, p.wash)).toBeGreaterThanOrEqual(8);
+      // The crayon pack marks with a stroke of its accent beneath the words
+      // rather than a wash behind them, so the accent is what has to clear
+      // the paper there.
+      const mark = COVER_TEMPLATES[id].highlightOn === 'accent' ? p.accent : p.wash;
+      expect(deltaE(p.paper, mark)).toBeGreaterThanOrEqual(8);
     },
   );
 
@@ -851,5 +858,61 @@ describe('readingMinutes', () => {
   it('charges a mixed post for both halves rather than for the louder one', () => {
     const mixed = '柏林'.repeat(1200) + ' ' + new Array(400).fill('word').join(' ');
     expect(readingMinutes(mixed)).toBeGreaterThan(readingMinutes('柏林'.repeat(1200)));
+  });
+});
+
+/* The packs (D-164): whole looks, worn by the editorial accounts. What the
+ * plan has to guarantee for them is the same as for the families, plus the
+ * parts a pack adds: a composition from its own list, at most two stickers,
+ * and a face only when the face can set the title. */
+describe('the packs', () => {
+  const PACK_POST = {
+    id: 'pack-1',
+    post_type: 'guide',
+    title: 'Registering your address in Berlin',
+    body: 'Bring your passport and the rental contract. The office opens at eight, and the queue is shortest then.',
+    theme: 'bureaucracy',
+  };
+
+  it.each(COVER_PACK_IDS.map((id) => ({ id })))('$id composes from its own layouts', ({ id }) => {
+    const plan = coverPlan({ ...PACK_POST, cover_template: id, cover_palette: 0 }, '', '');
+    expect(COVER_TEMPLATES[id].layouts).toContain(plan.layout);
+    expect(plan.pack?.id).toBe(id);
+    expect(plan.stickers.length).toBeLessThanOrEqual(2);
+    expect(plan.stickerStyle).not.toBe('emoji');
+  });
+
+  it('sets an English title in the pack face and a Chinese one in the system stack', () => {
+    const english = coverPlan({ ...PACK_POST, cover_template: 'sketch_max', cover_palette: 0 }, '', '');
+    expect(english.face).not.toBeNull();
+    const chinese = coverPlan(
+      { ...PACK_POST, cover_template: 'sketch_max', cover_palette: 0 },
+      '在柏林登记住址',
+      '带上护照和租房合同。办公室八点开门，那时排队最短。',
+    );
+    expect(chinese.face).toBeNull();
+  });
+
+  it('keeps the title whole on a block rather than cutting a phrase from the sentence', () => {
+    const plan = coverPlan({ ...PACK_POST, cover_template: 'candy', cover_palette: 1 }, '', '');
+    expect(plan.highlightStyle).toBe('block');
+    expect(plan.highlight).toBeNull();
+  });
+
+  it('gives one post the same stickers and doodles every time it is drawn', () => {
+    const a = coverPlan({ ...PACK_POST, cover_template: 'sketch_chloe', cover_palette: 2 }, '', '');
+    const b = coverPlan({ ...PACK_POST, cover_template: 'sketch_chloe', cover_palette: 2 }, '', '');
+    expect(a.stickers).toEqual(b.stickers);
+    expect(a.doodles).toEqual(b.doodles);
+    expect(a.doodles.length).toBeGreaterThan(0);
+  });
+
+  it('leaves the families exactly as they were', () => {
+    const plan = coverPlan({ ...PACK_POST, cover_template: 'bold', cover_palette: 0 }, '', '');
+    expect(plan.stickerStyle).toBe('emoji');
+    expect(plan.stickers).toEqual([]);
+    expect(plan.doodles).toEqual([]);
+    expect(plan.face).toBeNull();
+    expect(plan.pack).toBeNull();
   });
 });

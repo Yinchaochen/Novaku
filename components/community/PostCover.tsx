@@ -1,8 +1,23 @@
 import { Text, View } from 'react-native';
-import Svg, { Circle, Defs, Line, Pattern, Rect } from 'react-native-svg';
+import Svg, { Line } from 'react-native-svg';
 
+import { CoverSticker } from './CoverSticker';
+import {
+  BrushMark,
+  CoverGround,
+  DoodleLayer,
+  PhraseLabel,
+  RansomTitle,
+  ScribbleMark,
+  Scrap,
+  SpiralHoles,
+  Splashes,
+  StampsStrip,
+  Tab,
+} from './coverPackParts';
 import { useLanguage } from '../../context/LanguageContext';
-import { coverPlan, estimateEm, readingMinutes, type CoverPalette } from '../../lib/postCover';
+import { COVER_FACES, faceText } from '../../lib/coverFonts';
+import { coverPlan, estimateEm, readingMinutes, type CoverLayout, type CoverPalette } from '../../lib/postCover';
 import { displayFontFor } from '../../lib/displayFont';
 import type { CommunityPost } from '../../features/community/useCommunity';
 
@@ -116,7 +131,10 @@ export function PostCover({
    * and repeats it anyway, and looking at both walls the repetition costs far
    * less than the emptiness did.
    */
-  const titleText = (post.translated_title ?? post.title ?? '').trim();
+  const pack = plan.pack;
+  const face = plan.face ? COVER_FACES[plan.face] : null;
+  const seed = post.id.split('').reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) >>> 0, 7);
+  const titleText = faceText(plan.face, (post.translated_title ?? post.title ?? '').trim());
   const titleEm = estimateEm(titleText);
   // Sized to FIT four lines rather than banded into four sizes. The bands put
   // a 24em title on a rung that holds 22 and every other card in the wall
@@ -124,7 +142,9 @@ export function PostCover({
   // holds about 0.52/r em once wrapping slack is paid, so four of them hold
   // 2.08/r; 1.85 is that with the slack the estimate itself can be wrong by.
   const titleRatio = Math.max(0.052, Math.min(0.112, titleEm > 0 ? 1.85 / titleEm : 0.112));
-  const titleSize = width * titleRatio;
+  // A pack's hand face sets larger or smaller than the system face at the
+  // same size; `scale` is that correction, measured in the prototype.
+  const titleSize = width * titleRatio * (face?.scale ?? 1);
   // The summary is the same size a body page sets at, so a cover and the
   // pages behind it are one object at two densities rather than two designs.
   const size = width * Math.min(plan.sizeRatio, 0.052);
@@ -145,37 +165,83 @@ export function PostCover({
   // cover is drawn in the READER's language, so the family cannot promise the
   // layout -- it falls back to the plate, which is its nearest relative.
   const canStack = CJK_RE.test(plan.keyLine);
-  const layout = plan.layout === 'vertical' && !canStack ? 'plate' : plan.layout;
+  // A poster anchors its words to the bottom edge, and a long title pushed
+  // the first line off the top; past ~18 em the card is set as a page instead.
+  const layout: CoverLayout =
+    plan.layout === 'vertical' && !canStack
+      ? 'plate'
+      : plan.layout === 'poster' && titleEm > 18
+        ? 'journal'
+        : plan.layout;
   const centred = layout === 'plate' || layout === 'rules';
+  const onPage = layout === 'zine' || layout === 'journalpage';
 
   // Room left under the title, in lines of the summary's own size.
   const excerptLines = 6;
 
-  const titleBlock = titleText ? (
-    <Text
-      numberOfLines={4}
+  const titleStyle = {
+    fontSize: titleSize,
+    lineHeight: titleSize * (face?.lead ?? (onPage ? 1.12 : 1.22)),
+    // Set in the pack's face when it covers every glyph, else in the display
+    // face when that does, else the system stack — never a mixture (D-148).
+    fontFamily: face ? face.family : displayFontFor(titleText),
+    fontWeight: face ? face.weight : displayFontFor(titleText) ? ('400' as const) : ('800' as const),
+    letterSpacing: face?.track ? face.track * titleSize : titleSize > 18 ? -0.4 : 0,
+    color: palette.ink,
+    textAlign: centred ? ('center' as const) : ('left' as const),
+  };
+
+  // Cut-out letters past ~60 glyphs are a wall of scraps, not a title.
+  const ransom = Boolean(pack?.decor?.includes('ransom')) && onPage && Array.from(titleText).length <= 60;
+  const titleBlock = !titleText ? null : ransom ? (
+    <View style={{ marginBottom: plan.isBlank ? 0 : 0.5 * u }}>
+      <RansomTitle title={titleText} size={titleSize * 0.9} seed={seed} width={width} />
+    </View>
+  ) : plan.highlightStyle === 'block' ? (
+    // The candy pack: the title ON a block of its own colour.
+    <View style={{ alignItems: centred ? 'center' : 'flex-start', marginBottom: plan.isBlank ? 0 : 0.6 * u }}>
+      <View style={{ paddingHorizontal: 0.7 * u, paddingVertical: 0.4 * u, borderRadius: u * 0.28, backgroundColor: palette.wash }}>
+        <Text numberOfLines={4} style={titleStyle}>
+          {titleText}
+        </Text>
+      </View>
+    </View>
+  ) : (
+    <View
       style={{
-        fontSize: titleSize,
-        lineHeight: titleSize * 1.22,
-        // Set in the display face when every glyph of this title is in it, and
-        // in the system stack otherwise — never a mixture (D-148).
-        fontFamily: displayFontFor(titleText),
-        fontWeight: displayFontFor(titleText) ? '400' : '800',
-        letterSpacing: titleSize > 18 ? -0.4 : 0,
-        color: palette.ink,
         marginBottom: plan.isBlank ? 0 : 0.7 * u,
-        textAlign: centred ? 'center' : 'left',
+        transform: onPage ? [{ rotate: layout === 'zine' ? '-3deg' : '-1.2deg' }] : undefined,
       }}
     >
-      {titleText}
-    </Text>
-  ) : null;
+      <Text numberOfLines={4} style={titleStyle}>
+        {titleText}
+      </Text>
+    </View>
+  );
+
+  // On a journal page the sentence is in the page's own hand, a size up and
+  // looser, the way the prototype set it; elsewhere it stays the body face.
+  const labelFace = onPage && plan.labelFace ? COVER_FACES[plan.labelFace] : null;
+  const bodyType = labelFace
+    ? {
+        ...type,
+        fontFamily: labelFace.family,
+        fontWeight: labelFace.weight,
+        fontSize: size * 1.12 * labelFace.scale,
+        lineHeight: size * 1.12 * labelFace.scale * 1.4,
+        letterSpacing: 0,
+      }
+    : type;
+  const markOnLabel = plan.highlightStyle === 'tape' || plan.highlightStyle === 'sticky';
+  // The colour a stroke-style mark is painted in: the crayon pack marks with
+  // its accent beneath the words; everything else paints with the wash.
+  const markColour = pack?.highlightOn === 'accent' ? palette.accent : palette.wash;
 
   const keyLineBlock = plan.isBlank ? null : (
     <>
       <Text
-        numberOfLines={plan.highlight ? Math.max(1, excerptLines - 1) : excerptLines}
-        style={[type, centred ? { textAlign: 'center' as const } : null]}
+        numberOfLines={plan.highlight ? Math.max(1, (onPage ? 4 : excerptLines) - 1) : onPage ? 4 : excerptLines}
+        style={[bodyType, centred ? { textAlign: 'center' as const } : null]}
       >
         {plan.highlight ? plan.highlight.before.trimEnd() : plan.keyLine}
       </Text>
@@ -185,8 +251,21 @@ export function PostCover({
           all a nested run can paint: square, and the full height of the line.
           The phrase gets a block of its own instead, and the block shrinks to
           its own text, so the rule underneath is the width of the words and
-          nothing else. */}
-      {plan.highlight ? (
+          nothing else. The packs draw the same block under a brush stroke, a
+          scribble, or move the phrase onto a label (D-164). */}
+      {plan.highlight && markOnLabel ? (
+        <View style={{ marginTop: 0.8 * u, marginLeft: layout === 'journalpage' ? 0.4 * u : 0.3 * u }}>
+          <PhraseLabel
+            text={plan.highlight.span}
+            kind={plan.highlightStyle === 'sticky' ? 'sticky' : 'tape'}
+            face={plan.labelFace}
+            size={size}
+            palette={palette}
+            u={u}
+            rotate={layout === 'zine' ? -2 : 2}
+          />
+        </View>
+      ) : plan.highlight ? (
         <View
           style={{
             flexDirection: 'row',
@@ -199,59 +278,62 @@ export function PostCover({
                 rides up over the baseline and the glyphs stay on top of it,
                 which is a highlighter and not a strikethrough. Absolute so it
                 contributes no height. */}
-            <View
-              style={{
-                position: 'absolute',
-                left: -size * 0.04,
-                right: -size * 0.04,
-                bottom: (size * (plan.leading - 1)) / 2 + size * (DESCENDER + OVERLAP) - rule,
-                height: rule,
-                borderRadius: rule / 2,
-                backgroundColor: palette.wash,
-              }}
-            />
-            <Text numberOfLines={1} style={type}>
+            {plan.highlightStyle === 'brush' ? (
+              <BrushMark height={rule * 1.6} colour={markColour} />
+            ) : plan.highlightStyle === 'scribble' ? (
+              <ScribbleMark height={rule * 1.5} colour={markColour} />
+            ) : (
+              <View
+                style={{
+                  position: 'absolute',
+                  left: -size * 0.04,
+                  right: -size * 0.04,
+                  bottom: (size * (plan.leading - 1)) / 2 + size * (DESCENDER + OVERLAP) - rule,
+                  height: rule,
+                  borderRadius: rule / 2,
+                  backgroundColor: palette.wash,
+                }}
+              />
+            )}
+            <Text numberOfLines={1} style={bodyType}>
               {plan.highlight.span}
             </Text>
           </View>
-          {plan.highlight.after ? <Text style={type}>{plan.highlight.after}</Text> : null}
+          {plan.highlight.after ? <Text style={bodyType}>{plan.highlight.after}</Text> : null}
         </View>
       ) : null}
     </>
   );
 
   return (
-    <View style={{ width: '100%', aspectRatio: 1, backgroundColor: palette.paper }}>
-      <Svg width="100%" height="100%" style={{ position: 'absolute' }}>
-        {plan.ground === 'dotted' ? (
-          <>
-            <Defs>
-              {/* Pitch u, dot 0.9dp. That is ~9% of the pitch, which is where
-                  Rhodia and Leuchtturm put it. */}
-              <Pattern id="dots" width={u} height={u} patternUnits="userSpaceOnUse">
-                <Circle cx={u / 2} cy={u / 2} r={0.45} fill={palette.dot} />
-              </Pattern>
-            </Defs>
-            <Rect x={0} y={0} width="100%" height="100%" fill="url(#dots)" />
-          </>
-        ) : null}
+    <View style={{ width: '100%', aspectRatio: 1, backgroundColor: palette.paper, overflow: 'hidden' }}>
+      {/* Pitch u, dot 0.9dp. That is ~9% of the pitch, which is where Rhodia
+          and Leuchtturm put it. The packs' other grounds live next to it. */}
+      <CoverGround ground={plan.ground} u={u} palette={palette} grain={pack?.decor?.includes('grain')} />
 
-        {/* The margin rule belongs to the journal page and to nothing else: a
-            masthead has its band, a poster has its field, a plate has its two
-            hairlines. Held at a third alpha because a 1dp rule at full
-            strength beside 13dp type reads as a border. */}
-        {layout === 'journal' ? (
+      {/* The margin rule belongs to the journal page and to nothing else: a
+          masthead has its band, a poster has its field, a plate has its two
+          hairlines. Held at a third alpha because a 1dp rule at full
+          strength beside 13dp type reads as a border. A sketchbook page draws
+          its school-notebook red rule at the same place. */}
+      {layout === 'journal' || layout === 'journalpage' ? (
+        <Svg width="100%" height="100%" style={{ position: 'absolute' }}>
           <Line
-            x1={(MARGIN_LEFT - 0.8) * u}
+            x1={(layout === 'journalpage' ? 1.3 : MARGIN_LEFT - 0.8) * u}
             y1={0}
-            x2={(MARGIN_LEFT - 0.8) * u}
+            x2={(layout === 'journalpage' ? 1.3 : MARGIN_LEFT - 0.8) * u}
             y2={18 * u}
             stroke={palette.accent}
-            strokeWidth={1}
-            strokeOpacity={0.34}
+            strokeWidth={layout === 'journalpage' ? 1.5 : 1}
+            strokeOpacity={layout === 'journalpage' ? 0.6 : 0.34}
           />
-        ) : null}
-      </Svg>
+        </Svg>
+      ) : null}
+
+      {/* What else lies on a sketchbook page, under the words. */}
+      {pack?.decor?.includes('spiral') ? <SpiralHoles u={u} paper={palette.paper} /> : null}
+      {pack?.decor?.includes('splash') ? <Splashes u={u} /> : null}
+      {pack?.decor?.includes('scrap') ? <Scrap u={u} /> : null}
 
       {/* The watermark, in `palette.dot` — the ground colour, already
           specified as the one tone visible as texture and gone as noise. The
@@ -420,16 +502,40 @@ export function PostCover({
             alignItems: 'flex-start',
           }}
         >
-          <View
-            style={{
-              paddingHorizontal: 0.7 * u,
-              paddingVertical: 0.5 * u,
-              borderRadius: u * 0.28,
-              backgroundColor: palette.wash,
-            }}
-          >
-            {keyLineBlock}
-          </View>
+          {pack ? (
+            // A pack's block carries the title, and the sentence runs below it
+            // in the open (the prototype's reading of their 拼接色块).
+            <>
+              <View
+                style={{
+                  paddingHorizontal: 0.7 * u,
+                  paddingVertical: 0.5 * u,
+                  borderRadius: u * 0.28,
+                  backgroundColor: pack.highlightOn === 'accent' ? palette.accent : palette.wash,
+                  marginBottom: 0.6 * u,
+                }}
+              >
+                <Text
+                  numberOfLines={4}
+                  style={[titleStyle, pack.highlightOn === 'accent' ? { color: palette.paper } : null]}
+                >
+                  {titleText}
+                </Text>
+              </View>
+              {keyLineBlock}
+            </>
+          ) : (
+            <View
+              style={{
+                paddingHorizontal: 0.7 * u,
+                paddingVertical: 0.5 * u,
+                borderRadius: u * 0.28,
+                backgroundColor: palette.wash,
+              }}
+            >
+              {keyLineBlock}
+            </View>
+          )}
         </View>
       ) : layout === 'mono' ? (
         <View
@@ -490,6 +596,19 @@ export function PostCover({
             }}
           />
         </View>
+      ) : layout === 'zine' ? (
+        // The mixtape sheet: a tilted title high on the field, the sentence
+        // in the label hand, the phrase on a torn label below.
+        <View style={{ position: 'absolute', left: 1.4 * u, top: 1.9 * u, width: 15.2 * u }}>
+          {titleBlock}
+          {keyLineBlock}
+        </View>
+      ) : layout === 'journalpage' ? (
+        // A page of a journal: inside the red margin rule, in the page's hand.
+        <View style={{ position: 'absolute', left: 2.4 * u, top: 1.6 * u, width: 14.4 * u }}>
+          {titleBlock}
+          {keyLineBlock}
+        </View>
       ) : (
         <View
           style={{
@@ -512,7 +631,7 @@ export function PostCover({
           The plate does without one. Two rules, a centred rubric and a centred
           sentence are a composition; an emoji in the corner of it is a sticker
           somebody put on a printed card. */}
-      {plan.sticker && (layout === 'journal' || layout === 'poster') ? (
+      {plan.stickerStyle === 'emoji' && plan.sticker && (layout === 'journal' || layout === 'poster') ? (
         <Text
           style={{
             position: 'absolute',
@@ -526,6 +645,48 @@ export function PostCover({
         >
           {plan.sticker}
         </Text>
+      ) : null}
+
+      {/* The packs' drawn stickers (D-164): our geometry, in the pack's own
+          render, on the same margins the stamp used. The plate and the rules
+          still do without one, for the same reason as before. */}
+      {pack && plan.stickerStyle !== 'emoji' && !centred
+        ? plan.stickers.map((s, i) => {
+            const boost = s.second ? 1 : (pack.stickerBoost ?? 1);
+            const sizePx = s.sizeU * boost * u;
+            const position = s.second
+              ? layout === 'poster'
+                ? { left: 1.1 * u, top: 1.0 * u }
+                : onPage
+                  ? { left: 0.7 * u, bottom: 0.6 * u }
+                  : { left: 0.9 * u, bottom: 0.9 * u }
+              : layout === 'poster'
+                ? { right: 1.2 * u, top: 1.0 * u }
+                : layout === 'zine'
+                  ? { right: -0.3 * u, bottom: 1.6 * u }
+                  : layout === 'journalpage'
+                    ? { right: 0.8 * u, bottom: 0.7 * u }
+                    : { right: 1.0 * u, bottom: 0.6 * u };
+            return (
+              <View key={i} pointerEvents="none" style={{ position: 'absolute', ...position }}>
+                <CoverSticker
+                  id={s.id}
+                  size={sizePx}
+                  mode={plan.stickerStyle === 'emoji' ? 'puffy' : plan.stickerStyle}
+                  ink={palette.ink}
+                  halo={(pack.halo ?? 0) * 24}
+                  second={palette.accent}
+                  rotate={s.rot}
+                />
+              </View>
+            );
+          })
+        : null}
+
+      {pack?.decor?.includes('stamps') ? <StampsStrip u={u} palette={palette} /> : null}
+      {pack?.decor?.includes('tab') ? <Tab u={u} /> : null}
+      {pack && plan.doodles.length > 0 ? (
+        <DoodleLayer doodles={plan.doodles} u={u} ink={palette.ink} opacity={pack.doodles?.opacity ?? 0.9} />
       ) : null}
     </View>
   );

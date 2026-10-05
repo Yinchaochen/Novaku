@@ -40,6 +40,15 @@ import {
   PlusJakartaSans_800ExtraBold,
   useFonts,
 } from '@expo-google-fonts/plus-jakarta-sans';
+import { AmaticSC_700Bold } from '@expo-google-fonts/amatic-sc';
+import { Caveat_700Bold } from '@expo-google-fonts/caveat';
+import { CoveredByYourGrace_400Regular } from '@expo-google-fonts/covered-by-your-grace';
+import { Kalam_700Bold } from '@expo-google-fonts/kalam';
+import { Lobster_400Regular } from '@expo-google-fonts/lobster';
+import { PatrickHand_400Regular } from '@expo-google-fonts/patrick-hand';
+import { PermanentMarker_400Regular } from '@expo-google-fonts/permanent-marker';
+import { PlayfairDisplay_800ExtraBold } from '@expo-google-fonts/playfair-display';
+import { RockSalt_400Regular } from '@expo-google-fonts/rock-salt';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { StyleSheet } from 'nativewind';
 import { StatusBar } from 'expo-status-bar';
@@ -186,6 +195,18 @@ function AppBody() {
     // Bold, and lib/displayFont.ts knows exactly which codepoints are in it —
     // a string with one character outside them keeps the system stack.
     'PosterviaDisplay-Bold': require('../assets/fonts/PosterviaDisplay-Bold.otf'),
+    // The cover packs' hand faces (D-164), all SIL OFL. lib/coverFonts.ts
+    // holds each one's cmap and sets a title in it only when every glyph is
+    // there; the names here are the ones that file expects.
+    Caveat_700Bold,
+    PatrickHand_400Regular,
+    Kalam_700Bold,
+    PermanentMarker_400Regular,
+    RockSalt_400Regular,
+    CoveredByYourGrace_400Regular,
+    AmaticSC_700Bold,
+    PlayfairDisplay_800ExtraBold,
+    Lobster_400Regular,
   });
 
   // IOS-LOGIN-114/116: Android-only native splash dismiss. AppBody mounting
