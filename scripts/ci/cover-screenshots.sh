@@ -13,13 +13,15 @@ shoot() { adb exec-out screencap -p > "shots/$1.png"; }
 adb shell monkey -p app.novaku.mobile -c android.intent.category.LAUNCHER 1 >/dev/null
 sleep 30
 shoot 00-launch
-adb shell am start -W -a android.intent.action.VIEW -d "postervia://dev/plaza-cover" app.novaku.mobile
+# The wall: every pack on every sample, two to a row at the phone's own column
+# width (the gallery's own rows scroll sideways, past what a downward walk sees).
+adb shell am start -W -a android.intent.action.VIEW -d "postervia://dev/plaza-cover?wall=1" app.novaku.mobile
 sleep 30
-shoot 01-gallery-top
+shoot 01-wall
 
 # The Chinese faces load on first use; give them time, then walk the page.
-for i in $(seq 2 22); do
+for i in $(seq 2 18); do
   adb shell input swipe 540 1900 540 700 700
   sleep 5
-  shoot "$(printf '%02d' "$i")-gallery"
+  shoot "$(printf '%02d' "$i")-wall"
 done

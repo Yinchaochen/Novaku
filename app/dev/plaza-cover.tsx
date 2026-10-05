@@ -1,4 +1,5 @@
-import { ScrollView, Text, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import { ScrollView, Text, View, useWindowDimensions } from 'react-native';
 
 import { Screen } from '../../components/Screen';
 import { SectionLabel } from '../../components/SectionLabel';
@@ -361,7 +362,54 @@ function PagesRow() {
   );
 }
 
+/**
+ * Every pack on every sample post, and every family on the payslip, two to a
+ * row at the phone's own column width, the way the feed lays them out. The
+ * rows above scroll sideways, and a screenshot run that only scrolls down
+ * never sees past their first sample: the native check
+ * (.github/workflows/cover-screenshots-android.yml) opens this with ?wall=1.
+ */
+function PhoneWall() {
+  const { width: windowWidth } = useWindowDimensions();
+  // feedGrid on a phone: 6dp at each edge, two columns, 3dp of gutter in each cell.
+  const column = Math.floor((windowWidth - 12) / 2);
+  const cover = column - 6;
+  const cells = [
+    ...COVER_PACK_IDS.flatMap((id) =>
+      PACK_POSTS.map((post, index) => ({ id, post: { ...post, cover_template: id, cover_palette: index } as CommunityPost })),
+    ),
+    ...COVER_TEMPLATE_IDS.filter((id) => !(COVER_PACK_IDS as readonly string[]).includes(id)).map((id) => ({
+      id,
+      post: { ...COMPARE, cover_template: id, cover_palette: 0 } as CommunityPost,
+    })),
+  ];
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 6 }}>
+      {cells.map(({ id, post }) => (
+        <View key={`${id}-${post.id}`} style={{ width: column, paddingHorizontal: 3, paddingBottom: 8 }}>
+          <View style={{ width: cover, borderRadius: 12, overflow: 'hidden' }}>
+            <PostCover post={post} width={cover} />
+          </View>
+          <Text style={{ fontSize: 10, color: colors.textMuted, paddingTop: 2 }}>
+            {id} · {post.id}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export default function PlazaCoverGallery() {
+  const { wall } = useLocalSearchParams<{ wall?: string }>();
+  if (wall) {
+    return (
+      <Screen>
+        <ScrollView contentContainerStyle={{ paddingTop: 8, paddingBottom: 48 }}>
+          <PhoneWall />
+        </ScrollView>
+      </Screen>
+    );
+  }
   return (
     <Screen>
       <ScrollView contentContainerStyle={{ paddingBottom: 48 }}>
