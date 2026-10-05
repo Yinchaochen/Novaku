@@ -16,6 +16,7 @@
 import { render } from '@testing-library/react-native';
 
 import { PostCover } from '../PostCover';
+import * as CoverStickerModule from '../CoverSticker';
 import type { CommunityPost } from '../../../features/community/useCommunity';
 
 jest.mock('react-native-svg', () => {
@@ -112,6 +113,14 @@ function everyStyle(json: unknown): Record<string, unknown>[] {
   const own = Array.isArray(style) ? style : style ? [style] : [];
   const nested = (node.children ?? []).flatMap(everyStyle);
   return [...(own as Record<string, unknown>[]), ...nested];
+}
+
+/** Every node in the rendered tree that carries a numberOfLines prop. */
+function everyText(json: unknown): { props: { numberOfLines?: number } }[] {
+  if (!json || typeof json !== 'object') return [];
+  const node = json as { props?: { numberOfLines?: number }; children?: unknown[] };
+  const own = node.props && 'numberOfLines' in node.props ? [node as { props: { numberOfLines?: number } }] : [];
+  return [...own, ...(node.children ?? []).flatMap(everyText)];
 }
 
 describe('PostCover', () => {
@@ -232,6 +241,80 @@ describe('the collage', () => {
     );
     expect(tree.getAllByTestId('expo-image')).toHaveLength(1);
     expect(tree.getAllByText('Getting from BER into the city').length).toBeGreaterThan(0);
+  });
+});
+
+describe('fitting the words to the square', () => {
+  const longGerman = {
+    cover_template: 'stamp' as const,
+    title: 'Architekturführung im Mies van der Rohe Haus',
+    body:
+      'Eine Führung durch das letzte Wohnhaus, das Mies in Deutschland gebaut hat, mit Garten, Möbeln und den Plänen von damals.',
+  };
+
+  it('never breaks a German compound: the title is sized so its longest word fits a line', async () => {
+    const tree = await render(<PostCover post={makePost({ id: 'fit-1', ...longGerman })} width={184.5} />);
+    const title = tree.getAllByText(longGerman.title)[0];
+    const style = Object.assign({}, ...[title.props.style].flat(Infinity).filter(Boolean));
+    // 'Architekturführung' is about 9 em; the stamp column is 12u of an 18u card.
+    const u = 184.5 / 18;
+    expect(style.fontSize * 9).toBeLessThanOrEqual(12 * u * 0.95 * 1.05);
+  });
+
+  it('shortens the summary rather than let it run off the bottom of the card', async () => {
+    // A title that fills four lines and a summary that would fill six more:
+    // on any composition the pack picks, the summary is trimmed to fit.
+    const crowded = {
+      cover_template: 'crayon' as const,
+      title: 'Wie man in Berlin eine Wohnung findet, ohne dabei den Verstand zu verlieren',
+      body:
+        'Die Wohnungssuche in Berlin ist ein Vollzeitjob mit Besichtigungen, Unterlagen, Schufa-Auskunft, ' +
+        'Mietschuldenfreiheitsbescheinigung und Geduld, und wer neu in der Stadt ist, sollte früh anfangen und ' +
+        'jede Besichtigung wahrnehmen, auch wenn die Wohnung auf dem Papier nicht perfekt aussieht.',
+    };
+    for (const id of ['crowd-1', 'crowd-2', 'crowd-3', 'crowd-4']) {
+      const tree = await render(<PostCover post={makePost({ id, ...crowded })} width={148} />);
+      const budgets = everyText(tree.toJSON())
+        .map((node) => node.props.numberOfLines)
+        .filter((n): n is number => typeof n === 'number' && n !== 4 && n !== 1);
+      // Title texts carry 4 and the phrase line 1; whatever summary is left is under the default 6.
+      for (const n of budgets) expect(n).toBeLessThan(6);
+    }
+  });
+});
+
+describe('corner stickers', () => {
+  it('gives up the corner sticker rather than draw it over a long summary', async () => {
+    // lisum's Plaza, 2026-10-05: Sean's sparkle sat on "Schöneberg".
+    const drawn = jest.spyOn(CoverStickerModule, 'CoverSticker');
+    const u = 184.5 / 18;
+    const cornerSizes = () =>
+      drawn.mock.calls.map(([props]) => props.size).filter((size) => size > 2.5 * u);
+
+    await render(
+      <PostCover
+        post={makePost({ id: 'sean-1', cover_template: 'sketch_sean', title: 'Short', body: 'One short line here.' })}
+        width={184.5}
+      />,
+    );
+    expect(cornerSizes().length).toBeGreaterThan(0);
+
+    drawn.mockClear();
+    await render(
+      <PostCover
+        post={makePost({
+          id: 'sean-1',
+          cover_template: 'sketch_sean',
+          title: 'German for those rebuilding literacy skills',
+          body:
+            'If you have had schooling interrupted or never went far in school, this full-time course at ' +
+            'Barbarossaplatz 5 in Schöneberg teaches reading and writing from the very first letter onwards.',
+        })}
+        width={184.5}
+      />,
+    );
+    expect(cornerSizes()).toEqual([]);
+    drawn.mockRestore();
   });
 });
 

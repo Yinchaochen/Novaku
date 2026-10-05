@@ -151,20 +151,6 @@ export function PostCover({
   // holds about 0.52/r em once wrapping slack is paid, so four of them hold
   // 2.08/r; 1.85 is that with the slack the estimate itself can be wrong by.
   const titleRatio = Math.max(0.052, Math.min(0.112, titleEm > 0 ? 1.85 / titleEm : 0.112));
-  // A pack's hand face sets larger or smaller than the system face at the
-  // same size; `scale` is that correction, measured in the prototype.
-  // On the collage's slip a long word has less room than the line it was
-  // sized for: "Architekturführung" broke mid-word with no hyphen. The longest
-  // Latin word is held to the slip's line; Han, kana and Hangul wrap per glyph
-  // and need no such cap.
-  const longestWordEm = Math.max(
-    0,
-    ...titleText.split(/\s+/).filter((w) => w && !CJK_RE.test(w)).map((w) => estimateEm(w)),
-  );
-  const titleSize = Math.min(
-    width * titleRatio * (face?.scale ?? 1) * (collage ? 0.78 : 1),
-    collage && longestWordEm > 0 ? ((9.0 * u) / longestWordEm) * (face?.scale ?? 1) : Infinity,
-  );
   // The summary is the same size a body page sets at, so a cover and the
   // pages behind it are one object at two densities rather than two designs.
   const size = width * Math.min(plan.sizeRatio, 0.052);
@@ -199,6 +185,117 @@ export function PostCover({
   // Room left under the title, in lines of the summary's own size.
   const excerptLines = collage ? 3 : 6;
 
+  // The sentence is in the pack's hand for its script when the pack has one
+  // (D-166: the prototype sets the whole card in its face); otherwise, and
+  // until an on-demand face has loaded, it stays the system body face.
+  const labelFace = plan.labelFace && bodyReady ? COVER_FACES[plan.labelFace] : null;
+  const bodyType = labelFace
+    ? {
+        ...type,
+        fontFamily: labelFace.family,
+        fontWeight: labelFace.weight,
+        // A journal page sets its hand a size up and looser, as the prototype did.
+        fontSize: size * (onPage ? 1.12 : 1) * labelFace.scale,
+        lineHeight: size * (onPage ? 1.12 : 1) * labelFace.scale * (onPage ? 1.4 : 1.32),
+        letterSpacing: 0,
+      }
+    : type;
+  const markOnLabel = plan.highlightStyle === 'tape' || plan.highlightStyle === 'sticky';
+  const markRule = Math.max(3, bodyType.fontSize * RULE_HEIGHT);
+
+  // ---- Fitting the words to the square (2026-10-05) ------------------------
+  // An estimate, made without a layout pass: the cell is recycled, and a
+  // measured size would redraw the card while it scrolls. It decides the three
+  // things lisum's Plaza showed going wrong: a German compound broken with no
+  // hyphen, a summary cut off by the card's bottom edge, a sticker on a word.
+  const nametag = Boolean(pack?.decor?.includes('nametag'));
+  // Cut-out letters past ~60 glyphs are a wall of scraps, not a title.
+  const ransom = Boolean(pack?.decor?.includes('ransom')) && onPage && Array.from(titleText).length <= 60;
+  // How wide a line of the words is, in u, per composition.
+  const columnU = collage
+    ? 9.4
+    : nametag
+      ? 10.7
+      : layout === 'journalpage'
+        ? 14.4
+        : layout === 'zine'
+          ? 15.2
+          : layout === 'rules'
+            ? 10.2
+            : layout === 'blocks' && pack
+              ? 10.6
+              : MEASURE;
+  // Where the words start, and how much height they may take.
+  const startU =
+    layout === 'journalpage' ? 1.6 : layout === 'zine' ? 1.9 : layout === 'blocks' ? 4
+      : layout === 'mono' || layout === 'magazine' ? 4.2 : 3.4;
+  const availableU = collage
+    ? 13
+    : nametag
+      ? 16
+      : layout === 'plate'
+        ? 13.6
+        : layout === 'rules'
+          ? 15.6
+          : layout === 'poster'
+            ? 14.6
+            : 17.1 - startU;
+  // The badge sets its title a size down to fit its own measure.
+  const titleBox = nametag ? 0.74 : 1;
+  const titleLead = face?.lead ?? (onPage ? 1.12 : 1.22);
+  const faceScale = face?.scale ?? 1;
+  const bodyScale = labelFace?.scale ?? 1;
+  const linesFor = (em: number, fontPx: number, scale: number, max: number) =>
+    em > 0 ? Math.min(max, Math.ceil((em * fontPx) / scale / (columnU * u * 0.9))) : 0;
+  const glyphCount = Array.from(titleText.replace(/\s+/g, '')).length;
+  const titleHeightU = (titleSizePx: number): number => {
+    if (!titleText) return 0;
+    if (ransom) {
+      const s = titleSizePx * 0.9 * Math.max(0.66, Math.min(1, 40 / Math.max(1, glyphCount)));
+      const perLine = Math.max(4, Math.floor((width * 0.8) / (s * 0.64)));
+      return (Math.ceil(glyphCount / perLine) * s * 1.17) / u + 0.5;
+    }
+    const lines = linesFor(titleEm, titleSizePx * titleBox, faceScale, 4);
+    const textU = (lines * titleSizePx * titleBox * titleLead) / u;
+    if (nametag) return 1.3 + 3.8 + Math.max(4.6, 1.8 + textU) + 0.9 + 1.1;
+    const gapU = layout === 'blocks' && pack ? 1.6 : plan.highlightStyle === 'block' ? 1.4 : 0.7;
+    return textU + (plan.isBlank ? 0 : gapU);
+  };
+  const bodyHeightU = (budget: number): number => {
+    if (plan.isBlank || budget === 0) return 0;
+    // A marked phrase is set on a line of its own (or on a label), so the
+    // sentence before it and the phrase are counted apart.
+    const lines = plan.highlight
+      ? linesFor(estimateEm(plan.highlight.before.trimEnd()), bodyType.fontSize, bodyScale, Math.max(1, budget - 1)) +
+        (markOnLabel ? 0 : 1)
+      : linesFor(estimateEm(plan.keyLine), bodyType.fontSize, bodyScale, budget);
+    return (lines * bodyType.lineHeight) / u + (plan.highlight && markOnLabel ? 2.8 : 0);
+  };
+  // A Latin word is never broken: the title is held to the size at which its
+  // longest word fits one line. Han, kana and Hangul wrap per glyph.
+  const longestWordEm = Math.max(
+    0,
+    ...titleText.split(/\s+/).filter((w) => w && !CJK_RE.test(w)).map((w) => estimateEm(w)),
+  );
+  // A pack's hand face sets larger or smaller than the system face at the
+  // same size; `scale` is that correction, measured in the prototype.
+  let titleSize = Math.min(
+    width * titleRatio * faceScale * (collage ? 0.78 : 1),
+    longestWordEm > 0 ? ((columnU * u * 0.95) / (longestWordEm * titleBox)) * faceScale : Infinity,
+  );
+  let bodyBudget = plan.isBlank ? 0 : onPage ? 4 : excerptLines;
+  const overflows = () =>
+    layout !== 'vertical' && titleHeightU(titleSize) + bodyHeightU(bodyBudget) > availableU;
+  // Shorten the summary first, then ease the title down, and only then let
+  // the summary go: the title is the post, the summary is a taste of it.
+  while (overflows() && bodyBudget > 2) bodyBudget -= 1;
+  for (let i = 0; i < 4 && overflows(); i += 1) titleSize *= 0.92;
+  if (overflows()) bodyBudget = 0;
+  for (let i = 0; i < 3 && overflows(); i += 1) titleSize *= 0.9;
+  const textBottomU = startU + titleHeightU(titleSize) + bodyHeightU(bodyBudget);
+  /** Does a corner sticker this far from the bottom, this tall, stay clear of the words? */
+  const clearOfWords = (bottomU: number, sizeU: number) => textBottomU + 0.3 <= 18 - bottomU - sizeU;
+
   const titleStyle = {
     fontSize: titleSize,
     lineHeight: titleSize * (face?.lead ?? (onPage ? 1.12 : 1.22)),
@@ -211,8 +308,6 @@ export function PostCover({
     textAlign: centred ? ('center' as const) : ('left' as const),
   };
 
-  // Cut-out letters past ~60 glyphs are a wall of scraps, not a title.
-  const ransom = Boolean(pack?.decor?.includes('ransom')) && onPage && Array.from(titleText).length <= 60;
   const titleBlock = !titleText ? null : pack?.decor?.includes('nametag') ? (
     // The badge: the title is the one line written on it, so it is set a
     // size down to fit the badge's own measure rather than the page's.
@@ -251,31 +346,14 @@ export function PostCover({
     </View>
   );
 
-  // The sentence is in the pack's hand for its script when the pack has one
-  // (D-166: the prototype sets the whole card in its face); otherwise, and
-  // until an on-demand face has loaded, it stays the system body face.
-  const labelFace = plan.labelFace && bodyReady ? COVER_FACES[plan.labelFace] : null;
-  const bodyType = labelFace
-    ? {
-        ...type,
-        fontFamily: labelFace.family,
-        fontWeight: labelFace.weight,
-        // A journal page sets its hand a size up and looser, as the prototype did.
-        fontSize: size * (onPage ? 1.12 : 1) * labelFace.scale,
-        lineHeight: size * (onPage ? 1.12 : 1) * labelFace.scale * (onPage ? 1.4 : 1.32),
-        letterSpacing: 0,
-      }
-    : type;
-  const markOnLabel = plan.highlightStyle === 'tape' || plan.highlightStyle === 'sticky';
-  const markRule = Math.max(3, bodyType.fontSize * RULE_HEIGHT);
   // The colour a stroke-style mark is painted in: the crayon pack marks with
   // its accent beneath the words; everything else paints with the wash.
   const markColour = pack?.highlightOn === 'accent' ? palette.accent : palette.wash;
 
-  const keyLineBlock = plan.isBlank ? null : (
+  const keyLineBlock = plan.isBlank || bodyBudget === 0 ? null : (
     <>
       <Text
-        numberOfLines={plan.highlight ? Math.max(1, (onPage ? 4 : excerptLines) - 1) : onPage ? 4 : excerptLines}
+        numberOfLines={plan.highlight ? Math.max(1, bodyBudget - 1) : bodyBudget}
         style={[bodyType, centred ? { textAlign: 'center' as const } : null]}
       >
         {plan.highlight ? plan.highlight.before.trimEnd() : plan.keyLine}
@@ -675,7 +753,7 @@ export function PostCover({
           The plate does without one. Two rules, a centred rubric and a centred
           sentence are a composition; an emoji in the corner of it is a sticker
           somebody put on a printed card. */}
-      {plan.stickerStyle === 'emoji' && plan.sticker && (layout === 'journal' || layout === 'poster') ? (
+      {plan.stickerStyle === 'emoji' && plan.sticker && (layout === 'poster' || (layout === 'journal' && clearOfWords(0.7, 2.6))) ? (
         <Text
           style={{
             position: 'absolute',
@@ -711,6 +789,8 @@ export function PostCover({
                   : layout === 'journalpage'
                     ? { right: 0.8 * u, bottom: 0.7 * u }
                     : { right: 1.0 * u, bottom: 0.6 * u };
+            const fromBottom = 'bottom' in position ? position.bottom : undefined;
+            if (fromBottom !== undefined && !clearOfWords(fromBottom / u, sizePx / u)) return null;
             return (
               <View key={i} pointerEvents="none" style={{ position: 'absolute', ...position }}>
                 <CoverSticker
@@ -727,7 +807,7 @@ export function PostCover({
           })
         : null}
 
-      {pack?.decor?.includes('stamps') ? <StampsStrip u={u} palette={palette} /> : null}
+      {pack?.decor?.includes('stamps') && clearOfWords(0.7, 2.2) ? <StampsStrip u={u} palette={palette} /> : null}
       {pack?.decor?.includes('tab') ? <Tab u={u} /> : null}
       {pack && plan.doodles.length > 0 ? (
         <DoodleLayer doodles={plan.doodles} u={u} ink={palette.ink} opacity={pack.doodles?.opacity ?? 0.9} />
