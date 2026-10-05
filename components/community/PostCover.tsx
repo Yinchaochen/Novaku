@@ -18,6 +18,7 @@ import {
   Tab,
 } from './coverPackParts';
 import { useLanguage } from '../../context/LanguageContext';
+import { useCoverFaceReady } from '../../hooks/useCoverFaceReady';
 import { COVER_FACES, faceText } from '../../lib/coverFonts';
 import { coverPlan, estimateEm, readingMinutes, type CoverLayout, type CoverPalette } from '../../lib/postCover';
 import { displayFontFor } from '../../lib/displayFont';
@@ -136,7 +137,11 @@ export function PostCover({
   const pack = plan.pack;
   // The collage sets its words on a slip about three fifths of the card wide.
   const collage = Boolean(pack?.decor?.includes('collage') && plan.cutout);
-  const face = plan.face ? COVER_FACES[plan.face] : null;
+  // A Chinese face is registered on first use (D-166); until it lands the
+  // card is drawn in the system face and redrawn when it does.
+  const titleReady = useCoverFaceReady(plan.face);
+  const bodyReady = useCoverFaceReady(plan.labelFace);
+  const face = plan.face && titleReady ? COVER_FACES[plan.face] : null;
   const seed = post.id.split('').reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) >>> 0, 7);
   const titleText = faceText(plan.face, (post.translated_title ?? post.title ?? '').trim());
   const titleEm = estimateEm(titleText);
@@ -246,20 +251,23 @@ export function PostCover({
     </View>
   );
 
-  // On a journal page the sentence is in the page's own hand, a size up and
-  // looser, the way the prototype set it; elsewhere it stays the body face.
-  const labelFace = onPage && plan.labelFace ? COVER_FACES[plan.labelFace] : null;
+  // The sentence is in the pack's hand for its script when the pack has one
+  // (D-166: the prototype sets the whole card in its face); otherwise, and
+  // until an on-demand face has loaded, it stays the system body face.
+  const labelFace = plan.labelFace && bodyReady ? COVER_FACES[plan.labelFace] : null;
   const bodyType = labelFace
     ? {
         ...type,
         fontFamily: labelFace.family,
         fontWeight: labelFace.weight,
-        fontSize: size * 1.12 * labelFace.scale,
-        lineHeight: size * 1.12 * labelFace.scale * 1.4,
+        // A journal page sets its hand a size up and looser, as the prototype did.
+        fontSize: size * (onPage ? 1.12 : 1) * labelFace.scale,
+        lineHeight: size * (onPage ? 1.12 : 1) * labelFace.scale * (onPage ? 1.4 : 1.32),
         letterSpacing: 0,
       }
     : type;
   const markOnLabel = plan.highlightStyle === 'tape' || plan.highlightStyle === 'sticky';
+  const markRule = Math.max(3, bodyType.fontSize * RULE_HEIGHT);
   // The colour a stroke-style mark is painted in: the crayon pack marks with
   // its accent beneath the words; everything else paints with the wash.
   const markColour = pack?.highlightOn === 'accent' ? palette.accent : palette.wash;
@@ -285,7 +293,7 @@ export function PostCover({
           <PhraseLabel
             text={plan.highlight.span}
             kind={plan.highlightStyle === 'sticky' ? 'sticky' : 'tape'}
-            face={plan.labelFace}
+            face={bodyReady ? plan.labelFace : null}
             size={size}
             palette={palette}
             u={u}
@@ -315,9 +323,12 @@ export function PostCover({
                   position: 'absolute',
                   left: -size * 0.04,
                   right: -size * 0.04,
-                  bottom: (size * (plan.leading - 1)) / 2 + size * (DESCENDER + OVERLAP) - rule,
-                  height: rule,
-                  borderRadius: rule / 2,
+                  // Measured from the sentence's own face: a pack's hand sets
+                  // larger and looser than the system face, and a rule placed
+                  // for the system face crossed a Long Cang line at the middle.
+                  bottom: (bodyType.lineHeight - bodyType.fontSize) / 2 + bodyType.fontSize * (DESCENDER + OVERLAP) - markRule,
+                  height: markRule,
+                  borderRadius: markRule / 2,
                   backgroundColor: palette.wash,
                 }}
               />

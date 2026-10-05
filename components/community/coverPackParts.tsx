@@ -482,7 +482,7 @@ export function NameTag({
   );
 }
 
-const RANSOM_FLOWS_PER_GLYPH = /[぀-ヿ㐀-䶿一-鿿가-힯]/;
+const RANSOM_FLOWS_PER_GLYPH = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af]/;
 
 export function RansomTitle({
   title,

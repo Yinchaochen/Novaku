@@ -28,7 +28,7 @@
  */
 
 import { COVER_CUTOUTS, type CoverCutout, type CutoutHue } from './coverCutouts';
-import { pickFace, type CoverFace } from './coverFonts';
+import { faceCovers, pickFace, type CoverFace } from './coverFonts';
 
 export type CoverType = 'guide' | 'question' | 'recommendation' | 'experience' | 'warning';
 
@@ -378,8 +378,17 @@ export interface CoverTemplate {
   stickerStyle?: CoverStickerStyle;
   /** Faces the title may be set in, rotated by the seed; see lib/coverFonts.ts. */
   fonts?: CoverFace[];
-  /** The face for labels and notes. */
+  /** The face for labels, notes and the summary of a Latin post; none keeps the system face. */
   labelFont?: CoverFace;
+  /**
+   * The faces a Chinese title may be set in, rotated by the seed (D-166). The
+   * prototype pairs each Latin face with a Chinese one (Rock Salt with Ma Shan
+   * Zheng, Patrick Hand with Long Cang...); RN cannot fall back per glyph, so
+   * the pairing is a list of its own chosen by the title's script.
+   */
+  cjkFonts?: CoverFace[];
+  /** The summary's face when the summary is Chinese; none keeps the system face. */
+  cjkLabelFont?: CoverFace;
   /** Marker doodles in the margins: colours ('ink' means the page's ink), how many, how strong. */
   doodles?: { colours: string[]; count: [number, number]; opacity: number };
   /** What else the reference page carries. */
@@ -601,27 +610,29 @@ export const COVER_TEMPLATES: Record<CoverTemplateId, CoverTemplate> = {
     id: 'journal', layout: 'journal', swatches: DEFAULT_STOCKS.map((p) => p.paper), papers: DEFAULT_STOCKS,
     ground: 'dotted', scale: 1, highlight: true, layouts: ['journal', 'plate', 'mono', 'journal', 'poster'],
     highlightStyle: 'bar', stickerStyle: 'puffy', halo: 0.3, watermark: true,
+    fonts: ['playfair', 'caveat'], cjkFonts: ['mashan', 'serifsc'],
   },
   // Their candy rail: a strong colour given its quiet tint, the title on a
   // block of the colour itself, a tall display face where the script allows.
   candy: {
     id: 'candy', layout: 'poster', swatches: BRIGHT_SWATCHES, ground: 'plain', scale: 1.16, highlight: true,
     layouts: ['poster', 'blocks', 'journal', 'mono'], highlightStyle: 'block', stickerStyle: 'puffy',
-    fonts: ['amatic', 'lobster'], halo: 0.3, watermark: false,
+    fonts: ['amatic', 'lobster'], cjkFonts: ['smiley', 'kuaile'], halo: 0.3, watermark: false,
   },
   // One ink, grid paper, a serif. Stickers lose their fill and become line
   // work, stamped rather than stuck; the phrase gets a brush stroke.
   stamp: {
     id: 'stamp', layout: 'plate', swatches: ['#FBFAF7', '#F2EDE2', '#EDE7DB', '#1A1A1A'], ground: 'grid', scale: 1.08,
     highlight: true, layouts: ['plate', 'rules', 'mono', 'plate'], highlightStyle: 'brush', stickerStyle: 'ink',
-    fonts: ['playfair'], watermark: false,
+    fonts: ['playfair'], cjkFonts: ['serifsc', 'mashan', 'longcang'], cjkLabelFont: 'mashan', watermark: false,
   },
   // The dusk rail at mid-tone, with a crayon's misregistered second colour on
   // every sticker and a scribble under the phrase instead of a wash.
   crayon: {
     id: 'crayon', layout: 'journal', swatches: [...DUSK_SWATCHES, '#F6CE72'], ground: 'plain', scale: 0.92, highlight: true,
     highlightOn: 'accent', layouts: ['journal', 'magazine', 'blocks', 'journal'], highlightStyle: 'scribble',
-    stickerStyle: 'crayon', fonts: ['kalam', 'patrick'], decor: ['grain'], watermark: false,
+    stickerStyle: 'crayon', fonts: ['kalam', 'patrick'], labelFont: 'patrick',
+    cjkFonts: ['kuaile', 'zhimang', 'smiley', 'longcang'], cjkLabelFont: 'kuaile', decor: ['grain'], watermark: false,
   },
   // After makeyourownmixtape.com: one saturated field with a tone-on-tone
   // pattern, white painted capitals, cut-outs with a white edge, the phrase
@@ -630,6 +641,7 @@ export const COVER_TEMPLATES: Record<CoverTemplateId, CoverTemplate> = {
     id: 'mixtape', layout: 'zine', swatches: MIXTAPE_FIELDS.map((p) => p.paper), papers: MIXTAPE_FIELDS,
     ground: 'motif', scale: 1, highlight: true, layouts: ['zine'], highlightStyle: 'tape', stickerStyle: 'diecut',
     fonts: ['rocksalt', 'marker', 'caveat', 'lobster'], labelFont: 'grace', halo: 0.45, stickerBoost: 1.35,
+    cjkFonts: ['mashan', 'zhimang', 'longcang'], cjkLabelFont: 'kuaile',
     doodles: { colours: ['#FFF4E6'], count: [2, 4], opacity: 0.22 }, watermark: false,
   },
   // Max's diary (Life is Strange): crumpled cream paper, a black pen, blue
@@ -637,7 +649,7 @@ export const COVER_TEMPLATES: Record<CoverTemplateId, CoverTemplate> = {
   sketch_max: {
     id: 'sketch_max', layout: 'journalpage', swatches: MAX_PAPERS.map((p) => p.paper), papers: MAX_PAPERS,
     ground: 'crumpled', scale: 1, highlight: true, layouts: ['journalpage'], highlightStyle: 'sticky',
-    stickerStyle: 'ink', fonts: ['kalam', 'patrick', 'caveat'], labelFont: 'kalam',
+    stickerStyle: 'ink', fonts: ['kalam', 'patrick', 'caveat'], labelFont: 'kalam', cjkFonts: ['kuaile', 'longcang'], cjkLabelFont: 'kuaile',
     doodles: { colours: [BALLPOINT], count: [3, 6], opacity: 0.85 }, decor: ['stamps', 'scrap', 'tab'], watermark: false,
   },
   // Chloe's journal (Before the Storm): spiral-bound lined paper, watercolour
@@ -646,6 +658,7 @@ export const COVER_TEMPLATES: Record<CoverTemplateId, CoverTemplate> = {
     id: 'sketch_chloe', layout: 'journalpage', swatches: CHLOE_PAPERS.map((p) => p.paper), papers: CHLOE_PAPERS,
     ground: 'ruled', scale: 1, highlight: true, layouts: ['journalpage'], highlightStyle: 'tape',
     stickerStyle: 'puffy', fonts: ['patrick', 'caveat', 'kalam'], labelFont: 'patrick', halo: 0.4,
+    cjkFonts: ['longcang', 'zhimang', 'kuaile'], cjkLabelFont: 'longcang',
     doodles: { colours: ['#19E3FF', '#F7A6C9', '#6B6B6B'], count: [4, 7], opacity: 0.95 },
     decor: ['spiral', 'splash', 'ransom'], watermark: false,
   },
@@ -653,7 +666,7 @@ export const COVER_TEMPLATES: Record<CoverTemplateId, CoverTemplate> = {
   sketch_sean: {
     id: 'sketch_sean', layout: 'journalpage', swatches: SEAN_PAPERS.map((p) => p.paper), papers: SEAN_PAPERS,
     ground: 'toned', scale: 1, highlight: true, layouts: ['journalpage'], highlightStyle: 'bar',
-    stickerStyle: 'ink', fonts: ['patrick', 'kalam', 'caveat'], labelFont: 'patrick',
+    stickerStyle: 'ink', fonts: ['patrick', 'kalam', 'caveat'], labelFont: 'patrick', cjkFonts: ['longcang', 'kuaile'], cjkLabelFont: 'longcang',
     doodles: { colours: ['ink'], count: [4, 8], opacity: 0.8 }, decor: ['grain'], watermark: false,
   },
   // A packet of HELLO-I'M badges: the title is the one line written on the
@@ -663,7 +676,8 @@ export const COVER_TEMPLATES: Record<CoverTemplateId, CoverTemplate> = {
   nametag: {
     id: 'nametag', layout: 'plate', swatches: NAMETAG_PAPERS.map((p) => p.accent), papers: NAMETAG_PAPERS,
     ground: 'plain', scale: 1, measure: 0.6, highlight: true, layouts: ['plate'], highlightStyle: 'bar',
-    stickerStyle: 'ink', fonts: ['caveat', 'kalam', 'patrick'], decor: ['nametag'], watermark: false,
+    stickerStyle: 'ink', fonts: ['caveat', 'kalam', 'patrick'], labelFont: 'patrick', cjkFonts: ['kuaile', 'longcang'],
+    cjkLabelFont: 'kuaile', decor: ['nametag'], watermark: false,
   },
   // A journaling collage, after the tutorial lisum sent (Bilibili BV1CJ411D7US): flat
   // materials underneath, one heavy colour on top at a third of the page, nothing
@@ -673,7 +687,8 @@ export const COVER_TEMPLATES: Record<CoverTemplateId, CoverTemplate> = {
   collage: {
     id: 'collage', layout: 'journal', swatches: COLLAGE_PAPERS.map((p) => p.paper), papers: COLLAGE_PAPERS,
     ground: 'plain', scale: 1, highlight: true, layouts: ['journal'], highlightStyle: 'bar',
-    stickerStyle: 'ink', fonts: ['caveat', 'kalam', 'patrick'], decor: ['collage', 'grain'], watermark: false,
+    stickerStyle: 'ink', fonts: ['caveat', 'kalam', 'patrick'], labelFont: 'patrick', cjkFonts: ['longcang', 'mashan'],
+    cjkLabelFont: 'longcang', decor: ['collage', 'grain'], watermark: false,
   },
 };
 
@@ -1534,6 +1549,9 @@ export function readingMinutes(body: string): number {
   return rounded >= READING_TIME_MIN_MINUTES ? rounded : 0;
 }
 
+/** Han, kana and Hangul: a title with any of them is set from the pack's Chinese faces. */
+const CJK_TEXT = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uac00-\ud7af]/;
+
 /**
  * The plate a collage card wears: rotated by the post's seed through the cutouts
  * whose hue does not disappear into the chosen ground.
@@ -1690,8 +1708,14 @@ export function coverPlan(
   // The title decides the face: a pack's hand-drawn face is used only when it
   // can draw every glyph of this title in this reader's language (D-148).
   const titleText = (displayTitle || post.title || '').trim();
-  const face = pack ? pickFace(pack.fonts, seed, titleText) : null;
-  const labelFace = pack?.labelFont && pickFace([pack.labelFont], 0, highlight?.span ?? titleText) ? pack.labelFont : face;
+  // A Chinese title takes the pack's Chinese faces and a Latin one its Latin
+  // faces (D-166): a Chinese face carries Latin glyphs too, and setting an
+  // English title in brush-script capitals is not what any pack meant.
+  const face = pack ? pickFace(CJK_TEXT.test(titleText) ? pack.cjkFonts : pack.fonts, seed, titleText) : null;
+  // The summary, and the label cut from it, in the pack's hand for its script
+  // when that face can draw the whole sentence; otherwise the system face.
+  const bodyFace = pack && keyLine ? (CJK_TEXT.test(keyLine) ? pack.cjkLabelFont : pack.labelFont) : undefined;
+  const labelFace = bodyFace && faceCovers(bodyFace, keyLine) ? bodyFace : null;
 
   return {
     palette,

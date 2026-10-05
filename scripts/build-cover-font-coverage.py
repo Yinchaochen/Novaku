@@ -31,6 +31,18 @@ FACES = {
     "Lobster_400Regular": "lobster/400Regular/Lobster_400Regular.ttf",
 }
 
+# The Chinese faces (D-166) are our own subsets, built by build-cover-cjk-fonts.py and loaded on
+# demand from assets/fonts/cover rather than registered at start-up.
+CJK_DIR = ROOT / "assets" / "fonts" / "cover"
+CJK_FACES = [
+    "ZCOOLKuaiLe_Cover",
+    "MaShanZheng_Cover",
+    "LongCang_Cover",
+    "ZhiMangXing_Cover",
+    "NotoSerifSC900_Cover",
+    "SmileySans_Cover",
+]
+
 
 def packed(codepoints: list[int]) -> str:
     out = []
@@ -59,8 +71,10 @@ def main() -> int:
         "",
         "export const COVER_FONT_PACKED_COVERAGE: Record<string, string> = {",
     ]
-    for family, rel in FACES.items():
-        font = TTFont(FONTS / rel, lazy=True)
+    sources = [(family, FONTS / rel) for family, rel in FACES.items()]
+    sources += [(family, CJK_DIR / f"{family}.ttf") for family in CJK_FACES]
+    for family, path in sources:
+        font = TTFont(path, lazy=True)
         cmap = font.getBestCmap()
         cps = [cp for cp in cmap if cp >= 0x20]
         lines.append(f"  {family}: '{packed(cps)}',")

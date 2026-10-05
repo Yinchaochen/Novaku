@@ -1,17 +1,23 @@
+import * as Font from 'expo-font';
+
 import { COVER_FONT_PACKED_COVERAGE } from './coverFontCoverage';
 
 /**
  * The faces a cover pack may set its title in, and the rule for when it may.
  *
- * All nine are SIL OFL, bundled through @expo-google-fonts and registered in
- * app/_layout.tsx under the family names below. None of them has a CJK glyph,
- * most lack Cyrillic and Greek, and three (Rock Salt, Permanent Marker,
+ * The nine Latin faces are SIL OFL, bundled through @expo-google-fonts and
+ * registered in app/_layout.tsx under the family names below. The six Chinese
+ * faces (D-166) are our own subsets of OFL fonts in assets/fonts/cover, built
+ * by scripts/build-cover-cjk-fonts.py and loaded the first time a cover needs
+ * one (`asset`), so nobody downloads 11.7 MB of brush script at start-up. The
+ * Latin faces have no CJK glyph, most lack Cyrillic and Greek, and three (Rock Salt, Permanent Marker,
  * Covered By Your Grace) lack the Polish, Czech and Hungarian letters — which
  * is why the choice is made per title, against the face's own cmap, and never
  * per language label. D-148's rule, unchanged: a string with one glyph outside
- * the face keeps the system stack, whole. A Chinese reader therefore sees a
- * sketchbook page set in the system face; that is the correct degradation and
- * the pack's paper, ink and stickers still say which pack it is.
+ * the face keeps the system stack, whole. A Chinese title takes the pack's
+ * Chinese faces (`cjkFonts`), a Latin title its Latin ones, never each other's;
+ * a Japanese or Korean title, or a Chinese one with a rare character, keeps the
+ * system face, and the pack's paper, ink and stickers still say which pack it is.
  *
  * `scale` corrects for how large each face sets at a given size, measured in
  * the prototype against the system face; `track` is letter-spacing in ems and
@@ -26,16 +32,25 @@ export type CoverFace =
   | 'grace'
   | 'amatic'
   | 'playfair'
-  | 'lobster';
+  | 'lobster'
+  // Chinese (D-166): GB2312 level 1 + punctuation + Latin.
+  | 'kuaile'
+  | 'mashan'
+  | 'longcang'
+  | 'zhimang'
+  | 'serifsc'
+  | 'smiley';
 
 export interface CoverFaceSpec {
   family: string;
-  weight: '400' | '700' | '800';
+  weight: '400' | '700' | '800' | '900';
   scale: number;
   track?: number;
   upper?: boolean;
   /** Line height as a multiple of the size, where the face's ascenders need more than the default. */
   lead?: number;
+  /** Bundled but registered on first use rather than at start-up. */
+  asset?: number;
 }
 
 export const COVER_FACES: Record<CoverFace, CoverFaceSpec> = {
@@ -49,7 +64,38 @@ export const COVER_FACES: Record<CoverFace, CoverFaceSpec> = {
   amatic: { family: 'AmaticSC_700Bold', weight: '700', scale: 1.28, track: 0.03 },
   playfair: { family: 'PlayfairDisplay_800ExtraBold', weight: '800', scale: 1 },
   lobster: { family: 'Lobster_400Regular', weight: '400', scale: 1.02 },
+  // Scale and tracking as the prototype measured them against the system face.
+  kuaile: { family: 'ZCOOLKuaiLe_Cover', weight: '400', scale: 1.04, asset: require('../assets/fonts/cover/ZCOOLKuaiLe_Cover.ttf') },
+  mashan: { family: 'MaShanZheng_Cover', weight: '400', scale: 1.1, track: 0.02, asset: require('../assets/fonts/cover/MaShanZheng_Cover.ttf') },
+  longcang: { family: 'LongCang_Cover', weight: '400', scale: 1.14, track: 0.03, asset: require('../assets/fonts/cover/LongCang_Cover.ttf') },
+  zhimang: { family: 'ZhiMangXing_Cover', weight: '400', scale: 1.12, track: 0.03, asset: require('../assets/fonts/cover/ZhiMangXing_Cover.ttf') },
+  serifsc: { family: 'NotoSerifSC900_Cover', weight: '900', scale: 1, asset: require('../assets/fonts/cover/NotoSerifSC900_Cover.ttf') },
+  smiley: { family: 'SmileySans_Cover', weight: '400', scale: 1.04, asset: require('../assets/fonts/cover/SmileySans_Cover.ttf') },
 };
+
+/** Is this face ready to set text in right now? The start-up faces always are. */
+export function coverFaceLoaded(face: CoverFace | null): boolean {
+  if (!face) return true;
+  const spec = COVER_FACES[face];
+  return !spec.asset || Font.isLoaded(spec.family);
+}
+
+const pending = new Map<string, Promise<void>>();
+
+/** Register an on-demand face once; every cover that asks shares the one load. */
+export function loadCoverFace(face: CoverFace): Promise<void> {
+  const spec = COVER_FACES[face];
+  if (!spec.asset || Font.isLoaded(spec.family)) return Promise.resolve();
+  let load = pending.get(spec.family);
+  if (!load) {
+    load = Font.loadAsync({ [spec.family]: spec.asset }).catch((error) => {
+      pending.delete(spec.family);
+      throw error;
+    });
+    pending.set(spec.family, load);
+  }
+  return load;
+}
 
 const coverage = new Map<string, Set<number>>();
 

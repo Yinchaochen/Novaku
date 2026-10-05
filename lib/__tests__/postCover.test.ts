@@ -886,15 +886,30 @@ describe('the packs', () => {
     expect(plan.stickerStyle).not.toBe('emoji');
   });
 
-  it('sets an English title in the pack face and a Chinese one in the system stack', () => {
-    const english = coverPlan({ ...PACK_POST, cover_template: 'sketch_max', cover_palette: 0 }, '', '');
-    expect(english.face).not.toBeNull();
-    const chinese = coverPlan(
-      { ...PACK_POST, cover_template: 'sketch_max', cover_palette: 0 },
-      '在柏林登记住址',
-      '带上护照和租房合同。办公室八点开门，那时排队最短。',
-    );
-    expect(chinese.face).toBeNull();
+  it('sets each script in its own faces, and anything the faces cannot draw in the system stack', () => {
+    const pack = { ...PACK_POST, cover_template: 'sketch_max' as const, cover_palette: 0 };
+    const english = coverPlan(pack, '', '');
+    expect(COVER_TEMPLATES.sketch_max.fonts).toContain(english.face);
+
+    // D-166: a Chinese title takes the pack's Chinese faces, never a Latin one,
+    // and the summary takes the pack's Chinese hand.
+    const chinese = coverPlan(pack, '在柏林登记住址', '带上护照和租房合同。办公室八点开门，那时排队最短。');
+    expect(COVER_TEMPLATES.sketch_max.cjkFonts).toContain(chinese.face);
+    expect(chinese.labelFace).toBe(COVER_TEMPLATES.sketch_max.cjkLabelFont);
+
+    // The Chinese faces are cut to GB2312 level 1: kana and a character from
+    // CJK Extension B are outside them, so those titles keep the system face whole.
+    expect(coverPlan(pack, 'ベルリンで住所を登録する', '').face).toBeNull();
+    expect(coverPlan(pack, '在柏林登记𠮷的住址', '').face).toBeNull();
+  });
+
+  it('never sets an English title in a Chinese face', () => {
+    for (const id of COVER_PACK_IDS) {
+      for (let palette = 0; palette < 3; palette += 1) {
+        const plan = coverPlan({ ...PACK_POST, id: `p-${id}-${palette}`, cover_template: id, cover_palette: palette }, '', '');
+        if (plan.face) expect(COVER_TEMPLATES[id].cjkFonts ?? []).not.toContain(plan.face);
+      }
+    }
   });
 
   it('keeps the title whole on a block rather than cutting a phrase from the sentence', () => {
