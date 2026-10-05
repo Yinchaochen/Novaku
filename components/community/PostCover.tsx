@@ -315,8 +315,20 @@ export function PostCover({
   // same size; `scale` is that correction, measured in the prototype.
   let titleSize = Math.min(
     width * titleRatio * faceScale * (collage ? 0.78 : 1),
-    longestWordEm > 0 ? (titleColumnU * u * 0.96) / (longestWordEm * titleBox) : Infinity,
+    !ransom && longestWordEm > 0 ? (titleColumnU * u * 0.96) / (longestWordEm * titleBox) : Infinity,
   );
+  if (ransom) {
+    // Cut-out letters: a word is cut a little smaller to stay whole on its
+    // line; a compound that would need its scraps cut a quarter smaller or
+    // more flows letter by letter instead (RansomTitle).
+    const shrink = Math.max(0.66, Math.min(1, 40 / Math.max(1, glyphCount)));
+    const longestScrapEm = Math.max(
+      0,
+      ...titleText.split(/\s+/).filter((w) => w && !CJK_RE.test(w)).map(ransomScrapEm),
+    );
+    const whole = longestScrapEm > 0 ? ((width * RANSOM_LINE) / (longestScrapEm * 0.9 * shrink)) * 0.995 : Infinity;
+    if (whole >= titleSize * 0.75) titleSize = Math.min(titleSize, whole);
+  }
   // Four lines is what the title is given; a fifth would end in an ellipsis.
   for (let i = 0; i < 12 && titleDrawn && !ransom && titleLinesAt(titleSize) > 4; i += 1) titleSize *= 0.94;
   let bodyBudget = plan.isBlank ? 0 : onPage ? 4 : excerptLines;

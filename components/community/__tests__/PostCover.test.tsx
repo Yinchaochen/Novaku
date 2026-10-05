@@ -135,6 +135,19 @@ function textNodes(json: unknown): { style: Record<string, unknown>; text: strin
   return [...own, ...kids.flatMap(textNodes)];
 }
 
+/** The first node, depth first, whose flattened style passes the test. */
+function findNode(json: unknown, test: (style: Record<string, unknown>) => boolean): unknown {
+  if (!json || typeof json !== 'object') return null;
+  const node = json as { props?: { style?: unknown }; children?: unknown[] };
+  const style = Object.assign({}, ...[node.props?.style].flat(Infinity).filter(Boolean)) as Record<string, unknown>;
+  if (test(style)) return node;
+  for (const kid of node.children ?? []) {
+    const found = findNode(kid, test);
+    if (found) return found;
+  }
+  return null;
+}
+
 /** Every node in the rendered tree that carries a numberOfLines prop. */
 function everyText(json: unknown): { props: { numberOfLines?: number } }[] {
   if (!json || typeof json !== 'object') return [];
@@ -414,6 +427,24 @@ describe('what the Android emulator showed (D-166)', () => {
     );
     const limits = nodes.map((n) => n.numberOfLines).filter((n): n is number => typeof n === 'number');
     expect(Math.max(...limits)).toBeGreaterThanOrEqual(5);
+  });
+
+  it('keeps a cut-out word whole, cutting its letters a little smaller rather than across the word', async () => {
+    // Its last scrap ran 4px off a 148dp card, and measured honestly it split as "Registeri / ng".
+    for (const width of [148, 184.5]) {
+      const post = makePost({
+        id: 'chloe',
+        cover_template: 'sketch_chloe',
+        title: 'Registering your address in Berlin',
+        body: 'Bring your passport and the rental contract.',
+      });
+      const tree = await render(<PostCover post={post} width={width} />);
+      const scraps = findNode(tree.toJSON(), (st) => st.flexWrap === 'wrap' && st.alignItems === 'flex-end') as {
+        children: unknown[];
+      };
+      expect(scraps).not.toBeNull();
+      expect(sentence(scraps.children[0])).toBe('Registering');
+    }
   });
 
   it('sets the sentence whole when the words before the phrase do not fit above it', async () => {
