@@ -1,5 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { ActivityIndicator, Pressable, Text } from 'react-native';
+import { ActivityIndicator, Text } from 'react-native';
+
+import { FeedbackPressable } from '../FeedbackPressable';
 
 /**
  * "Continue with Apple" for the browser (D-151). Black pill with the Apple
@@ -16,13 +18,13 @@ export function AppleWebButton({
   loading?: boolean;
 }) {
   return (
-    <Pressable
+    <FeedbackPressable
       testID="auth.apple.web"
       onPress={onPress}
       disabled={loading}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={({ pressed }) => ({
+      style={{
         width: '100%',
         maxWidth: 400,
         alignSelf: 'center',
@@ -34,8 +36,8 @@ export function AppleWebButton({
         justifyContent: 'center',
         gap: 8,
         marginBottom: 12,
-        opacity: pressed ? 0.85 : 1,
-      })}
+      }}
+      pressedStyle={{ opacity: 0.85 }}
     >
       {loading ? (
         <ActivityIndicator size="small" color="#FFFFFF" />
@@ -45,6 +47,6 @@ export function AppleWebButton({
           <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '600' }}>{label}</Text>
         </>
       )}
-    </Pressable>
+    </FeedbackPressable>
   );
 }
