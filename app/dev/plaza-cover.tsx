@@ -3,6 +3,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { Screen } from '../../components/Screen';
 import { SectionLabel } from '../../components/SectionLabel';
 import { PostCover } from '../../components/community/PostCover';
+import { CommunityPostCard } from '../../features/community/CommunityPostCard';
 import type { CommunityPost } from '../../features/community/useCommunity';
 import { COVER_PACK_IDS, COVER_TEMPLATE_IDS, COVER_TEMPLATES } from '../../lib/postCover';
 import { paginateBody } from '../../lib/coverPages';
@@ -282,6 +283,16 @@ const PACK_POSTS = [
 function PackRows() {
   return (
     <View>
+      <SectionLabel>The feed card itself, at a phone column and at a browser column</SectionLabel>
+      <View style={{ flexDirection: 'row', gap: 16, alignItems: 'flex-start', marginBottom: 24 }}>
+        <View style={{ width: 184 }} testID="dev.feedcard.phone">
+          <CommunityPostCard post={PACK_POSTS[0]} onPress={() => {}} columnWidth={184} />
+        </View>
+        <View style={{ width: 490 }} testID="dev.feedcard.browser">
+          <CommunityPostCard post={PACK_POSTS[0]} onPress={() => {}} columnWidth={490} />
+        </View>
+      </View>
+
       <SectionLabel>The packs (D-164) — one look per editorial account, on real post shapes</SectionLabel>
       {COVER_PACK_IDS.map((id) => (
         <View key={id} style={{ paddingBottom: 6 }}>

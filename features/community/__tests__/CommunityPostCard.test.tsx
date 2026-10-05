@@ -18,6 +18,7 @@
 import { render } from '@testing-library/react-native';
 
 import { CommunityPostCard } from '../CommunityPostCard';
+import * as PostCoverModule from '../../../components/community/PostCover';
 import type { CommunityPost } from '../useCommunity';
 
 jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
@@ -102,6 +103,22 @@ function images(tree: Screen) {
 }
 
 describe('CommunityPostCard', () => {
+
+  it('sizes a text cover from the column the list hands it, before any layout event', async () => {
+    // The browser wall: feedGrid knows the column is 490 and the cell pads 3dp
+    // either side. Seeding from it is what keeps the cover from drawing a
+    // phone-sized title in the top-left quarter of a desktop card (2026-10-05).
+    const drawn = jest.spyOn(PostCoverModule, 'PostCover');
+    const widths = () => drawn.mock.calls.map(([props]) => props.width);
+
+    await render(<CommunityPostCard post={makePost({ media_items: [] })} columnWidth={490} />);
+    expect(widths()).toContain(484);
+
+    drawn.mockClear();
+    await render(<CommunityPostCard post={makePost({ media_items: [] })} />);
+    expect(widths()).toContain(184.5);
+    drawn.mockRestore();
+  });
   it('keys every picture to the post it belongs to, so a recycled cell clears', async () => {
     const tree = await render(<CommunityPostCard post={makePost()} />);
     const keys = images(tree).map((node) => node.props.recyclingKey);

@@ -1,7 +1,7 @@
 ﻿import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 
 import { colors } from '../../theme/tokens';
@@ -48,6 +48,13 @@ interface Props {
    * it down while the reader is scrolling.
    */
   columnWidth?: number;
+}
+
+// The list pads each cell 3dp either side (plaza.tsx renderItem), so a cover
+// is its column less that gutter. 184.5 is the real column on a 393dp phone.
+const CELL_GUTTER = 3;
+function coverWidthFor(columnWidth: number | undefined): number {
+  return columnWidth && columnWidth > 0 ? columnWidth - CELL_GUTTER * 2 : 184.5;
 }
 
 // A card without a picture is a coloured panel, and varying its height is what
@@ -215,7 +222,16 @@ export function CommunityPostCard({ post, onPress, titleHighlight, columnWidth }
   // aspectRatio either way, so measuring the width can never reflow the card
   // and D-078's rule is untouched. The seed is the real column width on a
   // 393dp phone, so the first frame is already close.
-  const [coverWidth, setCoverWidth] = useState(184.5);
+  const [coverWidth, setCoverWidth] = useState(coverWidthFor(columnWidth));
+  // The browser wall hands the card its column (feedGrid), so the cover is
+  // sized from it on the first frame and again when the window changes
+  // columns. On 2026-10-05 lisum's wall showed every text cover set for a
+  // 184dp phone column inside a 350dp browser column — the title in the top
+  // left quarter, the rest of the paper blank. onLayout below stays as the
+  // refinement for the phone, where the list does not know its column width.
+  useEffect(() => {
+    if (columnWidth && columnWidth > 0) setCoverWidth(coverWidthFor(columnWidth));
+  }, [columnWidth]);
   // A cover that will never arrive (D-143). The slot's background is a near
   // black, which is right for the moment before a picture decodes and wrong
   // forever after: a dead URL, an R2 host that is not wired up, or an iPhone
