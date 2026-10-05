@@ -28,7 +28,7 @@
  */
 
 import { COVER_CUTOUTS, type CoverCutout, type CutoutHue } from './coverCutouts';
-import { faceCovers, pickFace, type CoverFace } from './coverFonts';
+import { faceCovers, familyAdvance, pickFace, type CoverFace } from './coverFonts';
 
 export type CoverType = 'guide' | 'question' | 'recommendation' | 'experience' | 'warning';
 
@@ -874,6 +874,75 @@ export function estimateEm(text: string): number {
     else em += 0.5;
   }
   return em;
+}
+
+/**
+ * The system faces set their bold wider than estimateEm's model: Roboto Bold
+ * broke the emulator's summaries where 1.06-1.10x predicts, and Segoe UI Bold
+ * measured 1.03-1.12x on our titles.
+ */
+const SYSTEM_BOLD_WIDTH = 1.12;
+
+/**
+ * Android's optimal line breaker and pixel rounding leave a line less room
+ * than the arithmetic does: "first payslip is" measured 104.4px in the display
+ * face and did not fit a 104.5px line on the emulator.
+ */
+const LINE_SLACK = 0.97;
+
+/**
+ * How wide the text sets, in ems of the size it is set at: a bundled family's
+ * own Latin advances (read from the font files), a full em for Han, kana and
+ * Hangul, the estimate for the rest. Null is the system stack, in bold.
+ */
+export function textEm(text: string, family: string | null, track = 0): number {
+  let em = 0;
+  for (const ch of text) {
+    const measured = family ? familyAdvance(family, ch.codePointAt(0) ?? 0) : undefined;
+    em += (measured ?? (NO_SPACE_BREAK.test(ch) ? 1 : estimateEm(ch) * SYSTEM_BOLD_WIDTH)) + track;
+  }
+  return em;
+}
+
+/** A line breaks between any two Han, kana or Hangul glyphs, and at spaces everywhere else. */
+const WRAP_UNIT = /[぀-ヿ㐀-䶿一-鿿豈-﫿가-힯]|[^぀-ヿ㐀-䶿一-鿿豈-﫿가-힯]+/g;
+
+/**
+ * How many lines the text wraps into, wrapped the way Android and the browser
+ * do it: word after word, and a word that would cross the edge starts the next
+ * line. Total width over line width undercounts it, because the word pushed
+ * down wastes the end of the line it left; on a card two words wide that is a
+ * whole line (the Android emulator, 2026-10-05: a candy title counted as three
+ * lines set in four and pushed its summary off the card).
+ */
+export function wrappedLines(text: string, family: string | null, fontPx: number, widthPx: number, track = 0): number {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0 || fontPx <= 0 || widthPx <= 0) return 0;
+  const lineEm = (widthPx * LINE_SLACK) / fontPx;
+  const spaceEm = textEm(' ', family, track);
+  let lines = 1;
+  let used = 0;
+  for (const word of words) {
+    (word.match(WRAP_UNIT) ?? []).forEach((unit, index) => {
+      const em = textEm(unit, family, track);
+      const gap = index === 0 && used > 0 ? spaceEm : 0;
+      if (used > 0 && used + gap + em > lineEm) {
+        lines += 1;
+        used = 0;
+      } else {
+        used += gap;
+      }
+      if (used === 0 && em > lineEm) {
+        // Wider than a whole line: broken where it has to be.
+        const extra = Math.ceil(em / lineEm) - 1;
+        lines += extra;
+        used = em - extra * lineEm;
+      } else {
+        used += em;
+      }
+    });
+  }
+  return lines;
 }
 
 /** The longest unbreakable run — German compounds decide the size on their own. */

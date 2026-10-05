@@ -17,6 +17,8 @@ import { render } from '@testing-library/react-native';
 
 import { PostCover } from '../PostCover';
 import * as CoverStickerModule from '../CoverSticker';
+import { COVER_FACES } from '../../../lib/coverFonts';
+import { COVER_PACK_IDS, coverPlan, wrappedLines } from '../../../lib/postCover';
 import type { CommunityPost } from '../../../features/community/useCommunity';
 
 jest.mock('react-native-svg', () => {
@@ -115,6 +117,24 @@ function everyStyle(json: unknown): Record<string, unknown>[] {
   return [...(own as Record<string, unknown>[]), ...nested];
 }
 
+/** Every Text node: its flattened style, its own string children, and its line limit. */
+function textNodes(json: unknown): { style: Record<string, unknown>; text: string; numberOfLines?: number }[] {
+  if (!json || typeof json !== 'object') return [];
+  const node = json as { type?: string; props?: { style?: unknown; numberOfLines?: number }; children?: unknown[] };
+  const kids = node.children ?? [];
+  const own =
+    node.type === 'Text'
+      ? [
+          {
+            style: Object.assign({}, ...[node.props?.style].flat(Infinity).filter(Boolean)) as Record<string, unknown>,
+            text: kids.filter((k) => typeof k === 'string').join(''),
+            numberOfLines: node.props?.numberOfLines,
+          },
+        ]
+      : [];
+  return [...own, ...kids.flatMap(textNodes)];
+}
+
 /** Every node in the rendered tree that carries a numberOfLines prop. */
 function everyText(json: unknown): { props: { numberOfLines?: number } }[] {
   if (!json || typeof json !== 'object') return [];
@@ -192,7 +212,18 @@ describe('PostCover', () => {
     // descender instead of adding it, which put a highlighter under the
     // descenders where it reads as a margin rule; and it was declared after
     // the text, which paints it over the words rather than behind them.
-    const tree = await render(<PostCover post={makePost()} width={184.5} />);
+    // A short title, so the card has room to mark the phrase (D-166 sets the
+    // sentence unmarked when the words before the phrase do not fit).
+    const tree = await render(
+      <PostCover
+        post={makePost({
+          post_type: 'question',
+          title: 'Where do I register?',
+          body: 'Has anyone booked one recently?\n\nMy Termin is three weeks out and the deadline is sooner.',
+        })}
+        width={184.5}
+      />,
+    );
     const block = findRuleBlock(tree.toJSON());
 
     expect(block).not.toBeNull();
@@ -262,8 +293,10 @@ describe('fitting the words to the square', () => {
   });
 
   it('shortens the summary rather than let it run off the bottom of the card', async () => {
-    // A title that fills four lines and a summary that would fill six more:
-    // on any composition the pack picks, the summary is trimmed to fit.
+    // A title that fills four lines and a summary that would fill six more, on
+    // the narrowest card the gallery draws. Counted the way PostCover counts
+    // (wrappedLines, in the family each line is drawn in): on the journal page
+    // the words start at 3.4u and have to end by 17.1u.
     const crowded = {
       cover_template: 'crayon' as const,
       title: 'Wie man in Berlin eine Wohnung findet, ohne dabei den Verstand zu verlieren',
@@ -272,14 +305,31 @@ describe('fitting the words to the square', () => {
         'Mietschuldenfreiheitsbescheinigung und Geduld, und wer neu in der Stadt ist, sollte früh anfangen und ' +
         'jede Besichtigung wahrnehmen, auch wenn die Wohnung auf dem Papier nicht perfekt aussieht.',
     };
-    for (const id of ['crowd-1', 'crowd-2', 'crowd-3', 'crowd-4']) {
-      const tree = await render(<PostCover post={makePost({ id, ...crowded })} width={148} />);
-      const budgets = everyText(tree.toJSON())
-        .map((node) => node.props.numberOfLines)
-        .filter((n): n is number => typeof n === 'number' && n !== 4 && n !== 1);
-      // Title texts carry 4 and the phrase line 1; whatever summary is left is under the default 6.
-      for (const n of budgets) expect(n).toBeLessThan(6);
+    const u = 148 / 18;
+    const family = (n: { style: Record<string, unknown> }) =>
+      typeof n.style.fontFamily === 'string' ? n.style.fontFamily : null;
+    let checked = 0;
+    for (let i = 1; i <= 8; i += 1) {
+      const post = makePost({ id: `crowd-${i}`, ...crowded });
+      if (coverPlan(post, post.title, post.body).layout !== 'journal') continue;
+      const nodes = textNodes((await render(<PostCover post={post} width={148} />)).toJSON());
+      const title = nodes.find((n) => n.text === crowded.title)!;
+      const titleLines = wrappedLines(crowded.title, family(title), title.style.fontSize as number, 12 * u);
+      expect(titleLines).toBeLessThanOrEqual(4);
+      const summaryU = nodes
+        .filter((n) => n !== title && typeof n.numberOfLines === 'number')
+        .reduce(
+          (sum, n) =>
+            sum +
+            (Math.min(n.numberOfLines!, wrappedLines(n.text, family(n), n.style.fontSize as number, 12 * u)) *
+              (n.style.lineHeight as number)) /
+              u,
+          0,
+        );
+      expect(3.4 + (titleLines * (title.style.lineHeight as number)) / u + 0.7 + summaryU).toBeLessThanOrEqual(17.1);
+      checked += 1;
     }
+    expect(checked).toBeGreaterThan(0);
   });
 
   it('counts the rubric above a mono page at its real height on a phone-width card', async () => {
@@ -303,6 +353,77 @@ describe('fitting the words to the square', () => {
       );
     };
     expect(await summaryLines(170)).toBeLessThan(await summaryLines(362));
+  });
+});
+
+describe('what the Android emulator showed (D-166)', () => {
+  const PAYSLIP = {
+    id: 'cmp',
+    odyssey_slug: 'de_salary_and_deductions',
+    title: 'Why your first payslip is smaller than you expected',
+    body: 'The number in the contract is gross.\n\nBetween it and your bank account sit income tax and five statutory insurances.',
+  };
+  const SAMPLES = [
+    {
+      id: 'en',
+      title: 'Registering your address in Berlin',
+      body: 'Bring your passport and the rental contract.\n\nThe office opens at eight, and the queue is shortest then.',
+    },
+    {
+      id: 'de',
+      title: 'Architekturführung im Mies van der Rohe Haus',
+      body: 'Eine Führung durch das letzte Wohnhaus, das Mies in Deutschland gebaut hat.\n\nBeginn um 15:00 Uhr, die Teilnahme kostet 6 Euro.',
+    },
+  ];
+
+  it('never asks for a weight on a bundled face, because Android draws Roboto in its place', async () => {
+    // Playfair (800), Caveat and Kalam (700) all came out as Roboto Bold, and
+    // "Registering" broke in the middle because it was sized for Playfair.
+    const bundled = new Set([...Object.values(COVER_FACES).map((f) => f.family), 'PosterviaDisplay-Bold']);
+    let checked = 0;
+    for (const pack of COVER_PACK_IDS) {
+      for (const sample of SAMPLES) {
+        const post = makePost({ ...sample, id: `${pack}-${sample.id}`, cover_template: pack });
+        for (const node of textNodes((await render(<PostCover post={post} width={184.5} />)).toJSON())) {
+          if (typeof node.style.fontFamily !== 'string' || !bundled.has(node.style.fontFamily)) continue;
+          checked += 1;
+          expect([undefined, 'normal', '400']).toContain(node.style.fontWeight);
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(20);
+  });
+
+  it('sets a title a size down until it wraps into the four lines it is given', async () => {
+    // The rules column is 10.2u: "Why your / first payslip / is smaller / than you ex…".
+    const nodes = textNodes(
+      (await render(<PostCover post={makePost({ ...PAYSLIP, cover_template: 'rules' })} width={184.5} />)).toJSON(),
+    );
+    const title = nodes.find((n) => n.text === PAYSLIP.title)!;
+    expect(title.numberOfLines).toBe(4);
+    const u = 184.5 / 18;
+    expect(
+      wrappedLines(PAYSLIP.title, title.style.fontFamily as string, title.style.fontSize as number, 10.2 * u),
+    ).toBeLessThanOrEqual(4);
+  });
+
+  it('leaves a plain colour block its whole sentence, since it draws no title to make room for', async () => {
+    // "...income tax and five st…" in a block with half the card empty under it.
+    const nodes = textNodes(
+      (await render(<PostCover post={makePost({ ...PAYSLIP, cover_template: 'blocks' })} width={184.5} />)).toJSON(),
+    );
+    const limits = nodes.map((n) => n.numberOfLines).filter((n): n is number => typeof n === 'number');
+    expect(Math.max(...limits)).toBeGreaterThanOrEqual(5);
+  });
+
+  it('sets the sentence whole when the words before the phrase do not fit above it', async () => {
+    // "Between it and your bank account sit income tax and fiv…" and then "insurances." on a line of its own.
+    const post = makePost({ ...PAYSLIP, cover_template: 'crayon' });
+    const plan = coverPlan(post, post.title, post.body);
+    expect(plan.highlight).not.toBeNull();
+    const texts = textNodes((await render(<PostCover post={post} width={184.5} />)).toJSON()).map((n) => n.text);
+    expect(texts).toContain(plan.keyLine);
+    expect(texts).not.toContain(plan.highlight!.span);
   });
 });
 

@@ -335,6 +335,16 @@ outputBuffer[1] -= visibleWindowFrame.top;   // ← 状态栏
 
 ---
 
+### 坑 #9 — 自定义字体再给 `fontWeight`,Android 直接换成 Roboto
+
+**症状**(2026-10-05,封面包,D-166):Android 模拟器上 journal / stamp 的 Playfair、名牌与拼贴的 Caveat / Kalam 全部画成了 Roboto Bold;字号是按 Playfair 的字宽算的,换成更宽的 Roboto 后 "Registering" 被从中间断成 "Register / ing"。Patrick Hand、Lobster 这些 400 字重的没事。Expo Web 全对(浏览器找不到 800 就合成粗体,字形还是 Playfair)。
+
+**根因**:每个字体文件在 expo-font 里注册成**一个独立的 family**(`PlayfairDisplay_800ExtraBold`),只登记了 normal 一种 style。Text 再带 `fontWeight: '800'`,Android 去找这个 family 的 bold 变体,找不到就退回系统字体。
+
+**规则**:用打包字体时 `fontWeight` 一律 `'normal'`(或不写),字重在文件里。封面的三处已改(`PostCover` 标题 / 摘要、`PhraseLabel`),`CoverFaceSpec.weight` 只作记录、不传给样式;`PostCover.test.tsx` 里有测试遍历所有包锁死这一点。只在 web 上看是发现不了的 —— 原生排版要靠 `cover-screenshots-android.yml` 的模拟器截图。
+
+---
+
 ## 3. iOS vs Android 关键差异速查表
 
 ### Modal

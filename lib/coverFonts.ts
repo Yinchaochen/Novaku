@@ -1,6 +1,6 @@
 import * as Font from 'expo-font';
 
-import { COVER_FONT_PACKED_COVERAGE } from './coverFontCoverage';
+import { COVER_FONT_PACKED_ADVANCES, COVER_FONT_PACKED_COVERAGE } from './coverFontCoverage';
 
 /**
  * The faces a cover pack may set its title in, and the rule for when it may.
@@ -43,6 +43,11 @@ export type CoverFace =
 
 export interface CoverFaceSpec {
   family: string;
+  /**
+   * The weight the file was cut at. Never passed as fontWeight: each file is
+   * registered as a family of its own, and Android draws Roboto in place of a
+   * custom family asked for any weight but normal (the emulator, 2026-10-05).
+   */
   weight: '400' | '700' | '800' | '900';
   scale: number;
   track?: number;
@@ -111,6 +116,31 @@ function coverageOf(family: string): Set<number> {
   }
   coverage.set(family, built);
   return built;
+}
+
+const advanceTables = new Map<string, Map<number, number>>();
+
+function advancesOf(family: string): Map<number, number> {
+  const cached = advanceTables.get(family);
+  if (cached) return cached;
+  const built = new Map<number, number>();
+  let codepoint = 0;
+  for (const pair of (COVER_FONT_PACKED_ADVANCES[family] ?? '').split('.')) {
+    if (!pair) continue;
+    const [delta, advance] = pair.split(':');
+    codepoint += parseInt(delta, 36);
+    built.set(codepoint, parseInt(advance, 36) / 1000);
+  }
+  advanceTables.set(family, built);
+  return built;
+}
+
+/**
+ * A bundled family's own advance for a Latin codepoint, in ems; undefined
+ * outside the measured range or for a family whose advances were not read.
+ */
+export function familyAdvance(family: string, codepoint: number): number | undefined {
+  return advancesOf(family).get(codepoint);
 }
 
 /** Can this face draw every glyph of the text? Whitespace is exempt. */

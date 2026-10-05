@@ -233,7 +233,8 @@ export function PhraseLabel({
             lineHeight: fontSize * 1.25,
             color: palette.washInk ?? palette.ink,
             fontFamily: spec?.family,
-            fontWeight: spec ? spec.weight : '700',
+            // The weight is in the file; Android draws Roboto for any other (see CoverFaceSpec.weight).
+            fontWeight: spec ? 'normal' : '700',
             letterSpacing: spec?.track ? spec.track * fontSize : 0,
           }}
         >

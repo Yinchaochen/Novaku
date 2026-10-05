@@ -20,7 +20,15 @@ import {
 import { useLanguage } from '../../context/LanguageContext';
 import { useCoverFaceReady } from '../../hooks/useCoverFaceReady';
 import { COVER_FACES, faceText } from '../../lib/coverFonts';
-import { coverPlan, estimateEm, readingMinutes, type CoverLayout, type CoverPalette } from '../../lib/postCover';
+import {
+  coverPlan,
+  estimateEm,
+  readingMinutes,
+  textEm,
+  wrappedLines,
+  type CoverLayout,
+  type CoverPalette,
+} from '../../lib/postCover';
 import { displayFontFor } from '../../lib/displayFont';
 import type { CommunityPost } from '../../features/community/useCommunity';
 
@@ -193,7 +201,8 @@ export function PostCover({
     ? {
         ...type,
         fontFamily: labelFace.family,
-        fontWeight: labelFace.weight,
+        // The weight is in the file; Android draws Roboto for any other (see CoverFaceSpec.weight).
+        fontWeight: 'normal' as const,
         // A journal page sets its hand a size up and looser, as the prototype did.
         fontSize: size * (onPage ? 1.12 : 1) * labelFace.scale,
         lineHeight: size * (onPage ? 1.12 : 1) * labelFace.scale * (onPage ? 1.4 : 1.32),
@@ -208,10 +217,15 @@ export function PostCover({
   // measured size would redraw the card while it scrolls. It decides the three
   // things lisum's Plaza showed going wrong: a German compound broken with no
   // hyphen, a summary cut off by the card's bottom edge, a sticker on a word.
+  // Lines are counted by wrapping word by word in each face's own advance
+  // widths (wrappedLines): on the Android emulator a single width model and a
+  // total-over-line-width count each let a title or a summary run off the card.
   const nametag = Boolean(pack?.decor?.includes('nametag'));
   // Cut-out letters past ~60 glyphs are a wall of scraps, not a title.
   const ransom = Boolean(pack?.decor?.includes('ransom')) && onPage && Array.from(titleText).length <= 60;
-  // How wide a line of the words is, in u, per composition.
+  // A plain colour block carries only the sentence; the feed prints the title under the card.
+  const titleDrawn = Boolean(titleText) && layout !== 'vertical' && !(layout === 'blocks' && !pack);
+  // How wide the block of words is, in u, per composition.
   const columnU = collage
     ? 9.4
     : nametag
@@ -222,9 +236,12 @@ export function PostCover({
           ? 15.2
           : layout === 'rules'
             ? 10.2
-            : layout === 'blocks' && pack
-              ? 10.6
-              : MEASURE;
+            : MEASURE;
+  // A title set on a colour block loses the block's padding; so does a
+  // sentence inside a plain block, while a pack's sentence runs under its block.
+  const onBlock = (layout === 'blocks' && Boolean(pack)) || (plan.highlightStyle === 'block' && !nametag && !ransom);
+  const titleColumnU = columnU - (onBlock ? 1.4 : 0);
+  const bodyColumnU = layout === 'blocks' && !pack ? MEASURE - 1.4 : nametag ? MEASURE : columnU;
   // Where the words start, and how much height they may take.
   // Mono and magazine sit under a rubric with a pixel floor, so on a phone's
   // half-width card their words start a whole unit lower than on a wide one.
@@ -247,45 +264,59 @@ export function PostCover({
   const titleBox = nametag ? 0.74 : 1;
   const titleLead = face?.lead ?? (onPage ? 1.12 : 1.22);
   const faceScale = face?.scale ?? 1;
-  const bodyScale = labelFace?.scale ?? 1;
-  const linesFor = (em: number, fontPx: number, scale: number, max: number) =>
-    em > 0 ? Math.min(max, Math.ceil((em * fontPx) / scale / (columnU * u * 0.9))) : 0;
+  // Measured in the family the words are drawn in: the pack's face, the
+  // display face for a cover without a pack, or the system bold.
+  const titleFamily = face ? face.family : displayFontFor(titleText) ?? null;
+  const titleTrack = face?.track ?? 0;
+  const bodyFamily = labelFace ? labelFace.family : null;
+  const titleLinesAt = (sizePx: number) =>
+    wrappedLines(titleText, titleFamily, sizePx * titleBox, titleColumnU * u, titleTrack);
+  const bodyLinesOf = (text: string) => wrappedLines(text, bodyFamily, bodyType.fontSize, bodyColumnU * u);
   const glyphCount = Array.from(titleText.replace(/\s+/g, '')).length;
   const titleHeightU = (titleSizePx: number): number => {
-    if (!titleText) return 0;
+    if (!titleDrawn) return 0;
     if (ransom) {
       const s = titleSizePx * 0.9 * Math.max(0.66, Math.min(1, 40 / Math.max(1, glyphCount)));
       const perLine = Math.max(4, Math.floor((width * 0.8) / (s * 0.64)));
       return (Math.ceil(glyphCount / perLine) * s * 1.17) / u + 0.5;
     }
-    const lines = linesFor(titleEm, titleSizePx * titleBox, faceScale, 4);
+    const lines = Math.min(4, titleLinesAt(titleSizePx));
     const textU = (lines * titleSizePx * titleBox * titleLead) / u;
     if (nametag) return 1.3 + 3.8 + Math.max(4.6, 1.8 + textU) + 0.9 + 1.1;
     const gapU = layout === 'blocks' && pack ? 1.6 : plan.highlightStyle === 'block' ? 1.4 : 0.7;
     return textU + (plan.isBlank ? 0 : gapU);
   };
+  // The phrase goes on a line of its own (or a label) only when the sentence
+  // before it fits the lines left above it. Otherwise the sentence is set
+  // whole and unmarked: cut off and then resumed at the phrase, it read
+  // "...income tax and fiv… insurances." on the emulator.
+  const before = plan.highlight ? plan.highlight.before.trimEnd() : '';
+  const phraseFits =
+    Boolean(plan.highlight) &&
+    (markOnLabel || bodyLinesOf(`${plan.highlight?.span ?? ''}${plan.highlight?.after ?? ''}`) === 1);
+  const marksPhrase = (budget: number) => phraseFits && bodyLinesOf(before) <= budget - 1;
   const bodyHeightU = (budget: number): number => {
     if (plan.isBlank || budget === 0) return 0;
-    // A marked phrase is set on a line of its own (or on a label), so the
-    // sentence before it and the phrase are counted apart.
-    const lines = plan.highlight
-      ? linesFor(estimateEm(plan.highlight.before.trimEnd()), bodyType.fontSize, bodyScale, Math.max(1, budget - 1)) +
-        (markOnLabel ? 0 : 1)
-      : linesFor(estimateEm(plan.keyLine), bodyType.fontSize, bodyScale, budget);
-    return (lines * bodyType.lineHeight) / u + (plan.highlight && markOnLabel ? 2.8 : 0);
+    if (marksPhrase(budget)) {
+      const lines = bodyLinesOf(before) + (markOnLabel ? 0 : 1);
+      return (lines * bodyType.lineHeight) / u + (markOnLabel ? 2.8 : 0);
+    }
+    return (Math.min(budget, bodyLinesOf(plan.keyLine)) * bodyType.lineHeight) / u;
   };
   // A Latin word is never broken: the title is held to the size at which its
   // longest word fits one line. Han, kana and Hangul wrap per glyph.
   const longestWordEm = Math.max(
     0,
-    ...titleText.split(/\s+/).filter((w) => w && !CJK_RE.test(w)).map((w) => estimateEm(w)),
+    ...titleText.split(/\s+/).filter((w) => w && !CJK_RE.test(w)).map((w) => textEm(w, titleFamily, titleTrack)),
   );
   // A pack's hand face sets larger or smaller than the system face at the
   // same size; `scale` is that correction, measured in the prototype.
   let titleSize = Math.min(
     width * titleRatio * faceScale * (collage ? 0.78 : 1),
-    longestWordEm > 0 ? ((columnU * u * 0.95) / (longestWordEm * titleBox)) * faceScale : Infinity,
+    longestWordEm > 0 ? (titleColumnU * u * 0.96) / (longestWordEm * titleBox) : Infinity,
   );
+  // Four lines is what the title is given; a fifth would end in an ellipsis.
+  for (let i = 0; i < 12 && titleDrawn && !ransom && titleLinesAt(titleSize) > 4; i += 1) titleSize *= 0.94;
   let bodyBudget = plan.isBlank ? 0 : onPage ? 4 : excerptLines;
   const overflows = () =>
     layout !== 'vertical' && titleHeightU(titleSize) + bodyHeightU(bodyBudget) > availableU;
@@ -295,12 +326,11 @@ export function PostCover({
   for (let i = 0; i < 4 && overflows(); i += 1) titleSize *= 0.92;
   if (overflows()) bodyBudget = 0;
   for (let i = 0; i < 3 && overflows(); i += 1) titleSize *= 0.9;
+  const markPhrase = marksPhrase(bodyBudget);
   const contentU = titleHeightU(titleSize) + bodyHeightU(bodyBudget);
   const textBottomU = startU + contentU;
   // The block the words occupy, in u, for the marks that must keep off it.
   const textLeftU = layout === 'journalpage' ? 2.4 : layout === 'zine' ? 1.4 : MARGIN_LEFT;
-  // A pack's colour block narrows the title, not the summary under it.
-  const textRightU = layout === 'blocks' ? MARGIN_LEFT + MEASURE : textLeftU + columnU;
   const [textTopU, textEndU] =
     layout === 'poster'
       ? [15.8 - contentU, 15.8]
@@ -311,7 +341,7 @@ export function PostCover({
     const half = d.sizeU / 2 + 0.2;
     const x = d.x * 18;
     const y = d.y * 18;
-    return x + half < textLeftU || x - half > textRightU || y + half < textTopU || y - half > textEndU;
+    return x + half < textLeftU || x - half > textLeftU + columnU || y + half < textTopU || y - half > textEndU;
   });
   /** Does a corner sticker this far from the bottom, this tall, stay clear of the words? */
   const clearOfWords = (bottomU: number, sizeU: number) => textBottomU + 0.3 <= 18 - bottomU - sizeU;
@@ -322,7 +352,7 @@ export function PostCover({
     // Set in the pack's face when it covers every glyph, else in the display
     // face when that does, else the system stack — never a mixture (D-148).
     fontFamily: face ? face.family : displayFontFor(titleText),
-    fontWeight: face ? face.weight : displayFontFor(titleText) ? ('400' as const) : ('800' as const),
+    fontWeight: face || displayFontFor(titleText) ? ('normal' as const) : ('800' as const),
     letterSpacing: face?.track ? face.track * titleSize : titleSize > 18 ? -0.4 : 0,
     color: palette.ink,
     textAlign: centred ? ('center' as const) : ('left' as const),
@@ -373,10 +403,10 @@ export function PostCover({
   const keyLineBlock = plan.isBlank || bodyBudget === 0 ? null : (
     <>
       <Text
-        numberOfLines={plan.highlight ? Math.max(1, bodyBudget - 1) : bodyBudget}
+        numberOfLines={markPhrase ? Math.max(1, bodyBudget - 1) : bodyBudget}
         style={[bodyType, centred ? { textAlign: 'center' as const } : null]}
       >
-        {plan.highlight ? plan.highlight.before.trimEnd() : plan.keyLine}
+        {markPhrase ? before : plan.keyLine}
       </Text>
 
       {/* The rule. `wash` has been in every palette since the cover shipped
@@ -386,7 +416,7 @@ export function PostCover({
           its own text, so the rule underneath is the width of the words and
           nothing else. The packs draw the same block under a brush stroke, a
           scribble, or move the phrase onto a label (D-164). */}
-      {plan.highlight && markOnLabel ? (
+      {plan.highlight && markPhrase && markOnLabel ? (
         <View style={{ marginTop: 0.8 * u, marginLeft: layout === 'journalpage' ? 0.4 * u : 0.3 * u }}>
           <PhraseLabel
             text={plan.highlight.span}
@@ -398,7 +428,7 @@ export function PostCover({
             rotate={layout === 'zine' ? -2 : 2}
           />
         </View>
-      ) : plan.highlight ? (
+      ) : plan.highlight && markPhrase ? (
         <View
           style={{
             flexDirection: 'row',

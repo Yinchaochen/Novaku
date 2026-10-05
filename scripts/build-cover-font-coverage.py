@@ -44,6 +44,28 @@ CJK_FACES = [
 ]
 
 
+# Advance widths are read for Latin (Basic Latin through Latin Extended-B): the cover counts the
+# lines a title wraps into from them, because one width model for fifteen faces was off by a
+# quarter either way (D-166). Han, kana and Hangul are a full em in every face here.
+ADVANCE_RANGE = range(0x20, 0x250)
+
+
+def packed_advances(font: TTFont) -> str:
+    """'delta:advance' pairs, base 36, advance in thousandths of an em."""
+    cmap = font.getBestCmap()
+    hmtx = font["hmtx"]
+    upm = font["head"].unitsPerEm
+    out = []
+    previous = 0
+    for cp in ADVANCE_RANGE:
+        if cp not in cmap:
+            continue
+        advance = round(hmtx[cmap[cp]][0] * 1000 / upm)
+        out.append(f"{base36(cp - previous)}:{base36(advance)}")
+        previous = cp
+    return ".".join(out)
+
+
 def packed(codepoints: list[int]) -> str:
     out = []
     previous = 0
@@ -73,12 +95,23 @@ def main() -> int:
     ]
     sources = [(family, FONTS / rel) for family, rel in FACES.items()]
     sources += [(family, CJK_DIR / f"{family}.ttf") for family in CJK_FACES]
+    advances = []
+    # The display face sets the titles of covers without a pack (lib/displayFont.ts); its
+    # coverage lives in displayFontCoverage.ts, so only its advances are written here.
+    display = TTFont(ROOT / "assets" / "fonts" / "PosterviaDisplay-Bold.otf", lazy=True)
+    advances.append(f"  'PosterviaDisplay-Bold': '{packed_advances(display)}',")
     for family, path in sources:
         font = TTFont(path, lazy=True)
         cmap = font.getBestCmap()
         cps = [cp for cp in cmap if cp >= 0x20]
         lines.append(f"  {family}: '{packed(cps)}',")
+        advances.append(f"  {family}: '{packed_advances(font)}',")
         print(f"{family}: {len(cps)} codepoints")
+    lines.append("};")
+    lines.append("")
+    lines.append("// Latin advance widths: base-36 'codepoint delta:thousandths of an em' pairs.")
+    lines.append("export const COVER_FONT_PACKED_ADVANCES: Record<string, string> = {")
+    lines.extend(advances)
     lines.append("};")
     lines.append("")
     OUT.write_text("\n".join(lines), encoding="utf-8")

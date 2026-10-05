@@ -14,7 +14,9 @@ import {
   readingMinutes,
   templatePalette,
   pickCutout,
+  textEm,
   wordsGround,
+  wrappedLines,
 } from '../postCover';
 import { COVER_CUTOUTS } from '../coverCutouts';
 
@@ -1004,3 +1006,28 @@ describe('the collage (2026-10-05)', () => {
   });
 });
 
+describe('measuring and wrapping (D-166)', () => {
+  it('measures a bundled face in its own advances, read from the font file', () => {
+    // One width model for fifteen faces was off by a quarter either way on the
+    // Android emulator; these are the files' own numbers.
+    expect(textEm('Registering', 'PlayfairDisplay_800ExtraBold')).toBeCloseTo(5.395, 3);
+    expect(textEm('Registering', 'AmaticSC_700Bold')).toBeCloseTo(3.278, 3);
+    expect(textEm('Registering', 'PosterviaDisplay-Bold')).toBeCloseTo(5.638, 3);
+    // The system stack is not ours to read, so it is the estimate, widened for bold.
+    expect(textEm('Registering', null)).toBeGreaterThan(estimateEm('Registering'));
+  });
+
+  it('counts the line a word wastes when it is pushed down, which total width over line width misses', () => {
+    // Three words of about 6.2em on a 9.7em line: their total is under two
+    // lines, but no two of them share one.
+    const text = 'aaaaaaaaaaa aaaaaaaaaaa aaaaaaaaaaa';
+    expect(Math.ceil(textEm(text, null) / ((100 * 0.97) / 10))).toBe(2);
+    expect(wrappedLines(text, null, 10, 100)).toBe(3);
+  });
+
+  it('breaks a word wider than the line where it has to, and Han between any two glyphs', () => {
+    expect(wrappedLines('a'.repeat(30), null, 10, 100)).toBe(2);
+    expect(wrappedLines('字'.repeat(20), null, 10, 100)).toBe(3);
+    expect(wrappedLines('', null, 10, 100)).toBe(0);
+  });
+});
