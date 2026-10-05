@@ -226,9 +226,12 @@ export function PostCover({
               ? 10.6
               : MEASURE;
   // Where the words start, and how much height they may take.
+  // Mono and magazine sit under a rubric with a pixel floor, so on a phone's
+  // half-width card their words start a whole unit lower than on a wide one.
   const startU =
     layout === 'journalpage' ? 1.6 : layout === 'zine' ? 1.9 : layout === 'blocks' ? 4
-      : layout === 'mono' || layout === 'magazine' ? 4.2 : 3.4;
+      : layout === 'mono' ? MARGIN_TOP + (rubricSize * 3.4) / u
+        : layout === 'magazine' ? MARGIN_TOP + (rubricSize * 3.6) / u : 3.4;
   const availableU = collage
     ? 13
     : nametag
@@ -296,6 +299,8 @@ export function PostCover({
   const textBottomU = startU + contentU;
   // The block the words occupy, in u, for the marks that must keep off it.
   const textLeftU = layout === 'journalpage' ? 2.4 : layout === 'zine' ? 1.4 : MARGIN_LEFT;
+  // A pack's colour block narrows the title, not the summary under it.
+  const textRightU = layout === 'blocks' ? MARGIN_LEFT + MEASURE : textLeftU + columnU;
   const [textTopU, textEndU] =
     layout === 'poster'
       ? [15.8 - contentU, 15.8]
@@ -306,7 +311,7 @@ export function PostCover({
     const half = d.sizeU / 2 + 0.2;
     const x = d.x * 18;
     const y = d.y * 18;
-    return x + half < textLeftU || x - half > textLeftU + columnU || y + half < textTopU || y - half > textEndU;
+    return x + half < textLeftU || x - half > textRightU || y + half < textTopU || y - half > textEndU;
   });
   /** Does a corner sticker this far from the bottom, this tall, stay clear of the words? */
   const clearOfWords = (bottomU: number, sizeU: number) => textBottomU + 0.3 <= 18 - bottomU - sizeU;

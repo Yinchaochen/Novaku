@@ -281,6 +281,29 @@ describe('fitting the words to the square', () => {
       for (const n of budgets) expect(n).toBeLessThan(6);
     }
   });
+
+  it('counts the rubric above a mono page at its real height on a phone-width card', async () => {
+    // The rubric's type has a 9.5px floor, so on a half-width phone card the
+    // words start a unit lower than on a wide one; the summary pays for it.
+    const crowded = {
+      id: 'm-5',
+      cover_template: 'journal' as const,
+      title: 'Wie man in Berlin eine Wohnung findet, ohne dabei den Verstand zu verlieren',
+      body:
+        'Die Wohnungssuche in Berlin ist ein Vollzeitjob mit Besichtigungen, Unterlagen, Schufa-Auskunft, ' +
+        'Mietschuldenfreiheitsbescheinigung und Geduld, und wer neu in der Stadt ist, sollte früh anfangen und ' +
+        'jede Besichtigung wahrnehmen, auch wenn die Wohnung auf dem Papier nicht perfekt aussieht.',
+    };
+    const summaryLines = async (width: number) => {
+      const tree = await render(<PostCover post={makePost(crowded)} width={width} />);
+      return Math.max(
+        ...everyText(tree.toJSON())
+          .map((node) => node.props.numberOfLines)
+          .filter((n): n is number => typeof n === 'number' && n !== 4 && n !== 1),
+      );
+    };
+    expect(await summaryLines(170)).toBeLessThan(await summaryLines(362));
+  });
 });
 
 describe('corner stickers', () => {
