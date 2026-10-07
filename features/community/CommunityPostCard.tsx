@@ -238,7 +238,10 @@ export function CommunityPostCard({ post, onPress, titleHighlight, columnWidth }
   // HEIC that Chrome cannot decode all left a solid black rectangle sitting in
   // the wall with a title underneath it. When the picture fails the post draws
   // its own cover instead — the one every text post already gets.
-  const [coverFailed, setCoverFailed] = useState(false);
+  // Remembered by URL, not as a boolean: FlashList rebinds this card to other
+  // posts, and once the Image is unmounted no onLoad can clear a stale flag.
+  const [failedCoverUrl, setFailedCoverUrl] = useState<string | null>(null);
+  const coverFailed = coverUrl != null && failedCoverUrl === coverUrl;
 
   // Card-level "..." menu: per-user hide so the post stops showing on this user's feed.
   // Own posts skip this entry — you can't hide yourself from yourself.
@@ -296,11 +299,7 @@ export function CommunityPostCard({ post, onPress, titleHighlight, columnWidth }
           <View>
             <Image
               source={coverUrl}
-              // FlashList hands this view to a different post rather than
-              // remounting it, so the previous post's failure has to be
-              // cleared here as well as recorded.
-              onLoad={() => setCoverFailed(false)}
-              onError={() => setCoverFailed(true)}
+              onError={() => setFailedCoverUrl(coverUrl)}
               // FlashList rebinds one card view to a different post instead of
               // mounting a new one, and expo-image's default on a changed
               // source is to hold the old picture until the new one decodes —

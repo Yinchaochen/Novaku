@@ -182,6 +182,23 @@ describe('CommunityPostCard', () => {
     expect(images(tree).some((node) => node.props.onError)).toBe(false);
   });
 
+  it('does not hand one post\'s failed picture to the next post a recycled cell shows', async () => {
+    // 2026-10-07 recording: "Big show on Friedrichstraße" drew a text cover in
+    // the feed while its detail showed the photo. The cell had failed on an
+    // earlier post, and with the Image unmounted nothing could clear the flag.
+    const { act } = require('@testing-library/react-native');
+    const tree = await render(<CommunityPostCard post={makePost()} />);
+    await act(async () => {
+      images(tree).find((node) => node.props.onError)!.props.onError();
+    });
+
+    const next = makePost({ id: 'post-xyz' });
+    next.media_items = [{ ...next.media_items[0], id: 'media-2', media_url: 'https://media.postervia.app/b.jpg' }];
+    await tree.rerender(<CommunityPostCard post={next} />);
+
+    expect(images(tree).some((node) => node.props.recyclingKey === 'post-xyz')).toBe(true);
+  });
+
   it('shows no chip for a post by a real person', async () => {
     const post = makePost();
     const tree = await render(
