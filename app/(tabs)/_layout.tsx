@@ -242,6 +242,8 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="buddy"
           options={{
+            // Hidden from the tab bar (2026-10-07): testers found the app had too many surfaces.
+            href: null,
             title: t.buddy.title,
             tabBarButtonTestID: 'tab.buddy',
             tabBarIcon: ({ focused }) => <FloatingIcon name="scribe" focused={focused} />,

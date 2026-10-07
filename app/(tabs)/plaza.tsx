@@ -68,7 +68,6 @@ import {
   processAndUploadVideo,
 } from '../../features/community/videoPicker';
 import { CommunityPostCard } from '../../features/community/CommunityPostCard';
-import { FeedFilterRow } from '../../components/community/FeedFilterRow';
 import { CommunityPostDetailModal, type CardOrigin } from '../../features/community/CommunityPostDetailModal';
 import {
   type CommunityPostCreateInput,
@@ -209,9 +208,8 @@ export default function PlazaScreen() {
   // room reserved for one is just the last screen of the wall left empty.
   const railed = windowWidth >= WIDE_LAYOUT_MIN_WIDTH;
   const [editingPost, setEditingPost] = useState<CommunityPost | null>(null);
-  // Which kind of post the reader asked for, or null for everything. Sent to
-  // the backend rather than applied here — see communityFeedQueryKey.
-  const [feedFilter, setFeedFilter] = useState<CommunityFeedFilter>(null);
+  // The type filter row is hidden (2026-10-07, too much UI), so the feed is always unfiltered.
+  const feedFilter: CommunityFeedFilter = null;
   const feedQuery = useCommunityFeed(feedFilter);
   const pages = feedQuery?.data?.pages;
   const data = dedupeFeedItems(
@@ -837,8 +835,6 @@ export default function PlazaScreen() {
             <LangPill />
           </View>
         </View>
-
-        <FeedFilterRow value={feedFilter} onChange={setFeedFilter} />
       </View>
 
       {plazaBanner ? (
