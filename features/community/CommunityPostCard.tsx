@@ -319,14 +319,11 @@ export function CommunityPostCard({ post, onPress, titleHighlight, columnWidth }
               style={{
                 width: '100%',
                 aspectRatio: media.aspect,
-                // Near-black is right for a picture that will cover the slot —
-                // it is the dark moment before the image arrives, not a
-                // surface anyone sees afterwards. A `contain` picture never
-                // covers the slot, so that colour would become permanent
-                // letterbox bars around every wide event poster. Matting a
-                // poster on warm paper is the point; matting it in black is
-                // an accident.
-                backgroundColor: media.fit === 'contain' ? colors.bgWarmDeep : '#1F1B18',
+                // Warm paper, not near-black: while a photo loads or fades in
+                // (and around a `contain` poster) the slot shows through, and
+                // a wall of dark slots on a slow network read as broken photos
+                // (lisum, 2026-10-15).
+                backgroundColor: colors.bgWarmDeep,
               }}
             />
             {isVideoMedia(post.media_items[0]) ? (
