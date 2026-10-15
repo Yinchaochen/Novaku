@@ -46,6 +46,7 @@ import { useAuthStore } from '../../store/authStore';
 import { OfficialChip, isOfficialAuthor } from '../../components/OfficialChip';
 import { VerifiedBadge } from '../../components/VerifiedBadge';
 import { requireSignIn } from '../../store/signInPromptStore';
+import { PrivacyMask, PrivateText } from '../../components/PrivacyMask';
 
 function showCopiedToast(message: string) {
   if (Platform.OS === 'android') {
@@ -316,9 +317,9 @@ export default function UserProfileScreen() {
           <Ionicons name="chevron-back" size={26} color="#111111" />
         </Pressable>
         <View className="flex-1 flex-row items-center justify-center px-4">
-          <Text numberOfLines={1} className="shrink text-[16px] font-semibold text-black">
+          <PrivateText numberOfLines={1} className="shrink text-[16px] font-semibold text-black">
             {profileData.display_name}
-          </Text>
+          </PrivateText>
           {profileData.is_verified ? <VerifiedBadge /> : null}
           {isOfficialAuthor(profileData) ? <OfficialChip size="md" /> : null}
         </View>
@@ -330,13 +331,15 @@ export default function UserProfileScreen() {
       <ScrollView className="flex-1">
         <View className="px-5 pt-5">
           <View className="flex-row items-center gap-4">
-            <HeroAvatar name={profileData.display_name} avatarUrl={profileData.avatar_url} />
+            <PrivacyMask>
+              <HeroAvatar name={profileData.display_name} avatarUrl={profileData.avatar_url} />
+            </PrivacyMask>
             <View className="flex-1">
-              <Text className="text-[20px] font-extrabold text-black">{profileData.display_name}</Text>
+              <PrivateText className="text-[20px] font-extrabold text-black">{profileData.display_name}</PrivateText>
               <View className="mt-1 flex-row items-center">
-                <Text className="text-[12px] text-neutral-500">
+                <PrivateText className="text-[12px] text-neutral-500">
                   Postervia ID: {profileData.display_id ?? numericDisplayId(profileData.id)}
-                </Text>
+                </PrivateText>
                 <Pressable
                   onPress={() => void handleCopyDisplayId()}
                   hitSlop={6}
@@ -379,9 +382,9 @@ export default function UserProfileScreen() {
           </View>
 
           {profileData.bio?.trim() ? (
-            <Text className="mt-3 text-[14px] leading-5 text-neutral-700">
+            <PrivateText className="mt-3 text-[14px] leading-5 text-neutral-700">
               {profileData.bio.trim()}
-            </Text>
+            </PrivateText>
           ) : null}
 
           {profileData.intent_tags.length > 0 ? (

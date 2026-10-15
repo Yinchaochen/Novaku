@@ -25,6 +25,7 @@ import {
 import { OfficialChip, isOfficialAuthor } from '../../components/OfficialChip';
 import { VerifiedBadge } from '../../components/VerifiedBadge';
 import { requireSignIn } from '../../store/signInPromptStore';
+import { PrivacyMask, PrivateText } from '../../components/PrivacyMask';
 
 interface Props {
   post: CommunityPost;
@@ -388,7 +389,9 @@ export function CommentRow({
   return (
     <View className={`flex-row gap-3 ${pending ? 'opacity-60' : ''}`}>
       <Pressable onPress={openAuthorProfile} hitSlop={4}>
-        <Avatar name={comment.author.display_name} avatarUrl={comment.author.avatar_url} />
+        <PrivacyMask>
+          <Avatar name={comment.author.display_name} avatarUrl={comment.author.avatar_url} />
+        </PrivacyMask>
       </Pressable>
       <View className="flex-1">
         <View className="flex-row items-start justify-between">
@@ -397,9 +400,9 @@ export function CommentRow({
             hitSlop={4}
             className="flex-1 flex-row items-center"
           >
-            <Text className="shrink text-[15px] font-semibold text-black" numberOfLines={1}>
+            <PrivateText className="shrink text-[15px] font-semibold text-black" numberOfLines={1}>
               {comment.author.display_name}
-            </Text>
+            </PrivateText>
             {comment.author.is_verified ? <VerifiedBadge size={13} /> : null}
             {isOfficialAuthor(comment.author) ? <OfficialChip /> : null}
           </Pressable>
@@ -410,13 +413,15 @@ export function CommentRow({
           )}
         </View>
 
-        <Text className="mt-1 text-[15px] leading-6 text-neutral-800">
-          {replyPrefix}
-          <LinkText text={bodyToShow} />
-        </Text>
+        <PrivacyMask>
+          <Text className="mt-1 text-[15px] leading-6 text-neutral-800">
+            {replyPrefix}
+            <LinkText text={bodyToShow} />
+          </Text>
+        </PrivacyMask>
 
         <View className="mt-2 flex-row flex-wrap items-center gap-3">
-          <Text className="text-[12px] text-neutral-400">{detailLine}</Text>
+          <PrivateText className="text-[12px] text-neutral-400">{detailLine}</PrivateText>
           {pending ? null : (
             <Pressable onPress={onPressReply} hitSlop={6}>
               <Text className="text-[12px] font-medium text-neutral-500">{t.comments.reply}</Text>

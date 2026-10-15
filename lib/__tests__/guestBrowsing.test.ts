@@ -14,6 +14,7 @@ describe('isGuestBrowsable', () => {
     expect(isGuestBrowsable(['plaza', 'search'], 'web')).toBe(true);
     expect(isGuestBrowsable(['p', '[id]'], 'web')).toBe(true);
     expect(isGuestBrowsable(['users', '[id]'], 'web')).toBe(true);
+    expect(isGuestBrowsable(['feedback'], 'web')).toBe(true);
   });
 
   it('keeps every other tab behind an account', () => {

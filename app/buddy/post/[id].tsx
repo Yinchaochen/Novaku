@@ -21,6 +21,7 @@ import { resolveMediaUrl } from '../../../lib/media';
 import { reportToSentry } from '../../../lib/sentry';
 import { useSearchIntentStore } from '../../../store/searchIntentStore';
 import { colors, radius, spacing, typography } from '../../../theme/tokens';
+import { PrivacyMask, PrivateText } from '../../../components/PrivacyMask';
 
 function formatPrice(cents: number, currency: string): string {
   if (cents === 0) return '';
@@ -183,19 +184,21 @@ export default function BuddyPostDetailScreen() {
         >
           <SurfaceCard style={styles.authorCard}>
             {avatar ? (
-              <Image source={avatar} style={styles.avatar} contentFit="cover" />
+              <PrivacyMask>
+                <Image source={avatar} style={styles.avatar} contentFit="cover" />
+              </PrivacyMask>
             ) : (
               <View style={styles.avatarFallback}>
-                <Text style={styles.avatarLetter}>{post.author.display_name.slice(0, 1).toUpperCase()}</Text>
+                <PrivateText style={styles.avatarLetter}>{post.author.display_name.slice(0, 1).toUpperCase()}</PrivateText>
               </View>
             )}
             <View style={styles.authorCopy}>
-              <Text style={styles.authorName}>{post.author.display_name}</Text>
-              <Text style={styles.authorMeta} numberOfLines={1}>
+              <PrivateText style={styles.authorName}>{post.author.display_name}</PrivateText>
+              <PrivateText style={styles.authorMeta} numberOfLines={1}>
                 #{post.author.display_id}
                 {post.author.age ? ` · ${post.author.age}` : ''}
                 {post.author.city ? ` · ${post.author.city}` : ''}
-              </Text>
+              </PrivateText>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textSubtle} />
           </SurfaceCard>

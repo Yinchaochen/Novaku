@@ -1145,6 +1145,33 @@ export type Translations = {
     organisers_unclaimed: string;
     organisers_invite_blocked: string;
   };
+  feedback: {
+    entry: string;
+    entry_hint: string;
+    whatsapp_entry: string;
+    whatsapp_hint: string;
+    title: string;
+    placeholder: string;
+    screenshot_label: string;
+    screenshot_note: string;
+    screenshot_remove: string;
+    purpose_title: string;
+    purpose_body: string;
+    email_label: string;
+    whatsapp_inline: string;
+    send: string;
+    sent: string;
+    error_rate_limited: string;
+    error_failed: string;
+    admin_entry: string;
+    admin_entry_hint: string;
+    admin_title: string;
+    admin_empty: string;
+    admin_show_screenshot: string;
+    admin_mark_done: string;
+    admin_mark_new: string;
+    admin_guest: string;
+  };
   report: {
     sheet_title: string;
     select_reason: string;

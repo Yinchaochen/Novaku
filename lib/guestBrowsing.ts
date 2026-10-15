@@ -13,7 +13,8 @@
  */
 
 /** Route roots a guest may read on the web. */
-const GUEST_ROUTE_ROOTS = new Set(['plaza', 'p', 'users']);
+// 'feedback': a reader who can browse can also tell us what is broken (D-169).
+const GUEST_ROUTE_ROOTS = new Set(['plaza', 'p', 'users', 'feedback']);
 
 export function isGuestBrowsable(segments: readonly string[], platform: string): boolean {
   if (platform !== 'web') return false;

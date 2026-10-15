@@ -1444,5 +1444,32 @@
     "deadline_chip": "Frist",
     "device_connect": "Termine aus dem Handy-Kalender anzeigen (bleibt auf dem Gerät, wird nie hochgeladen)",
     "device_connected": "Handy-Kalender verbunden"
+  },
+  "feedback": {
+    "entry": "Feedback senden",
+    "entry_hint": "Etwas kaputt oder unklar? Sag es uns.",
+    "whatsapp_entry": "Unserer WhatsApp-Gruppe beitreten",
+    "whatsapp_hint": "Direkt mit dem Postervia-Team schreiben",
+    "title": "Feedback senden",
+    "placeholder": "Was ist passiert, und was hast du erwartet?",
+    "screenshot_label": "Screenshot der Seite, auf der du warst",
+    "screenshot_note": "Namen, Profilbilder, Nachrichten und Kommentare werden auf deinem Handy abgedeckt, bevor der Screenshot gesendet wird.",
+    "screenshot_remove": "Screenshot entfernen",
+    "purpose_title": "Wofür wir den Screenshot nutzen",
+    "purpose_body": "Wir sehen damit, auf welcher Seite du warst, und können den Fehler beheben. Wir verstehen, wo Leute hängen bleiben, und entscheiden, was wir zuerst verbessern. Nur das Postervia-Team sieht ihn. Wir veröffentlichen ihn nicht, geben ihn nicht weiter und nutzen ihn weder für Werbung noch für KI-Training. Nach 90 Tagen oder wenn du dein Konto löschst, wird er gelöscht.",
+    "email_label": "Deine E-Mail (optional, damit wir antworten können)",
+    "whatsapp_inline": "Lieber direkt schreiben? Tritt unserer WhatsApp-Gruppe bei",
+    "send": "Senden",
+    "sent": "Danke, ist angekommen.",
+    "error_rate_limited": "Du hast in kurzer Zeit viel Feedback gesendet. Bitte versuch es später noch einmal.",
+    "error_failed": "Dein Feedback konnte nicht gesendet werden. Bitte versuch es noch einmal.",
+    "admin_entry": "Nutzer-Feedback",
+    "admin_entry_hint": "Lesen, was Nutzer aus der App geschickt haben",
+    "admin_title": "Nutzer-Feedback",
+    "admin_empty": "Noch kein Feedback",
+    "admin_show_screenshot": "Screenshot zeigen",
+    "admin_mark_done": "Als erledigt markieren",
+    "admin_mark_new": "Als neu markieren",
+    "admin_guest": "Gast"
   }
 }

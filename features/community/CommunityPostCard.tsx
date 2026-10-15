@@ -23,6 +23,7 @@ import {
 import { PostCover } from '../../components/community/PostCover';
 import { VerifiedBadge } from '../../components/VerifiedBadge';
 import type { CardOrigin } from './CommunityPostDetailModal';
+import { PrivacyMask, PrivateText } from '../../components/PrivacyMask';
 
 function formatDuration(totalSeconds?: number | null): string {
   const safe = Math.max(0, Math.floor(totalSeconds ?? 0));
@@ -478,13 +479,15 @@ export function CommunityPostCard({ post, onPress, titleHighlight, columnWidth }
             onPress={openAuthorProfile}
             hitSlop={4}
           >
-            <Avatar
-              name={post.author.display_name}
-              avatarUrl={post.author.avatar_url}
-              recyclingKey={post.author.id}
-              size={wide ? 28 : 22}
-            />
-            <Text
+            <PrivacyMask>
+              <Avatar
+                name={post.author.display_name}
+                avatarUrl={post.author.avatar_url}
+                recyclingKey={post.author.id}
+                size={wide ? 28 : 22}
+              />
+            </PrivacyMask>
+            <PrivateText
               numberOfLines={1}
               style={{
                 marginLeft: 8,
@@ -494,7 +497,7 @@ export function CommunityPostCard({ post, onPress, titleHighlight, columnWidth }
               }}
             >
               {post.author.display_name}
-            </Text>
+            </PrivateText>
             {post.author.is_verified ? <VerifiedBadge size={12} /> : null}
           </Pressable>
 

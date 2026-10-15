@@ -79,6 +79,7 @@ import {
 } from './useCommunity';
 import { OfficialChip, isOfficialAuthor } from '../../components/OfficialChip';
 import { VerifiedBadge } from '../../components/VerifiedBadge';
+import { PrivacyMask, PrivateText } from '../../components/PrivacyMask';
 
 /** Where on screen the card that opened this sat, in window coordinates. */
 export interface CardOrigin {
@@ -909,12 +910,14 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
                 testID="plaza.detail.author"
                 className="flex-1 flex-row items-center"
               >
-                <Avatar name={post.author.display_name} avatarUrl={post.author.avatar_url} size={34} />
+                <PrivacyMask>
+                  <Avatar name={post.author.display_name} avatarUrl={post.author.avatar_url} size={34} />
+                </PrivacyMask>
                 <View className="ml-3 flex-1">
                   <View className="flex-row items-center">
-                    <Text numberOfLines={1} className="shrink text-[15px] font-semibold text-black">
+                    <PrivateText numberOfLines={1} className="shrink text-[15px] font-semibold text-black">
                       {post.author.display_name}
-                    </Text>
+                    </PrivateText>
                     {post.author.is_verified ? <VerifiedBadge /> : null}
                     {isOfficialAuthor(post.author) ? <OfficialChip size="md" /> : null}
                   </View>
@@ -1312,11 +1315,13 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
 
           <View className="border-t border-neutral-200 bg-white px-4 pt-3" style={{ paddingBottom: Math.max(insets.bottom, 12) }}>
             <View className="mb-3 flex-row items-center gap-3">
-              <Avatar
-                name={user?.display_name ?? 'N'}
-                avatarUrl={currentAvatarUrl ?? user?.avatar_url}
-                size={34}
-              />
+              <PrivacyMask>
+                <Avatar
+                  name={user?.display_name ?? 'N'}
+                  avatarUrl={currentAvatarUrl ?? user?.avatar_url}
+                  size={34}
+                />
+              </PrivacyMask>
 
               <Pressable
                 // A guest is asked to sign in, then the composer opens (D-151).

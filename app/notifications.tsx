@@ -14,6 +14,7 @@ import {
   useNotifications,
 } from '../features/community/useCommunity';
 import { resolveMediaUrl } from '../lib/media';
+import { PrivacyMask, PrivateText } from '../components/PrivacyMask';
 
 function timeAgo(value: string, langCode: string) {
   try {
@@ -128,11 +129,13 @@ export default function NotificationsScreen() {
                 }}
                 hitSlop={4}
               >
-                <Avatar name={n.actor.display_name} avatarUrl={n.actor.avatar_url} />
+                <PrivacyMask>
+                  <Avatar name={n.actor.display_name} avatarUrl={n.actor.avatar_url} />
+                </PrivacyMask>
               </Pressable>
               <View className="flex-1">
                 <Text className="text-[14px] leading-5 text-black">
-                  <Text className="font-semibold">{n.actor.display_name}</Text>{' '}
+                  <PrivateText className="font-semibold">{n.actor.display_name}</PrivateText>{' '}
                   <Text className="text-neutral-700">
                     {n.type === 'follow'
                       ? t.notifications.followed_you
@@ -148,9 +151,9 @@ export default function NotificationsScreen() {
                   </Text>
                 </Text>
                 {n.comment_excerpt ? (
-                  <Text numberOfLines={2} className="mt-1 text-[13px] text-neutral-500">
+                  <PrivateText numberOfLines={2} className="mt-1 text-[13px] text-neutral-500">
                     “{n.comment_excerpt}”
-                  </Text>
+                  </PrivateText>
                 ) : n.post_title ? (
                   <Text numberOfLines={1} className="mt-1 text-[13px] text-neutral-500">
                     {n.post_title}

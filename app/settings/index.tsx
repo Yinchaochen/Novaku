@@ -6,6 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { SettingsHeader, SettingsRow, SettingsSection } from '../../components/SettingsRow';
 import { useLanguage } from '../../context/LanguageContext';
 import { useCreateDSR } from '../../features/compliance/useCompliance';
+import { WHATSAPP_GROUP_URL, openFeedback } from '../../features/feedback/useFeedback';
+import { openExternalUrl } from '../../lib/links';
 import { useProductGuide } from '../../features/guide/useProductGuide';
 import { useUpdateDeadlinePush } from '../../features/social/useSocial';
 import { useAuthStore } from '../../store/authStore';
@@ -174,6 +176,18 @@ export default function SettingsHubScreen() {
             icon="information-circle-outline"
             label={`${t.settings.about_version} ${version}`}
           />
+          <SettingsRow
+            icon="chatbubble-ellipses-outline"
+            label={t.feedback.entry}
+            hint={t.feedback.entry_hint}
+            onPress={() => void openFeedback({ screen: '/settings', withScreenshot: false })}
+          />
+          <SettingsRow
+            icon="logo-whatsapp"
+            label={t.feedback.whatsapp_entry}
+            hint={t.feedback.whatsapp_hint}
+            onPress={() => void openExternalUrl(WHATSAPP_GROUP_URL)}
+          />
         </SettingsSection>
 
         <SettingsSection title={t.settings.section_labs}>
@@ -228,6 +242,12 @@ export default function SettingsHubScreen() {
               label={t.settings.admin_verified_title}
               hint={t.settings.admin_verified_hint}
               onPress={() => router.push('/admin/verified-accounts' as never)}
+            />
+            <SettingsRow
+              icon="mail-unread-outline"
+              label={t.feedback.admin_entry}
+              hint={t.feedback.admin_entry_hint}
+              onPress={() => router.push('/admin/feedback' as never)}
             />
           </SettingsSection>
         ) : null}

@@ -44,11 +44,13 @@ import { z } from 'zod/v4';
 import { AppBackground } from '../../components/AppBackground';
 import { ChalkIcon } from '../../components/ChalkIcon';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
+import { ActionSheet } from '../../components/ActionSheet';
 import { FeedbackPressable } from '../../components/FeedbackPressable';
 import { GlassCard } from '../../components/GlassCard';
 import { LangPill } from '../../components/PageHeader';
 import { useLanguage } from '../../context/LanguageContext';
 import { getPostingLocation, type PostingLocation } from '../../features/community/postingLocation';
+import { openFeedback } from '../../features/feedback/useFeedback';
 import { captureSentryMessage } from '../../lib/sentry';
 import { colors, shadows } from '../../theme/tokens';
 import { compressImageForUpload } from '../../lib/imageCompression';
@@ -210,6 +212,8 @@ export default function PlazaScreen() {
   const [editingPost, setEditingPost] = useState<CommunityPost | null>(null);
   // The type filter row is hidden (2026-10-07, too much UI), so the feed is always unfiltered.
   const feedFilter: CommunityFeedFilter = null;
+  // The ? button opens a small menu: replay the walkthrough, or send feedback.
+  const [helpMenuVisible, setHelpMenuVisible] = useState(false);
   const feedQuery = useCommunityFeed(feedFilter);
   const pages = feedQuery?.data?.pages;
   const data = dedupeFeedItems(
@@ -798,8 +802,7 @@ export default function PlazaScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             {/* Permanent walkthrough entry (D-050): re-runnable any time. */}
             <FeedbackPressable
-              // The walkthrough ends in the composer, so it needs an account too.
-              onPress={() => requireSignIn(() => guide.startWalkthrough({ composerOpen: false }))}
+              onPress={() => setHelpMenuVisible(true)}
               accessibilityLabel={t.guide.take_the_tour}
               testID="plaza.guide-entry"
               hitSlop={8}
@@ -836,6 +839,25 @@ export default function PlazaScreen() {
           </View>
         </View>
       </View>
+
+      <ActionSheet
+        visible={helpMenuVisible}
+        onClose={() => setHelpMenuVisible(false)}
+        actions={[
+          {
+            label: t.guide.take_the_tour,
+            icon: 'help-circle-outline',
+            // The walkthrough ends in the composer, so it needs an account too.
+            onPress: () => requireSignIn(() => guide.startWalkthrough({ composerOpen: false })),
+          },
+          {
+            label: t.feedback.entry,
+            icon: 'chatbubble-ellipses-outline',
+            // Wait for the sheet to slide away so it is not in the screenshot.
+            onPress: () => void openFeedback({ screen: '/plaza', withScreenshot: true, delayMs: 400 }),
+          },
+        ]}
+      />
 
       {plazaBanner ? (
         <GlassCard

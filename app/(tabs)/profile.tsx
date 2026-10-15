@@ -60,6 +60,7 @@ import { numericDisplayId } from '../../lib/displayId';
 import { formatDisplayLocation } from '../../lib/displayLocation';
 import { resolveMediaUrl } from '../../lib/media';
 import { useAuthStore } from '../../store/authStore';
+import { PrivacyMask, PrivateText } from '../../components/PrivacyMask';
 
 type ProfileTab = 'notes' | 'comments' | 'saves' | 'likes';
 
@@ -372,9 +373,9 @@ function CommentRecordRow({
             {excerpt}
           </Text>
         ) : null}
-        <Text style={{ marginTop: 6, fontSize: 11.5, color: colors.textSubtle }} numberOfLines={1}>
+        <PrivateText style={{ marginTop: 6, fontSize: 11.5, color: colors.textSubtle }} numberOfLines={1}>
           {postDate ? `${postDate} · ` : ''}@{post.author.display_name}
-        </Text>
+        </PrivateText>
       </View>
     </FeedbackPressable>
   );
@@ -807,7 +808,9 @@ export default function ProfileScreen() {
           style={{ backgroundColor: heroMediaUri ? colors.textBrown : 'rgba(255, 159, 110, 0.5)' }}
         >
           {heroMediaUri ? (
-            <Image source={heroMediaUri} contentFit="cover" transition={120} style={StyleSheet.absoluteFillObject} />
+            <PrivacyMask style={StyleSheet.absoluteFillObject}>
+              <Image source={heroMediaUri} contentFit="cover" transition={120} style={StyleSheet.absoluteFillObject} />
+            </PrivacyMask>
           ) : null}
           {/* Warm overlay — replaces the harsh black overlay with a soft brown gradient. */}
           <LinearGradient
@@ -899,11 +902,13 @@ export default function ProfileScreen() {
                   }}
                 >
                   {savedAvatarUri ? (
-                    <Image
-                      source={savedAvatarUri}
-                      contentFit="cover"
-                      style={{ width: 80, height: 80, borderRadius: 40 }}
-                    />
+                    <PrivacyMask>
+                      <Image
+                        source={savedAvatarUri}
+                        contentFit="cover"
+                        style={{ width: 80, height: 80, borderRadius: 40 }}
+                      />
+                    </PrivacyMask>
                   ) : (
                     <View
                       style={{
@@ -915,16 +920,16 @@ export default function ProfileScreen() {
                         justifyContent: 'center',
                       }}
                     >
-                      <Text style={{ fontSize: 30, fontWeight: '800', color: colors.brandCoral }}>
+                      <PrivateText style={{ fontSize: 30, fontWeight: '800', color: colors.brandCoral }}>
                         {user?.display_name?.slice(0, 1).toUpperCase() ?? 'N'}
-                      </Text>
+                      </PrivateText>
                     </View>
                   )}
                 </View>
               </Pressable>
               <View className="ml-4 flex-1">
                 <View className="flex-row items-center">
-                  <Text
+                  <PrivateText
                     style={{
                       flexShrink: 1,
                       fontSize: 26,
@@ -937,13 +942,13 @@ export default function ProfileScreen() {
                     }}
                   >
                     {user?.display_name ?? 'Postervia'}
-                  </Text>
+                  </PrivateText>
                   {user?.is_verified ? <VerifiedBadge size={20} tone="onDark" /> : null}
                 </View>
                 <View className="mt-1 flex-row items-center">
-                  <Text style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.7)', letterSpacing: 0.3 }}>
+                  <PrivateText style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.7)', letterSpacing: 0.3 }}>
                     Postervia ID: {shortId}
-                  </Text>
+                  </PrivateText>
                   <Pressable
                     onPress={async () => {
                       if (!user?.display_id && !user?.id) return;
@@ -988,7 +993,7 @@ export default function ProfileScreen() {
               }}
               pressedStyle={{ opacity: 0.85 }}
             >
-              <Text
+              <PrivateText
                 style={{
                   fontSize: 13,
                   lineHeight: 19,
@@ -997,7 +1002,7 @@ export default function ProfileScreen() {
                 numberOfLines={3}
               >
                 {user?.bio?.trim() || t.profile.bio_placeholder}
-              </Text>
+              </PrivateText>
             </FeedbackPressable>
 
             {/* STATS — slim translucent strip, not a thick card */}

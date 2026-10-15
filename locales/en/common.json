@@ -1460,5 +1460,32 @@
     "deadline_chip": "Deadline",
     "device_connect": "Show phone calendar events (stays on this device, never uploaded)",
     "device_connected": "Phone calendar connected"
+  },
+  "feedback": {
+    "entry": "Send feedback",
+    "entry_hint": "Something broken or confusing? Tell us.",
+    "whatsapp_entry": "Join our WhatsApp group",
+    "whatsapp_hint": "Talk to the Postervia team directly",
+    "title": "Send feedback",
+    "placeholder": "What happened, and what did you expect?",
+    "screenshot_label": "Screenshot of the screen you were on",
+    "screenshot_note": "Names, profile photos, messages and comments are covered on your phone before the screenshot is sent.",
+    "screenshot_remove": "Remove screenshot",
+    "purpose_title": "What we use the screenshot for",
+    "purpose_body": "To see exactly which screen you were on so we can fix the problem, to understand where people get stuck, and to decide what to fix first. Only the Postervia team sees it. We never publish or share it, or use it for marketing or to train AI, and we delete it after 90 days or when you delete your account.",
+    "email_label": "Your email (optional, so we can reply)",
+    "whatsapp_inline": "Rather talk? Join our WhatsApp group",
+    "send": "Send",
+    "sent": "Thanks, we got it.",
+    "error_rate_limited": "You've sent a lot of feedback in a short time. Please try again later.",
+    "error_failed": "Couldn't send your feedback. Please try again.",
+    "admin_entry": "User feedback",
+    "admin_entry_hint": "Read what users sent from the app",
+    "admin_title": "User feedback",
+    "admin_empty": "No feedback yet",
+    "admin_show_screenshot": "Show screenshot",
+    "admin_mark_done": "Mark as done",
+    "admin_mark_new": "Mark as new",
+    "admin_guest": "Guest"
   }
 }

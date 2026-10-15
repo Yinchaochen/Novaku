@@ -5,6 +5,7 @@ import { Pressable, Text, View } from 'react-native';
 import { useLanguage } from '../../context/LanguageContext';
 import type { BuddyPost, BuddyPostCategory } from '../../features/buddyPosts/useBuddyPosts';
 import { resolveMediaUrl } from '../../lib/media';
+import { PrivacyMask, PrivateText } from '../PrivacyMask';
 
 const CATEGORY_ICON: Record<BuddyPostCategory, keyof typeof Ionicons.glyphMap> = {
   anmeldung: 'document-text-outline',
@@ -128,19 +129,21 @@ export function BuddyPostCard({ post, onPress }: BuddyPostCardProps) {
       {/* Top row: author */}
       <View className="flex-row items-center">
         {avatar ? (
-          <Image source={avatar} style={{ width: 36, height: 36, borderRadius: 18 }} contentFit="cover" />
+          <PrivacyMask>
+            <Image source={avatar} style={{ width: 36, height: 36, borderRadius: 18 }} contentFit="cover" />
+          </PrivacyMask>
         ) : (
           <View className="h-9 w-9 items-center justify-center rounded-full bg-[#FFE6EA]">
-            <Text className="text-[14px] font-bold text-[#F47C7C]">
+            <PrivateText className="text-[14px] font-bold text-[#F47C7C]">
               {(post.author.display_name || '?').slice(0, 1).toUpperCase()}
-            </Text>
+            </PrivateText>
           </View>
         )}
         <View className="ml-2 flex-1">
           <View className="flex-row items-center">
-            <Text className="text-[14px] font-semibold text-neutral-900" numberOfLines={1}>
+            <PrivateText className="text-[14px] font-semibold text-neutral-900" numberOfLines={1}>
               {post.author.display_name}
-            </Text>
+            </PrivateText>
             <View className="ml-1.5 flex-row items-center">
               <GenderIcon gender={post.author.gender} />
               {post.author.age ? (

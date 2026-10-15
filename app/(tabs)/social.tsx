@@ -81,6 +81,7 @@ import { useNotifications } from '../../features/community/useCommunity';
 import { api } from '../../lib/api';
 import { useChatOutboxStore } from '../../store/chatOutboxStore';
 import { useSearchIntentStore } from '../../store/searchIntentStore';
+import { PrivacyMask, PrivateText } from '../../components/PrivacyMask';
 
 type ConversationKind = 'self' | 'direct' | 'group';
 
@@ -154,7 +155,7 @@ function AvatarFallback({ size, label, tint }: { size: number; label: string; ti
   );
 }
 
-function SingleAvatar({ uri, size, label, tint }: { uri?: string | null; size: number; label: string; tint: string }) {
+function SingleAvatarInner({ uri, size, label, tint }: { uri?: string | null; size: number; label: string; tint: string }) {
   if (!uri) return <AvatarFallback size={size} label={label} tint={tint} />;
   return (
     <Image
@@ -163,6 +164,15 @@ function SingleAvatar({ uri, size, label, tint }: { uri?: string | null; size: n
       contentFit="cover"
       transition={120}
     />
+  );
+}
+
+// Every avatar on this tab goes through here, so masking it covers them all.
+function SingleAvatar(props: Parameters<typeof SingleAvatarInner>[0]) {
+  return (
+    <PrivacyMask>
+      <SingleAvatarInner {...props} />
+    </PrivacyMask>
   );
 }
 
@@ -202,14 +212,14 @@ function ConversationRow({ item, langCode, onPress }: { item: ConversationItem; 
       <ConversationAvatar item={item} />
       <View className="ml-4 flex-1">
         <View className="flex-row items-start justify-between">
-          <Text className="flex-1 pr-4 text-[19px] font-semibold text-slate-900" numberOfLines={1}>
+          <PrivateText className="flex-1 pr-4 text-[19px] font-semibold text-slate-900" numberOfLines={1}>
             {item.title}
-          </Text>
+          </PrivateText>
           {timeLabel ? <Text className="text-xs text-slate-400">{timeLabel}</Text> : null}
         </View>
-        <Text className="mt-1 text-[14px] leading-5 text-slate-500" numberOfLines={2}>
+        <PrivateText className="mt-1 text-[14px] leading-5 text-slate-500" numberOfLines={2}>
           {item.subtitle}
-        </Text>
+        </PrivateText>
       </View>
       {item.unreadCount > 0 ? (
         <View className="ml-3 min-w-[22px] rounded-full bg-[#FF5A57] px-1.5 py-1">
@@ -460,7 +470,7 @@ export function MessageBubble({
             <SingleAvatar uri={senderAvatar} size={36} label={senderName} tint={senderTint} />
           </View>
         ) : null}
-        <View style={{ maxWidth: isMedia ? undefined : '72%' }}>{bubbleContent()}</View>
+        <View style={{ maxWidth: isMedia ? undefined : '72%' }}><PrivacyMask>{bubbleContent()}</PrivacyMask></View>
         {isMe ? (
           <View style={{ marginLeft: 8 }}>
             <SingleAvatar uri={senderAvatar} size={36} label={senderName} tint={senderTint} />
@@ -489,7 +499,7 @@ export function MessageBubble({
         </View>
       ) : null}
       <View style={{ maxWidth: isMedia ? undefined : '72%' }}>
-        {bubbleContent()}
+        <PrivacyMask>{bubbleContent()}</PrivacyMask>
         {/* MS-16: local-first send status. Pending = optimistic, waiting on
             the server; failed = network/5xx, tap the bubble to resend. */}
         {isMe && message._pending ? (
@@ -1388,9 +1398,9 @@ export default function SocialScreen() {
                     <Text style={{ fontSize: 16, fontWeight: '700', color: colors.textMain }}>
                       {incomingRequests.length} {t.social.incoming_requests}
                     </Text>
-                    <Text style={{ marginTop: 4, fontSize: 13, lineHeight: 18, color: colors.textMuted }}>
+                    <PrivateText style={{ marginTop: 4, fontSize: 13, lineHeight: 18, color: colors.textMuted }}>
                       {incomingRequests[0]?.user.display_name}
-                    </Text>
+                    </PrivateText>
                   </View>
                   <Ionicons name="chevron-forward" size={20} color={colors.textSubtle} />
                 </View>
@@ -1645,7 +1655,7 @@ export default function SocialScreen() {
                         <View className="flex-row items-center px-4 py-4">
                           <SingleAvatar uri={resolveMediaUrl(request.user.avatar_url) ?? null} size={46} label={request.user.display_name} tint="#E8EEFF" />
                           <View className="ml-3 flex-1 pr-2">
-                            <Text className="text-[16px] font-semibold text-slate-900">{request.user.display_name}</Text>
+                            <PrivateText className="text-[16px] font-semibold text-slate-900">{request.user.display_name}</PrivateText>
                             <Text className="mt-1 text-[13px] text-slate-500">
                               {formatDisplayLocation(request.user.city_label ?? request.user.city) ??
                                 request.user.city_label ??
@@ -1674,9 +1684,9 @@ export default function SocialScreen() {
                   <SectionTitle>{t.social.outgoing_requests}</SectionTitle>
                   <View className="rounded-[24px] bg-white px-4 py-3" style={styles.panelCard}>
                     {outgoingRequests.map((request) => (
-                      <Text key={request.id} className="py-1 text-[14px] text-slate-500">
+                      <PrivateText key={request.id} className="py-1 text-[14px] text-slate-500">
                         {request.user.display_name} · {t.social.request_sent}
-                      </Text>
+                      </PrivateText>
                     ))}
                   </View>
                 </>
@@ -1695,7 +1705,7 @@ export default function SocialScreen() {
                     <View className="flex-row items-center px-4 py-4">
                       <SingleAvatar uri={resolveMediaUrl(item.avatar_url) ?? null} size={46} label={item.display_name} tint="#FDEADA" />
                       <View className="ml-3 flex-1 pr-2">
-                        <Text className="text-[16px] font-semibold text-slate-900">{item.display_name}</Text>
+                        <PrivateText className="text-[16px] font-semibold text-slate-900">{item.display_name}</PrivateText>
                         <Text className="mt-1 text-[13px] text-slate-500">
                           {formatDisplayLocation(item.city_label ?? item.city) ?? item.city_label ?? item.city}
                         </Text>
@@ -1792,9 +1802,9 @@ export default function SocialScreen() {
                             backgroundColor: isSelected ? '#EEF1FF' : '#F8FAFD',
                           }}
                         >
-                          <Text style={{ color: isSelected ? '#4C57C8' : '#334155', fontWeight: '700' }}>
+                          <PrivateText style={{ color: isSelected ? '#4C57C8' : '#334155', fontWeight: '700' }}>
                             {friendship.user.display_name}
-                          </Text>
+                          </PrivateText>
                         </Pressable>
                       );
                     })}
@@ -1904,9 +1914,9 @@ export default function SocialScreen() {
                     <Ionicons name="chevron-back" size={27} color="#111827" />
                   </Pressable>
                   <View style={{ flex: 1, alignItems: 'center', marginHorizontal: 10 }}>
-                    <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827' }} numberOfLines={1}>
+                    <PrivateText style={{ fontSize: 18, fontWeight: '700', color: '#111827' }} numberOfLines={1}>
                       {selectedConversation?.title}
-                    </Text>
+                    </PrivateText>
                     {selectedConversation?.kind === 'group' && groupDetailQuery.data ? (
                       <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>
                         {groupDetailQuery.data.member_count} {t.social.group_members}
@@ -2076,8 +2086,8 @@ export default function SocialScreen() {
               <View style={{ backgroundColor: '#EEF3FF', paddingHorizontal: 14, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#D1D5DB' }}>
                 <View style={{ width: 3, height: 36, borderRadius: 2, backgroundColor: '#FF9F6E', marginRight: 10 }} />
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#FF9F6E' }} numberOfLines={1}>{replyTo.sender.display_name}</Text>
-                  <Text style={{ fontSize: 12, color: '#6B7280' }} numberOfLines={1}>{replyTo.body ?? '[media]'}</Text>
+                  <PrivateText style={{ fontSize: 12, fontWeight: '700', color: '#FF9F6E' }} numberOfLines={1}>{replyTo.sender.display_name}</PrivateText>
+                  <PrivateText style={{ fontSize: 12, color: '#6B7280' }} numberOfLines={1}>{replyTo.body ?? '[media]'}</PrivateText>
                 </View>
                 <Pressable onPress={() => setReplyTo(null)} hitSlop={8}>
                   <Ionicons name="close" size={20} color="#9CA3AF" />
@@ -2467,7 +2477,7 @@ export default function SocialScreen() {
                     style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
                   >
                     <ConversationAvatar item={item} />
-                    <Text className="ml-4 flex-1 text-[17px] font-semibold text-slate-900" numberOfLines={1}>{item.title}</Text>
+                    <PrivateText className="ml-4 flex-1 text-[17px] font-semibold text-slate-900" numberOfLines={1}>{item.title}</PrivateText>
                     <Ionicons name="arrow-redo-outline" size={20} color="#FF9F6E" />
                   </Pressable>
                   {index < conversations.length - 1 ? <View className="ml-[92px] h-px bg-slate-100" /> : null}

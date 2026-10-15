@@ -8,6 +8,7 @@ import { SettingsHeader } from '../../components/SettingsRow';
 import { useLanguage } from '../../context/LanguageContext';
 import { resolveMediaUrl } from '../../lib/media';
 import { useBlockedUsers, useUnblockUser } from '../../features/social/useSocial';
+import { PrivacyMask, PrivateText } from '../../components/PrivacyMask';
 
 export default function BlockedUsersScreen() {
   const { t } = useLanguage();
@@ -73,25 +74,27 @@ export default function BlockedUsersScreen() {
                   }
                 >
                   {avatarUrl ? (
-                    <Image
-                      source={avatarUrl}
-                      style={{ width: 40, height: 40, borderRadius: 20 }}
-                      contentFit="cover"
-                    />
+                    <PrivacyMask>
+                      <Image
+                        source={avatarUrl}
+                        style={{ width: 40, height: 40, borderRadius: 20 }}
+                        contentFit="cover"
+                      />
+                    </PrivacyMask>
                   ) : (
                     <View
                       className="h-10 w-10 items-center justify-center rounded-full"
                       style={{ backgroundColor: '#F4E3FF' }}
                     >
-                      <Text style={{ fontSize: 14, fontWeight: '800', color: '#1F2937' }}>
+                      <PrivateText style={{ fontSize: 14, fontWeight: '800', color: '#1F2937' }}>
                         {initial}
-                      </Text>
+                      </PrivateText>
                     </View>
                   )}
                   <View className="flex-1">
-                    <Text className="text-[15px] font-semibold text-[#3B2A22]" numberOfLines={1}>
+                    <PrivateText className="text-[15px] font-semibold text-[#3B2A22]" numberOfLines={1}>
                       {entry.user.display_name}
-                    </Text>
+                    </PrivateText>
                     {entry.user.city ? (
                       <Text className="mt-0.5 text-[12px] text-neutral-500" numberOfLines={1}>
                         {entry.user.city}

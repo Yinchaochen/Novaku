@@ -25,6 +25,7 @@ import {
 } from '../../features/social/useSocial';
 import { resolveMediaUrl } from '../../lib/media';
 import { useSearchIntentStore } from '../../store/searchIntentStore';
+import { PrivacyMask, PrivateText } from '../../components/PrivacyMask';
 
 const HIGHLIGHT_COLOR = '#2F80ED';
 const SEARCH_DEBOUNCE_MS = 200;
@@ -38,7 +39,7 @@ function useDebouncedValue<T>(value: T, delay: number): T {
   return debounced;
 }
 
-function HighlightedText({
+function HighlightedTextInner({
   text,
   query,
   className,
@@ -78,7 +79,7 @@ function HighlightedText({
   );
 }
 
-function Avatar({ url, fallback, size = 40 }: { url?: string | null; fallback: string; size?: number }) {
+function AvatarInner({ url, fallback, size = 40 }: { url?: string | null; fallback: string; size?: number }) {
   const resolved = resolveMediaUrl(url);
   if (resolved) {
     return (
@@ -98,6 +99,24 @@ function Avatar({ url, fallback, size = 40 }: { url?: string | null; fallback: s
         {fallback.trim().slice(0, 1).toUpperCase() || '?'}
       </Text>
     </View>
+  );
+}
+
+// Every name, group title and message preview on this screen goes through
+// these two, so masking them here covers the whole search page.
+function HighlightedText(props: Parameters<typeof HighlightedTextInner>[0]) {
+  return (
+    <PrivacyMask>
+      <HighlightedTextInner {...props} />
+    </PrivacyMask>
+  );
+}
+
+function Avatar(props: Parameters<typeof AvatarInner>[0]) {
+  return (
+    <PrivacyMask>
+      <AvatarInner {...props} />
+    </PrivacyMask>
   );
 }
 
@@ -316,9 +335,9 @@ export default function SocialSearchScreen() {
                             {[hit.city, hit.identity].filter(Boolean).join(' · ')}
                           </Text>
                         </View>
-                        <Text className="ml-2 text-[11px] font-medium text-neutral-400">
+                        <PrivateText className="ml-2 text-[11px] font-medium text-neutral-400">
                           #{hit.display_id}
-                        </Text>
+                        </PrivateText>
                       </Pressable>
                     ))
                   )}
@@ -414,9 +433,9 @@ export default function SocialSearchScreen() {
                         />
                         <View className="flex-1">
                           <View className="flex-row items-center justify-between">
-                            <Text numberOfLines={1} className="text-[15px] font-semibold text-black">
+                            <PrivateText numberOfLines={1} className="text-[15px] font-semibold text-black">
                               {hit.conversation_title ?? hit.message.sender.display_name}
-                            </Text>
+                            </PrivateText>
                             <Text className="ml-2 text-[11px] text-neutral-400">
                               {formatHitDate(hit.message.created_at, langCode)}
                             </Text>
