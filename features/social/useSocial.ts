@@ -238,28 +238,38 @@ export const EVENT_INTERESTS = [
 ] as const;
 export type EventInterest = (typeof EVENT_INTERESTS)[number];
 
+// Both replies are the same user /auth/me returns, so they go straight into the
+// store; refetching /me as well would only race a second tap on the switch.
 export function useUpdateEventPush() {
-  const qc = useQueryClient();
+  const setUser = useAuthStore((state) => state.setUser);
   return useMutation({
     mutationFn: async (patch: { enabled?: boolean; interests?: EventInterest[] }) => {
       const res = await api.patch('/auth/me/event-push', patch);
-      return res.data.data;
+      return res.data.data as AuthUser;
     },
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ['auth', 'me'] });
+    onSuccess: (user) => {
+      setUser(user);
     },
   });
 }
 
 export function useUpdateDeadlinePush() {
-  const qc = useQueryClient();
+  const setUser = useAuthStore((state) => state.setUser);
   return useMutation({
     mutationFn: async (enabled: boolean) => {
       const res = await api.patch('/auth/me/deadline-push', { enabled });
-      return res.data.data;
+      return res.data.data as AuthUser;
     },
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ['auth', 'me'] });
+    onMutate: (enabled) => {
+      const previous = useAuthStore.getState().user;
+      if (previous) setUser({ ...previous, deadline_push_enabled: enabled });
+      return { previous };
+    },
+    onError: (_err, _enabled, context) => {
+      if (context?.previous) setUser(context.previous);
+    },
+    onSuccess: (user) => {
+      setUser(user);
     },
   });
 }

@@ -21,7 +21,6 @@ const ICONS: Record<EventInterest, keyof typeof Ionicons.glyphMap> = {
 export default function EventRemindersScreen() {
   const { t } = useLanguage();
   const user = useAuthStore((s) => s.user);
-  const setUser = useAuthStore((s) => s.setUser);
   const update = useUpdateEventPush();
 
   const enabled = user?.event_push_enabled ?? true;
@@ -29,8 +28,7 @@ export default function EventRemindersScreen() {
 
   const save = async (patch: { enabled?: boolean; interests?: EventInterest[] }) => {
     try {
-      const updated = await update.mutateAsync(patch);
-      if (updated && setUser) setUser(updated);
+      await update.mutateAsync(patch);
     } catch (err) {
       Alert.alert(t.common.error, (err as Error).message ?? '');
     }

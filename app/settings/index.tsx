@@ -144,7 +144,9 @@ export default function SettingsHubScreen() {
             trailing={
               <Switch
                 value={deadlinePushEnabled}
-                onValueChange={(next) => updateDeadlinePush.mutate(next)}
+                onValueChange={(next) =>
+                  updateDeadlinePush.mutate(next, { onError: () => Alert.alert(t.common.error) })
+                }
                 trackColor={{ true: '#F47C7C', false: '#D6D9E0' }}
               />
             }
