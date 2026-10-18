@@ -13,7 +13,6 @@ const OPTIONS: FeedMode[] = ['personalized', 'chronological', 'following'];
 export default function RecommendationsScreen() {
   const { t } = useLanguage();
   const user = useAuthStore((s) => s.user);
-  const setUser = useAuthStore((s) => s.setUser);
   const update = useUpdateFeedMode();
 
   const current = (user?.feed_mode as FeedMode | undefined) ?? 'personalized';
@@ -21,10 +20,7 @@ export default function RecommendationsScreen() {
   const handleSelect = async (next: FeedMode) => {
     if (next === current || update.isPending) return;
     try {
-      const updated = await update.mutateAsync(next);
-      if (updated && setUser) {
-        setUser(updated);
-      }
+      await update.mutateAsync(next);
     } catch (err) {
       Alert.alert(t.common.error, (err as Error).message ?? '');
     }

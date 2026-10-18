@@ -177,17 +177,19 @@ export function useBlockedUsers() {
 
 export type SearchVisibility = 'open' | 'limited' | 'hidden';
 
+// The three settings PATCHes below reply with the user /auth/me returns, so the
+// reply goes straight into the store the settings screens read.
 export function useUpdateSearchVisibility() {
-  const qc = useQueryClient();
+  const setUser = useAuthStore((state) => state.setUser);
   return useMutation({
     mutationFn: async (visibility: SearchVisibility) => {
       const res = await api.patch('/auth/me/search-visibility', {
         search_visibility: visibility,
       });
-      return res.data.data;
+      return res.data.data as AuthUser;
     },
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ['auth', 'me'] });
+    onSuccess: (user) => {
+      setUser(user);
     },
   });
 }
@@ -195,16 +197,16 @@ export function useUpdateSearchVisibility() {
 export type ProfileVisibility = 'public' | 'followers' | 'friends' | 'only_me';
 
 export function useUpdateProfileVisibility() {
-  const qc = useQueryClient();
+  const setUser = useAuthStore((state) => state.setUser);
   return useMutation({
     mutationFn: async (visibility: ProfileVisibility) => {
       const res = await api.patch('/auth/me/profile-visibility', {
         profile_visibility: visibility,
       });
-      return res.data.data;
+      return res.data.data as AuthUser;
     },
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ['auth', 'me'] });
+    onSuccess: (user) => {
+      setUser(user);
     },
   });
 }
@@ -213,15 +215,16 @@ export type FeedMode = 'personalized' | 'chronological' | 'following';
 
 export function useUpdateFeedMode() {
   const qc = useQueryClient();
+  const setUser = useAuthStore((state) => state.setUser);
   return useMutation({
     mutationFn: async (feedMode: FeedMode) => {
       const res = await api.patch('/auth/me/feed-mode', {
         feed_mode: feedMode,
       });
-      return res.data.data;
+      return res.data.data as AuthUser;
     },
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ['auth', 'me'] });
+    onSuccess: async (user) => {
+      setUser(user);
       await qc.invalidateQueries({ queryKey: ['community', 'feed'] });
     },
   });

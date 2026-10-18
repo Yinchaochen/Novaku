@@ -21,7 +21,13 @@ jest.mock('../../../lib/sentry', () => ({
 import { api } from '../../../lib/api';
 import { useAuthStore } from '../../../store/authStore';
 import { type AuthUser, useMe } from '../../auth/useAuth';
-import { useUpdateDeadlinePush, useUpdateEventPush } from '../useSocial';
+import {
+  useUpdateDeadlinePush,
+  useUpdateEventPush,
+  useUpdateFeedMode,
+  useUpdateProfileVisibility,
+  useUpdateSearchVisibility,
+} from '../useSocial';
 
 // The settings switches read the auth store. Each test mounts the real /me
 // query next to the mutation and backs both with one fake server user, so the
@@ -46,6 +52,9 @@ describe('push settings mutations keep the auth store in sync', () => {
       deadline_push_enabled: true,
       event_push_enabled: true,
       event_interests: [],
+      search_visibility: 'open',
+      profile_visibility: 'public',
+      feed_mode: 'personalized',
     } as unknown as AuthUser;
     useAuthStore.setState({ user: { ...server }, isAuthenticated: true });
     (api.get as jest.Mock).mockImplementation(async () => ({ data: { data: { ...server } } }));
@@ -125,6 +134,66 @@ describe('push settings mutations keep the auth store in sync', () => {
     await waitFor(() => expect(useAuthStore.getState().user).toEqual(server));
     expect(useAuthStore.getState().user?.event_push_enabled).toBe(false);
     expect(useAuthStore.getState().user?.event_interests).toEqual(['founder']);
+    unmount();
+  });
+
+  it.each([
+    {
+      name: 'search visibility',
+      useHook: useUpdateSearchVisibility,
+      url: '/auth/me/search-visibility',
+      field: 'search_visibility',
+      value: 'hidden',
+    },
+    {
+      name: 'profile visibility',
+      useHook: useUpdateProfileVisibility,
+      url: '/auth/me/profile-visibility',
+      field: 'profile_visibility',
+      value: 'only_me',
+    },
+    {
+      name: 'feed mode',
+      useHook: useUpdateFeedMode,
+      url: '/auth/me/feed-mode',
+      field: 'feed_mode',
+      value: 'chronological',
+    },
+  ] as const)('puts the $name reply into the store', async ({ useHook, url, field, value }) => {
+    (api.patch as jest.Mock).mockImplementation(async (_url: string, body: Record<string, string>) => {
+      server = { ...server, ...body, display_name: 'From server' };
+      return { data: { data: { ...server } } };
+    });
+    const { result, unmount } = await renderHook(
+      () => ({ me: useMe(), update: useHook() }),
+      { wrapper: wrapperFor(queryClient) },
+    );
+    await waitFor(() => expect(result.current.me.isSuccess).toBe(true));
+
+    await act(async () => {
+      await result.current.update.mutateAsync(value as never);
+    });
+
+    expect(api.patch).toHaveBeenCalledWith(url, { [field]: value });
+    await waitFor(() => expect(useAuthStore.getState().user).toEqual(server));
+    expect(useAuthStore.getState().user?.[field]).toBe(value);
+    unmount();
+  });
+
+  it('still refreshes the feed after a feed mode change', async () => {
+    (api.patch as jest.Mock).mockImplementation(async () => ({
+      data: { data: { ...server, feed_mode: 'following' } },
+    }));
+    const invalidate = jest.spyOn(queryClient, 'invalidateQueries');
+    const { result, unmount } = await renderHook(() => useUpdateFeedMode(), {
+      wrapper: wrapperFor(queryClient),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync('following');
+    });
+
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['community', 'feed'] });
     unmount();
   });
 });

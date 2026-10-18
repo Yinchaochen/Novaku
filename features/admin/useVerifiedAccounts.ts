@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { api } from '../../lib/api';
+import { useAuthStore } from '../../store/authStore';
 
 export interface AdminAccountLookup {
   id: string;
@@ -42,15 +43,18 @@ export function useAccountLookup() {
 
 export function useSetAccountVerified() {
   const queryClient = useQueryClient();
+  const setUser = useAuthStore((state) => state.setUser);
   return useMutation({
     mutationFn: async ({ userId, verified }: { userId: string; verified: boolean }) => {
       const res = await api.post(`/admin/users/${userId}/verified`, null, { params: { verified } });
       return res.data.data as AdminAccountLookup;
     },
-    onSuccess: async () => {
+    onSuccess: async (account) => {
+      // Staff badging their own account: the Profile tab reads the badge from the store.
+      const me = useAuthStore.getState().user;
+      if (me?.id === account.id) setUser({ ...me, is_verified: account.is_verified });
       // The badge renders from cached author payloads all over the feed.
       await queryClient.invalidateQueries({ queryKey: ['community'] });
-      await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
     },
   });
 }

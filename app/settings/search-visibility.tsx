@@ -13,7 +13,6 @@ const OPTIONS: SearchVisibility[] = ['open', 'limited', 'hidden'];
 export default function SearchVisibilityScreen() {
   const { t } = useLanguage();
   const user = useAuthStore((s) => s.user);
-  const setUser = useAuthStore((s) => s.setUser);
   const update = useUpdateSearchVisibility();
 
   const current = (user?.search_visibility as SearchVisibility | undefined) ?? 'limited';
@@ -21,10 +20,7 @@ export default function SearchVisibilityScreen() {
   const handleSelect = async (next: SearchVisibility) => {
     if (next === current || update.isPending) return;
     try {
-      const updated = await update.mutateAsync(next);
-      if (updated && setUser) {
-        setUser(updated);
-      }
+      await update.mutateAsync(next);
     } catch (err) {
       Alert.alert(t.common.error, (err as Error).message ?? '');
     }

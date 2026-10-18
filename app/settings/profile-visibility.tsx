@@ -13,7 +13,6 @@ const OPTIONS: ProfileVisibility[] = ['public', 'followers', 'friends', 'only_me
 export default function ProfileVisibilityScreen() {
   const { t } = useLanguage();
   const user = useAuthStore((s) => s.user);
-  const setUser = useAuthStore((s) => s.setUser);
   const update = useUpdateProfileVisibility();
 
   const current = (user?.profile_visibility as ProfileVisibility | undefined) ?? 'public';
@@ -21,10 +20,7 @@ export default function ProfileVisibilityScreen() {
   const handleSelect = async (next: ProfileVisibility) => {
     if (next === current || update.isPending) return;
     try {
-      const updated = await update.mutateAsync(next);
-      if (updated && setUser) {
-        setUser(updated);
-      }
+      await update.mutateAsync(next);
     } catch (err) {
       Alert.alert(t.common.error, (err as Error).message ?? '');
     }
