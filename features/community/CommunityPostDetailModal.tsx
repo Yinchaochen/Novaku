@@ -33,6 +33,7 @@ import { WIDE_LAYOUT_MIN_WIDTH } from '../../theme/layout';
 import { requireSignIn } from '../../store/signInPromptStore';
 import { paginateBody } from '../../lib/coverPages';
 import { PostCover } from '../../components/community/PostCover';
+import { PostUpdateBanner } from '../../components/community/PostUpdateBanner';
 import { PostCoverPage } from '../../components/community/PostCoverPage';
 import { formatDisplayLocation } from '../../lib/displayLocation';
 import { formatEventTime } from '../../lib/eventTime';
@@ -734,6 +735,13 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
           setToast({ id: Date.now(), tone: 'info', text: t.plaza.add_to_odyssey_already_active, durationMs: 2200 });
           return;
         }
+        if (code === 'post.cancelled') {
+          // D-171: cancelled after this view was loaded; refetch so the
+          // banner shows, and say why instead of a bare error.
+          void qc.invalidateQueries({ queryKey: ['community'] });
+          Alert.alert(t.plaza.info_tag_cancelled, t.plaza.info_banner_cancelled);
+          return;
+        }
         const detail = errBody?.data?.error?.message ?? (err as Error)?.message ?? '';
         Alert.alert(t.common.error, detail || t.plaza.add_to_tasks_failed);
       },
@@ -979,6 +987,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
             nestedScrollEnabled
             showsVerticalScrollIndicator={false}
           >
+            <PostUpdateBanner post={post} />
             {post.media_items.length > 0 ? (
               <View>
                 <View style={{ width: viewportWidth, height: mediaHeight }} className="bg-[#F4F1EA]">
@@ -1246,7 +1255,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
                           ) : null}
                         </Pressable>
 
-                        {entry.actionCandidateId ? (
+                        {entry.actionCandidateId && post.info_update_kind !== 'cancelled' ? (
                           <View className="mt-3 border-t border-neutral-100 pt-3">
                             <Pressable
                               className="self-start rounded-full bg-[#F67673] px-4 py-2.5"

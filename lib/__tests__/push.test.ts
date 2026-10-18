@@ -51,6 +51,14 @@ describe('push routing (D-170)', () => {
     expect(track.mock.calls[0][0][0].metadata_json).toEqual({ push_type: 'post_deadline' });
   });
 
+  it('opens the post for a correction without counting it as interest (D-171)', () => {
+    const router = fakeRouter();
+    const track = jest.fn();
+    routeForNotification(router, { type: 'post_updated', post_id: 'p3' }, track);
+    expect((router as unknown as { push: jest.Mock }).push).toHaveBeenCalledWith('/p/p3');
+    expect(track).not.toHaveBeenCalled();
+  });
+
   it('sends other types to the Social tab without a learning signal', () => {
     const router = fakeRouter();
     const track = jest.fn();

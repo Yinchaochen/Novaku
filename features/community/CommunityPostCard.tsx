@@ -8,6 +8,8 @@ import { colors } from '../../theme/tokens';
 import { useLanguage } from '../../context/LanguageContext';
 import { cardMediaFit } from '../../lib/cardAspect';
 import { formatEventTime } from '../../lib/eventTime';
+import { cardTag } from '../../lib/postUpdates';
+import { InfoUpdateTag } from '../../components/community/InfoUpdateTag';
 import { resolveMediaUrl } from '../../lib/media';
 import { useAuthStore } from '../../store/authStore';
 import { requireSignIn } from '../../store/signInPromptStore';
@@ -170,6 +172,7 @@ export function CommunityPostCard({ post, onPress, titleHighlight, columnWidth }
     resolveMediaUrl(post.media_items[0]?.thumb_url ?? post.media_items[0]?.media_url) ??
     post.media_items[0]?.media_url ??
     null;
+  const updateTag = cardTag(post);
   const hasEventCandidate = post.action_candidates.some(
     (candidate) => candidate.metadata_json?.['card_type'] === 'event'
   );
@@ -427,6 +430,8 @@ export function CommunityPostCard({ post, onPress, titleHighlight, columnWidth }
             />
           )}
 
+          {updateTag ? <InfoUpdateTag kind={updateTag} /> : null}
+
           {post.event_starts_at ? (
             <View
               style={{
@@ -441,7 +446,15 @@ export function CommunityPostCard({ post, onPress, titleHighlight, columnWidth }
               }}
             >
               <Ionicons name="calendar-outline" size={11} color={colors.brandCoral} />
-              <Text style={{ marginLeft: 4, fontSize: 10.5, fontWeight: '700', color: colors.brandCoral }}>
+              <Text
+                style={{
+                  marginLeft: 4,
+                  fontSize: 10.5,
+                  fontWeight: '700',
+                  color: colors.brandCoral,
+                  textDecorationLine: updateTag === 'cancelled' ? 'line-through' : 'none',
+                }}
+              >
                 {formatEventTime(post.event_starts_at, post.event_ends_at ?? null, langCode)}
               </Text>
             </View>

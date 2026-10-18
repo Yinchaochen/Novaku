@@ -18,6 +18,7 @@ const PAGES: { href: string; title: string; blurb: string }[] = [
   { href: '/dev/social-guide', title: 'Social walkthrough', blurb: 'Chapter steps, confirm card, long German, no-target state' },
   { href: '/dev/app-update', title: 'App update', blurb: "What's new, update available, forced update, long German" },
   { href: '/dev/interest-push', title: 'Suggestion pushes', blurb: 'One-time notice and the Settings switch (D-170)' },
+  { href: '/dev/post-source-banner', title: 'Post source changes', blurb: 'Detail banner and card tags (D-171)' },
   { href: '/dev/odyssey-calendar', title: 'Odyssey calendar', blurb: 'Marked month, day list, deadlines, device merge, plan-when sheet' },
   { href: '/dev/plaza-search', title: 'Plaza search', blurb: 'Search entry, history, filters, results, zero/error states' },
   { href: '/dev/plaza-card', title: 'Plaza card', blurb: 'Feed card at real column width: byline, long German, translated, read' },

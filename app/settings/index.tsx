@@ -255,6 +255,12 @@ export default function SettingsHubScreen() {
               onPress={() => router.push('/admin/odyssey-freshness' as never)}
             />
             <SettingsRow
+              icon="git-compare-outline"
+              label={t.settings.admin_post_sources}
+              hint={t.settings.admin_post_sources_hint}
+              onPress={() => router.push('/admin/post-sources' as never)}
+            />
+            <SettingsRow
               icon="calendar-outline"
               label={t.settings.admin_luma_calendars}
               hint={t.settings.admin_luma_calendars_hint}

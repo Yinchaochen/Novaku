@@ -1,3 +1,5 @@
+import { router } from 'expo-router';
+
 import { openExternalUrl } from '../../lib/links';
 import { Linking, Pressable, Text, View } from 'react-native';
 
@@ -92,14 +94,20 @@ function LocationQuestCard({ task, t }: { task: PersonalOdyssey; t: ReturnType<t
           </View>
         </View>
 
-        {task.source_changed_at && task.status !== 'done' ? (
+        {(task.source_changed_at || task.source_info_update_kind) && task.status !== 'done' ? (
           <Pressable
             className="mb-3 flex-row items-center gap-2 rounded-full px-3 py-2"
             style={{ backgroundColor: 'rgba(176, 122, 30, 0.12)', alignSelf: 'flex-start' }}
             onPress={() => {
+              // D-171: the post shows what changed; the task's own link is
+              // usually a map pin.
+              if (task.source_info_update_kind && task.source_post_id) {
+                router.push(`/p/${task.source_post_id}` as never);
+                return;
+              }
               void openExternalUrl(task.source_url);
             }}
-            disabled={!task.source_url}
+            disabled={!task.source_url && !(task.source_info_update_kind && task.source_post_id)}
           >
             <Text className="text-xs font-bold" style={{ color: '#B07A1E' }}>
               {t.tasks.source_updated_hint}
@@ -212,9 +220,14 @@ function SocialEventCard({
   const eventName = metadataString(task.metadata_json?.['event_name']);
   const groupName = metadataString(task.metadata_json?.['group_name']);
   const placeName = metadataString(task.metadata_json?.['place_name']);
-  const locationHint = metadataString(task.metadata_json?.['location_hint']);
-  const eventTimeHint = metadataString(task.metadata_json?.['event_time_hint']);
-  const eventStartDate = formatDate(metadataString(task.metadata_json?.['event_starts_at']), langCode);
+  // Copied from the post when the task was added; once the post's source
+  // changed them (D-171) they are the old values, so they are not shown.
+  const stale = Boolean(task.source_info_update_kind);
+  const locationHint = stale ? null : metadataString(task.metadata_json?.['location_hint']);
+  const eventTimeHint = stale ? null : metadataString(task.metadata_json?.['event_time_hint']);
+  const eventStartDate = stale
+    ? null
+    : formatDate(metadataString(task.metadata_json?.['event_starts_at']), langCode);
   const displayEventName = formatDisplayLocation(eventName) ?? eventName;
   const displayGroupName = formatDisplayLocation(groupName) ?? groupName;
   const displayPlaceName = formatDisplayLocation(placeName) ?? placeName;

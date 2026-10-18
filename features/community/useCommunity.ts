@@ -1,3 +1,4 @@
+import type { InfoUpdate, InfoUpdateKind } from '../../lib/postUpdates';
 import { Platform } from 'react-native';
 import {
   InfiniteData,
@@ -206,6 +207,12 @@ export interface CommunityPost {
    *  renders a date pill, and saving/adding-to-Odyssey puts it on the calendar. */
   event_starts_at?: string | null;
   event_ends_at?: string | null;
+  action_deadline_at?: string | null;
+  /** D-171: the last change re-read from the post's source, and the recent
+   *  ones before → after. The body is never rewritten; these say what holds. */
+  info_update_kind?: InfoUpdateKind | null;
+  info_updated_at?: string | null;
+  info_updates?: InfoUpdate[];
   feed_context?: CommunityRecommendationFeedContext | null;
   content_context?: CommunityRecommendationContentContext | null;
   /** Capability token for the public share URL postervia.app/p/{id}?s=… (D-040). */
@@ -235,6 +242,9 @@ export interface PersonalOdyssey {
   last_verified_at?: string | null;
   next_verify_at?: string | null;
   source_changed_at?: string | null;
+  /** D-171: the source post changed (time / place / deadline / cancelled)
+   *  after this task copied its hints. */
+  source_info_update_kind?: InfoUpdateKind | null;
   started_at?: string | null;
   completed_at?: string | null;
   created_at: string;

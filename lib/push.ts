@@ -157,6 +157,13 @@ export function routeForNotification(
     router.push(`/p/${data.post_id}` as never);
     return;
   }
+  if (data?.type === 'post_updated' && typeof data.post_id === 'string') {
+    // D-171: a correction about a post the person already knew. Opening it
+    // says nothing about what they want next, so it teaches the profile
+    // nothing, and it is not a push session the feed metrics should count.
+    router.push(`/p/${data.post_id}` as never);
+    return;
+  }
   // No dedicated conversation route exists yet, so we land the user on the
   // relevant tab (parity with the in-app notification center).
   if (data?.type === 'comment_reply') {

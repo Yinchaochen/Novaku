@@ -27,6 +27,7 @@
  * not: the card's geometry has to be known before layout, not after it.
  */
 
+import { bodyMayBeStale } from './postUpdates';
 import { COVER_CUTOUTS, type CoverCutout, type CutoutHue } from './coverCutouts';
 import { faceCovers, familyAdvance, pickFace, type CoverFace } from './coverFonts';
 
@@ -1667,6 +1668,8 @@ export function coverPlan(
     cover_template?: string | null;
     /** Which colour inside that family. Ignored without a template. */
     cover_palette?: number | null;
+    /** Set when the post's source changed after publishing (D-171). */
+    info_update_kind?: string | null;
   },
   displayTitle: string,
   displayBody: string,
@@ -1684,7 +1687,13 @@ export function coverPlan(
   const palette = template
     ? templatePalette(template, post.cover_palette ?? 0)
     : defaultStock(seed);
-  const keyLine = pickKeyLine(displayBody || post.body, displayTitle || post.title);
+  // The body keeps the words it was published with (D-171). Once the source
+  // moved the time or the place, the sentence most worth lifting -- the one
+  // with the date in it -- is the one most likely to be wrong, so the cover
+  // shows the title alone.
+  const keyLine = bodyMayBeStale(post)
+    ? ''
+    : pickKeyLine(displayBody || post.body, displayTitle || post.title);
   const em = keyLine ? estimateEm(keyLine) : 0;
 
   // Two constraints, not one. The sentence has to fit the block, and its
