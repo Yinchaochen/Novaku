@@ -9,7 +9,7 @@ import { useCreateDSR } from '../../features/compliance/useCompliance';
 import { WHATSAPP_GROUP_URL, openFeedback } from '../../features/feedback/useFeedback';
 import { openExternalUrl } from '../../lib/links';
 import { useProductGuide } from '../../features/guide/useProductGuide';
-import { useUpdateDeadlinePush } from '../../features/social/useSocial';
+import { useUpdateDeadlinePush, useUpdateInterestPush } from '../../features/social/useSocial';
 import { useAuthStore } from '../../store/authStore';
 
 export default function SettingsHubScreen() {
@@ -19,6 +19,26 @@ export default function SettingsHubScreen() {
   const isStaff = useAuthStore((s) => s.user?.is_staff ?? false);
   const deadlinePushEnabled = useAuthStore((s) => s.user?.deadline_push_enabled ?? true);
   const updateDeadlinePush = useUpdateDeadlinePush();
+  const interestPushEnabled = useAuthStore((s) => s.user?.interest_push_enabled ?? true);
+  const setUser = useAuthStore((s) => s.setUser);
+  const updateInterestPush = useUpdateInterestPush();
+  const toggleInterestPush = (next: boolean) => {
+    // The switch moves now; the server's copy of the user replaces it, and a
+    // failed request puts it back.
+    const previous = useAuthStore.getState().user;
+    if (previous) setUser({ ...previous, interest_push_enabled: next });
+    updateInterestPush.mutate(
+      { enabled: next },
+      {
+        onSuccess: (user) => {
+          if (user) setUser(user);
+        },
+        onError: () => {
+          if (previous) setUser(previous);
+        },
+      },
+    );
+  };
   const createDsr = useCreateDSR();
 
   // App Store Guideline 5.1.1(v): account deletion must be reachable in-app.
@@ -126,6 +146,19 @@ export default function SettingsHubScreen() {
                 value={deadlinePushEnabled}
                 onValueChange={(next) => updateDeadlinePush.mutate(next)}
                 trackColor={{ true: '#F47C7C', false: '#D6D9E0' }}
+              />
+            }
+          />
+          <SettingsRow
+            icon="bulb-outline"
+            label={t.settings.interest_push_label}
+            hint={t.settings.interest_push_hint}
+            trailing={
+              <Switch
+                value={interestPushEnabled}
+                onValueChange={toggleInterestPush}
+                trackColor={{ true: '#F47C7C', false: '#D6D9E0' }}
+                testID="settings.interest-push"
               />
             }
           />

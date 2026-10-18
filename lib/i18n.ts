@@ -952,6 +952,9 @@ export type Translations = {
     event_push_hint: string;
     event_push_row_hint: string;
     event_push_explainer: string;
+    interest_push_label: string;
+    interest_push_hint: string;
+    interest_push_channel: string;
     event_interests_section: string;
     event_interests_none_hint: string;
     event_interest_founder: string;
@@ -1144,6 +1147,14 @@ export type Translations = {
     organisers_claimed: string;
     organisers_unclaimed: string;
     organisers_invite_blocked: string;
+  };
+  interest_notice: {
+    eyebrow: string;
+    title: string;
+    body: string;
+    privacy: string;
+    ok: string;
+    turn_off: string;
   };
   feedback: {
     entry: string;

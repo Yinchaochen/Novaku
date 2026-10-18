@@ -1207,6 +1207,9 @@
     "event_push_hint": "An evening push when a sign-up event in your city is tonight or tomorrow. At most one a day.",
     "event_push_row_hint": "Tonight and tomorrow, matched to what you do",
     "event_push_explainer": "Only events that need registration or have limited places — and only the kinds that fit you. Tell us what you are and we'll leave the rest out.",
+    "interest_push_label": "Picks for you",
+    "interest_push_hint": "Up to three a day, only when something fits. Never at night.",
+    "interest_push_channel": "Suggestions",
     "event_interests_section": "What fits you",
     "event_interests_none_hint": "Pick at least one, or you won't get event reminders.",
     "event_interest_founder": "Founder / running a business",
@@ -1487,5 +1490,13 @@
     "admin_mark_done": "Mark as done",
     "admin_mark_new": "Mark as new",
     "admin_guest": "Guest"
+  },
+  "interest_notice": {
+    "eyebrow": "Notifications",
+    "title": "Up to three picks a day",
+    "body": "Postervia can send you up to three short notifications a day about posts and events in your city. We pick them from what you do in the app: tasks you are working on, people you follow, what you searched for, posts you opened or marked helpful, and the event types you chose. Only between 8:00 and 21:00, and only when something fits.",
+    "privacy": "You can switch this off in Settings at any time. If you object, we stop.",
+    "ok": "OK",
+    "turn_off": "Turn off"
   }
 }

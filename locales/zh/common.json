@@ -1207,6 +1207,9 @@
     "event_push_hint": "同城需报名的活动在今晚或明天举行时，傍晚推送提醒。每天最多一条。",
     "event_push_row_hint": "今晚和明天，按您的身份匹配",
     "event_push_explainer": "只提醒需要报名或名额有限的活动，而且只推适合您的类型。告诉我们您是谁，其他的我们就不打扰了。",
+    "interest_push_label": "为您挑选",
+    "interest_push_hint": "每天最多三条，没有合适的就不发，夜里不发。",
+    "interest_push_channel": "推荐",
     "event_interests_section": "哪些适合您",
     "event_interests_none_hint": "至少选一项，否则不会收到活动提醒。",
     "event_interest_founder": "创业者 / 经营生意",
@@ -1487,5 +1490,13 @@
     "admin_mark_done": "标为已处理",
     "admin_mark_new": "标为未处理",
     "admin_guest": "访客"
+  },
+  "interest_notice": {
+    "eyebrow": "通知",
+    "title": "每天最多三条推荐",
+    "body": "Postervia 每天最多给您发三条简短通知，内容是您所在城市的帖子和活动。我们根据您在 app 里做过的事来挑：正在办的任务、您关注的人、您搜索过的内容、您打开过或标为有用的帖子，以及您选的活动类型。只在 8:00 到 21:00 之间发，没有合适的就不发。",
+    "privacy": "您随时可以在设置里关掉。您提出反对，我们就停止。",
+    "ok": "好的",
+    "turn_off": "关掉"
   }
 }

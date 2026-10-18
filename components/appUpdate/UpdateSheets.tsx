@@ -44,7 +44,7 @@ interface SheetShellProps {
   children: React.ReactNode;
 }
 
-function SheetShell({ visible, onDismiss, eyebrow, title, children }: SheetShellProps) {
+export function SheetShell({ visible, onDismiss, eyebrow, title, children }: SheetShellProps) {
   const insets = useSafeAreaInsets();
 
   return (

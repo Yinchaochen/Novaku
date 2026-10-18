@@ -1207,6 +1207,9 @@
     "event_push_hint": "Abends eine Push-Nachricht, wenn eine Veranstaltung mit Anmeldung in deiner Stadt heute oder morgen stattfindet. Höchstens eine pro Tag.",
     "event_push_row_hint": "Heute und morgen, passend zu dem, was du machst",
     "event_push_explainer": "Nur Veranstaltungen mit Anmeldung oder begrenzten Plätzen – und nur die Arten, die zu dir passen. Sag uns, was du bist, den Rest lassen wir weg.",
+    "interest_push_label": "Für dich ausgewählt",
+    "interest_push_hint": "Höchstens drei am Tag, nur wenn etwas passt. Nie nachts.",
+    "interest_push_channel": "Vorschläge",
     "event_interests_section": "Was zu dir passt",
     "event_interests_none_hint": "Wähle mindestens eins, sonst bekommst du keine Veranstaltungs-Erinnerungen.",
     "event_interest_founder": "Gründer:in / selbstständig",
@@ -1471,5 +1474,13 @@
     "admin_mark_done": "Als erledigt markieren",
     "admin_mark_new": "Als neu markieren",
     "admin_guest": "Gast"
+  },
+  "interest_notice": {
+    "eyebrow": "Benachrichtigungen",
+    "title": "Höchstens drei Vorschläge am Tag",
+    "body": "Postervia kann dir bis zu drei kurze Benachrichtigungen am Tag zu Beiträgen und Veranstaltungen in deiner Stadt schicken. Wir wählen sie nach dem aus, was du in der App machst: Aufgaben, an denen du gerade bist, Leute, denen du folgst, wonach du gesucht hast, Beiträge, die du geöffnet oder als hilfreich markiert hast, und welche Veranstaltungsarten du gewählt hast. Nur zwischen 8 und 21 Uhr und nur, wenn etwas passt.",
+    "privacy": "Du kannst das jederzeit in den Einstellungen ausschalten. Wenn du widersprichst, hören wir auf.",
+    "ok": "OK",
+    "turn_off": "Ausschalten"
   }
 }

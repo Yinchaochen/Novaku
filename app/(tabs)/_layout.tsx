@@ -6,6 +6,7 @@ import { Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppUpdateGate } from '../../components/appUpdate/AppUpdateGate';
+import { InterestPushNotice } from '../../components/InterestPushNotice';
 import { ChalkIcon, ChalkIconName } from '../../components/ChalkIcon';
 import { OnboardingModal } from '../../components/OnboardingModal';
 import { useLanguage } from '../../context/LanguageContext';
@@ -267,6 +268,8 @@ export default function TabsLayout() {
 
       {/* Update prompts wait for onboarding — a first run should not open with a changelog. */}
       {showOnboardingModal ? null : <AppUpdateGate />}
+      {/* D-170: what suggestion pushes are, once, before the first one. */}
+      {showOnboardingModal ? null : <InterestPushNotice />}
     </>
   );
 }

@@ -71,6 +71,8 @@ export interface AuthUser {
   deadline_push_enabled?: boolean;
   event_push_enabled?: boolean;
   event_interests?: string[];
+  interest_push_enabled?: boolean;
+  interest_push_notice_seen_at?: string | null;
   gender: 'male' | 'female' | 'non_binary' | 'prefer_not_to_say' | null;
   buddy_publish_banned_at: string | null;
   // D-046 first-value guide: 0 = current guide not completed/skipped yet.

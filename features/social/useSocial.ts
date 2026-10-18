@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../../context/LanguageContext';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
+import type { AuthUser } from '../auth/useAuth';
 
 export interface SocialUserSummary {
   id: string;
@@ -259,6 +260,17 @@ export function useUpdateDeadlinePush() {
     },
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ['auth', 'me'] });
+    },
+  });
+}
+
+// D-170: up to three picks a day. Returns the updated user; callers put it in
+// the auth store so the switch and the one-time notice reflect it at once.
+export function useUpdateInterestPush() {
+  return useMutation({
+    mutationFn: async (patch: { enabled?: boolean; notice_seen?: boolean }) => {
+      const res = await api.patch('/auth/me/interest-push', patch);
+      return res.data.data as AuthUser;
     },
   });
 }
