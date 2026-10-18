@@ -30,11 +30,9 @@ export function ChalkIcon({ name, size = 24, color, style }: Props) {
   return (
     <Image
       source={ICONS[name]}
-      style={[
-        { width: size, height: size },
-        color ? { tintColor: color } : null,
-        style,
-      ]}
+      style={[{ width: size, height: size }, style]}
+      // expo-image on web reads only the prop; style.tintColor is native-only.
+      tintColor={color}
       contentFit="contain"
     />
   );
