@@ -308,7 +308,9 @@ export default function UserProfileScreen() {
   }
 
   const isLoadingActive = activeQuery.isLoading && postList.length === 0;
-  const isEmpty = !isLoadingActive && postList.length === 0;
+  // A refused or failed request is not an empty list (D-151 addendum).
+  const isErrorActive = activeQuery.isError && postList.length === 0;
+  const isEmpty = !isLoadingActive && !isErrorActive && postList.length === 0;
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['top']}>
@@ -501,6 +503,13 @@ export default function UserProfileScreen() {
             {isLoadingActive ? (
               <View className="items-center py-10">
                 <ActivityIndicator size="small" color="#F47C7C" />
+              </View>
+            ) : isErrorActive ? (
+              <View className="items-center py-12">
+                <Text className="text-[13px] text-neutral-400">{t.common.error}</Text>
+                <Pressable onPress={() => activeQuery.refetch()} hitSlop={8} className="mt-3">
+                  <Text className="text-[13px] font-semibold text-[#F47C7C]">{t.common.retry}</Text>
+                </Pressable>
               </View>
             ) : isEmpty ? (
               <View className="items-center py-12">
