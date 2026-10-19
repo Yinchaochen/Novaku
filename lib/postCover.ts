@@ -321,7 +321,9 @@ export type CoverTemplateId =
   // A HELLO-I'M badge with the title written on it. Authors pick it; no persona wears it.
   | 'nametag'
   // A journaling collage: kraft, a taped slip, one public-domain plate on top. Authors pick it.
-  | 'collage';
+  | 'collage'
+  // A weekly planner page: pink grid, a highlighter swipe, puffy stickers. Authors pick it.
+  | 'planner';
 
 /**
  * How a cover is composed — where the words sit and what else is on the card.
@@ -577,6 +579,32 @@ export const COLLAGE_SLIP = '#F7F1E3';
 /** The hue a cutout must not have on each ground, by stock: brown on kraft vanishes, and so on. */
 const COLLAGE_AVOID: (CutoutHue | null)[] = ['brown', 'green', 'blue', null];
 
+/**
+ * A weekly planner page, after the opening sequence of tvN's 최애의 사원
+ * (undesignedmuseum, IG Db7AMPnzUti): pink grid paper, one yellow
+ * highlighter swipe, puffy die-cut stickers, crayon doodles, handwriting.
+ * The reel's film grade is stripped: whites measured #E0CFD3 are the paper
+ * at #FBF0F2. Authors pick it in the composer; no persona wears it.
+ */
+const PLANNER_INK = '#2E2A33';
+const PLANNER_PAPERS: CoverPalette[] = (
+  [
+    // paper, rule, ink, accent, wash
+    ['#FBF0F2', '#EEBFC8', PLANNER_INK, '#5CB8E6', '#F6DB5E'], // pink planner grid, blue marker, highlighter
+    ['#F8F5F7', '#BFCBEA', PLANNER_INK, '#E8484F', '#F6DB5E'], // blue-ruled notepaper, red crayon
+    ['#D9E2F4', '#C3D0EA', '#22283A', '#F2C14E', '#FFFDF8'], // the blue card, lifted; the wash is a white slip
+    ['#F5EADC', '#E6D5C0', PLANNER_INK, '#F08A96', '#F6DB5E'], // cream envelope, pink washi
+  ] as const
+).map(([paper, rule, ink, accent, wash]) => ({
+  paper,
+  dot: rule,
+  secondary: mix(paper, ink, 0.72),
+  ink,
+  accent,
+  wash,
+  washInk: ink,
+}));
+
 export const COVER_PACK_IDS: CoverTemplateId[] = [
   'journal',
   'candy',
@@ -588,6 +616,7 @@ export const COVER_PACK_IDS: CoverTemplateId[] = [
   'sketch_sean',
   'nametag',
   'collage',
+  'planner',
 ];
 
 export function isCoverPack(id: CoverTemplateId | null | undefined): boolean {
@@ -690,6 +719,17 @@ export const COVER_TEMPLATES: Record<CoverTemplateId, CoverTemplate> = {
     ground: 'plain', scale: 1, highlight: true, layouts: ['journal'], highlightStyle: 'bar',
     stickerStyle: 'ink', fonts: ['caveat', 'kalam', 'patrick'], labelFont: 'patrick', cjkFonts: ['longcang', 'mashan'],
     cjkLabelFont: 'longcang', decor: ['collage', 'grain'], watermark: false,
+  },
+  // A weekly planner page (plan/cover-pack-planner-2026-10.md): the grid is
+  // the paper's own rule, one highlighter bar, puffy stickers with a white
+  // halo, crayon doodles in four colours. Authors pick it; no persona wears it.
+  planner: {
+    id: 'planner', layout: 'journalpage', swatches: PLANNER_PAPERS.map((p) => p.paper), papers: PLANNER_PAPERS,
+    ground: 'grid', scale: 1, highlight: true, layouts: ['journalpage', 'journal'], highlightStyle: 'bar',
+    stickerStyle: 'puffy', halo: 0.4, stickerBoost: 1.2,
+    fonts: ['patrick', 'caveat', 'kalam'], labelFont: 'patrick', cjkFonts: ['kuaile', 'longcang'], cjkLabelFont: 'kuaile',
+    doodles: { colours: ['#E8484F', '#F2A444', '#5CB8E6', '#F2C14E'], count: [3, 6], opacity: 0.9 },
+    decor: ['tab'], watermark: false,
   },
 };
 
