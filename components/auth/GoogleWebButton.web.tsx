@@ -3,6 +3,7 @@ import { View } from 'react-native';
 
 import { useLanguage } from '../../context/LanguageContext';
 import { env } from '../../lib/env';
+import { buttonWidthFor } from '../../lib/googleButtonWidth';
 import { loadScript } from '../../lib/loadScript';
 
 const GOOGLE_WEB_CLIENT_ID = env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
@@ -61,6 +62,10 @@ export function GoogleWebButton({
 }) {
   const { langCode } = useLanguage();
   const container = useRef<HTMLDivElement | null>(null);
+  // Holds the width the button will be drawn at, not the raw container width:
+  // a scrollbar appearing beside the form changes the container by ~15px, and
+  // re-drawing an identical 400px button for that emptied the container,
+  // moved the content height back under the scroll threshold, and looped.
   const [width, setWidth] = useState(0);
 
   useEffect(() => {
@@ -93,8 +98,7 @@ export function GoogleWebButton({
           shape: 'pill',
           text: 'continue_with',
           logo_alignment: 'center',
-          // Google caps the button at 400px.
-          width: Math.min(400, Math.max(200, Math.floor(width))),
+          width,
           locale: langCode,
         });
       })
@@ -111,10 +115,16 @@ export function GoogleWebButton({
   return (
     <View
       testID="auth.google.web"
-      onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
+      onLayout={(event) => {
+        const measured = event.nativeEvent.layout.width;
+        if (measured > 0) setWidth(buttonWidthFor(measured));
+      }}
       style={{
         width: '100%',
-        minHeight: 44,
+        // Fixed, not min: the button is 40px and must never move the page's
+        // height while Google redraws it, or a scrollbar flips on and off.
+        height: 44,
+        overflow: 'hidden',
         alignItems: 'center',
         opacity: disabled ? 0.5 : 1,
         pointerEvents: disabled ? 'none' : 'auto',
