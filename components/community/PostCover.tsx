@@ -78,6 +78,10 @@ const MARGIN_LEFT = 2;
 const MARGIN_TOP = 2;
 const MARGIN_RIGHT = 4;
 const MEASURE = 18 - MARGIN_LEFT - MARGIN_RIGHT;
+// The wide right margin is the stamp's. A centred composition (plate, rules)
+// draws no stamp, so its block sits in the middle of the card, not of the
+// text column: at MARGIN_LEFT it was a unit left of centre (lisum, 2026-10-21).
+const CENTRED_LEFT = (18 - MEASURE) / 2;
 
 /** The rule under the phrase, as fractions of the type size. */
 const RULE_HEIGHT = 0.58;
@@ -344,7 +348,9 @@ export function PostCover({
   const contentU = titleHeightU(titleSize) + bodyHeightU(bodyBudget);
   const textBottomU = startU + contentU;
   // The block the words occupy, in u, for the marks that must keep off it.
-  const textLeftU = layout === 'journalpage' ? 2.4 : layout === 'zine' ? 1.4 : MARGIN_LEFT;
+  const textLeftU = centred
+    ? (18 - columnU) / 2
+    : layout === 'journalpage' ? 2.4 : layout === 'zine' ? 1.4 : MARGIN_LEFT;
   const [textTopU, textEndU] =
     layout === 'poster'
       ? [15.8 - contentU, 15.8]
@@ -659,7 +665,7 @@ export function PostCover({
         <View
           style={{
             position: 'absolute',
-            left: MARGIN_LEFT * u,
+            left: CENTRED_LEFT * u,
             top: 0,
             bottom: 0,
             width: MEASURE * u,
@@ -753,7 +759,7 @@ export function PostCover({
         <View
           style={{
             position: 'absolute',
-            left: MARGIN_LEFT * u,
+            left: CENTRED_LEFT * u,
             top: 0,
             bottom: 0,
             width: MEASURE * u,
