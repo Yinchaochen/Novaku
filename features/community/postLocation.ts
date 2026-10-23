@@ -85,24 +85,9 @@ export function getLocationEntries(post: CommunityPost) {
     });
   }
 
-  if (entries.length > 0) {
-    return entries;
-  }
-
-  if (post.source_url) {
-    const fallbackLabel = firstMetadataString(post.city, post.author?.city);
-    if (fallbackLabel) {
-      return [
-        {
-          key: post.source_url,
-          label: fallbackLabel,
-          meta: getSourceHost(post.source_url),
-          sourceUrl: post.source_url,
-          actionCandidateId: null,
-        },
-      ];
-    }
-  }
-
-  return [];
+  // No tagged place means no location row. `post.city` is the feed a post is
+  // distributed in, not where its subject is: an editorial post about a Potsdam
+  // programme sits in the Berlin feed, and showing "Berlin" under a pin read as
+  // a false address (2026-10-23). The modal shows the source link instead.
+  return entries;
 }

@@ -70,11 +70,15 @@ describe('getLocationEntries survives an incomplete post', () => {
     expect(entries[0].label).toBe('Tempelhofer Feld');
   });
 
-  it('falls back to the city when there is only a source url', () => {
-    const entries = getLocationEntries(post({ source_url: 'https://example.com/x' }));
+  it('does not present the feed city as a place when there is only a source url', () => {
+    // An editorial post about a Potsdam programme lives in the Berlin feed; a
+    // pin reading "Berlin" under it was a false address (2026-10-23). With no
+    // tagged place there is no location row, and the modal shows the link.
+    const entries = getLocationEntries(
+      post({ source_url: 'https://mth-potsdam.de/expertise/call-for-applications' }),
+    );
 
-    expect(entries).toHaveLength(1);
-    expect(entries[0].label).toBe('Berlin');
+    expect(entries).toEqual([]);
   });
 
   it('returns nothing rather than a half-built entry when there is nothing to say', () => {
