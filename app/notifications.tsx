@@ -73,8 +73,7 @@ export default function NotificationsScreen() {
       markOne.mutate(n.id);
     }
     if (n.post_id) {
-      // Plaza tab handles post detail; we don't have a direct route, so just navigate to plaza.
-      router.push('/(tabs)/plaza');
+      router.push(`/p/${n.post_id}` as never);
     } else {
       // For follow-only, take user to social.
       router.push('/(tabs)/social');

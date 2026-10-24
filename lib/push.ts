@@ -1,8 +1,8 @@
 import * as Device from 'expo-device';
 import * as Localization from 'expo-localization';
 import * as Notifications from 'expo-notifications';
-import { useRouter } from 'expo-router';
-import { useEffect, useRef } from 'react';
+import { usePathname, useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 
 import { api } from './api';
@@ -132,6 +132,24 @@ export async function unregisterPushTokenAsync(): Promise<void> {
   lastRegisteredVersion = undefined;
 }
 
+/** The fields the server put on a push, wherever this platform left them.
+ *  On iOS expo-notifications fills `content.data` only from a `body` key in
+ *  the APNs payload, which the server did not send before 2026-10-25; the
+ *  whole payload is still on the trigger. */
+export function notificationData(
+  request: Notifications.NotificationRequest,
+): Record<string, unknown> | undefined {
+  const data = request.content.data as Record<string, unknown> | null | undefined;
+  if (typeof data?.type === 'string') return data;
+  const trigger = request.trigger as {
+    payload?: Record<string, unknown>;
+    remoteMessage?: { data?: Record<string, unknown> };
+  } | null;
+  if (typeof trigger?.payload?.type === 'string') return trigger.payload;
+  if (typeof trigger?.remoteMessage?.data?.type === 'string') return trigger.remoteMessage.data;
+  return data ?? undefined;
+}
+
 export function routeForNotification(
   router: ReturnType<typeof useRouter>,
   data: Record<string, unknown> | undefined,
@@ -157,10 +175,10 @@ export function routeForNotification(
     router.push(`/p/${data.post_id}` as never);
     return;
   }
-  if (data?.type === 'post_updated' && typeof data.post_id === 'string') {
-    // D-171: a correction about a post the person already knew. Opening it
-    // says nothing about what they want next, so it teaches the profile
-    // nothing, and it is not a push session the feed metrics should count.
+  if (typeof data?.post_id === 'string') {
+    // A reply, a correction (D-171), a moderation notice: each is about one
+    // post, so the tap opens it. None says what the person wants to read
+    // next, so none teaches the profile or counts as a push session.
     router.push(`/p/${data.post_id}` as never);
     return;
   }
@@ -207,15 +225,29 @@ export function usePushNotifications(): void {
     }).catch(() => {});
   }, [isAuthenticated, suggestionsChannelName]);
 
+  // A tap waits here until the app can show the post. On a cold start the
+  // navigator is not mounted yet (navigating throws, and the tap was lost) and
+  // the index route has still to redirect, which would replace the post.
+  const [pendingTap, setPendingTap] = useState<{ data: Record<string, unknown> | undefined } | null>(null);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (!pendingTap || !hasHydrated || pathname === '/') return;
+    setPendingTap(null);
+    try {
+      routeForNotification(router, pendingTap.data, track);
+    } catch (err) {
+      reportToSentry(err, { source: 'push.route' });
+    }
+  }, [pendingTap, hasHydrated, pathname, router, track]);
+
   useEffect(() => {
     const handle = (response: Notifications.NotificationResponse) => {
       const id = response.notification.request.identifier;
       if (handledResponses.has(id)) return;
       handledResponses.add(id);
-      const data = response.notification.request.content.data as
-        | Record<string, unknown>
-        | undefined;
-      routeForNotification(router, data, track);
+      setPendingTap({ data: notificationData(response.notification.request) });
     };
     // A tap that launched the app from killed state may have fired before
     // this listener existed, and would open the app without opening the post.
@@ -235,5 +267,5 @@ export function usePushNotifications(): void {
       responseSub.remove();
       tokenSub.remove();
     };
-  }, [router, track]);
+  }, []);
 }

@@ -19,6 +19,9 @@ export default function SharedPostScreen() {
   const query = useCommunityPost(postId, Boolean(postId) && isAuthenticated);
 
   const goHome = () => router.replace('/plaza');
+  // Back to what the post was opened over (the notification list, the tab a
+  // push landed on); a link that launched the app has nothing behind it.
+  const close = () => (router.canGoBack() ? router.back() : goHome());
 
   if (!isAuthenticated || query.isLoading) {
     return (
@@ -46,5 +49,5 @@ export default function SharedPostScreen() {
     );
   }
 
-  return <CommunityPostDetailModal post={query.data} visible onClose={goHome} />;
+  return <CommunityPostDetailModal post={query.data} visible onClose={close} />;
 }
