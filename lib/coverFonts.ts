@@ -39,7 +39,9 @@ export type CoverFace =
   | 'longcang'
   | 'zhimang'
   | 'serifsc'
-  | 'smiley';
+  | 'smiley'
+  // The poster's big word in Latin (lib/posterCover.ts).
+  | 'abril';
 
 export interface CoverFaceSpec {
   family: string;
@@ -76,6 +78,7 @@ export const COVER_FACES: Record<CoverFace, CoverFaceSpec> = {
   zhimang: { family: 'ZhiMangXing_Cover', weight: '400', scale: 1.12, track: 0.03, asset: require('../assets/fonts/cover/ZhiMangXing_Cover.ttf') },
   serifsc: { family: 'NotoSerifSC900_Cover', weight: '900', scale: 1, asset: require('../assets/fonts/cover/NotoSerifSC900_Cover.ttf') },
   smiley: { family: 'SmileySans_Cover', weight: '400', scale: 1.04, asset: require('../assets/fonts/cover/SmileySans_Cover.ttf') },
+  abril: { family: 'AbrilFatface_Cover', weight: '400', scale: 1, upper: true, asset: require('../assets/fonts/cover/AbrilFatface_Cover.ttf') },
 };
 
 /** Is this face ready to set text in right now? The start-up faces always are. */
