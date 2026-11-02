@@ -1,6 +1,7 @@
 import { COVER_FACES, faceCovers } from '../coverFonts';
 import { wrappedLines } from '../postCover';
 import {
+  posterOf,
   fitPosterTitle,
   fitPosterWord,
   hiddenLetters,
@@ -201,5 +202,42 @@ describe('the face follows the writing system', () => {
     expect(posterPlan('', 'أول صديق').rtl).toBe(true);
     expect(posterPlan('', 'חבר ראשון').rtl).toBe(true);
     expect(posterPlan('', 'ค่อยๆ').rtl).toBe(false);
+  });
+
+  it('drops the full stop machine translation adds to a phrase', () => {
+    expect(posterPlan('Take your time.', '').word).toBe('TAKE YOUR TIME');
+    expect(posterPlan('慢慢来。', '').word).toBe('慢慢来');
+  });
+});
+
+describe('a post carries its poster', () => {
+  const wire = {
+    ...lamp,
+    base: 'https://media.postervia.app/posters/a/base.jpg',
+    subject: 'https://media.postervia.app/posters/a/subject.webp',
+    word: '慢慢来',
+  };
+
+  it('takes the reader\'s word and falls back to the stored one', () => {
+    expect(posterOf({ cover_spec: { v: 1, poster: wire }, translated_cover_word: 'LANGSAM' })?.word).toBe('LANGSAM');
+    expect(posterOf({ cover_spec: { v: 1, poster: wire }, translated_cover_word: null })?.word).toBe('慢慢来');
+    expect(posterOf({ cover_spec: { v: 1, poster: wire }, translated_cover_word: '' })?.word).toBe('慢慢来');
+  });
+
+  it('sends a broken R2 host through the image proxy like every other picture', () => {
+    const broken = { ...wire, base: 'https://abc.r2.cloudflarestorage.com/posters/a/base.jpg' };
+    expect(posterOf({ cover_spec: { v: 1, poster: broken } })?.spec.base).toContain('/community/media/proxy');
+  });
+
+  it('draws the text cover for anything it cannot trust', () => {
+    expect(posterOf({})).toBeNull();
+    expect(posterOf({ cover_spec: null })).toBeNull();
+    expect(posterOf({ cover_spec: { v: 1 } })).toBeNull();
+    expect(posterOf({ cover_spec: { v: 2, poster: wire } })).toBeNull();
+    expect(posterOf({ cover_spec: { v: 1, poster: { ...wire, base: '' } } })).toBeNull();
+    expect(posterOf({ cover_spec: { v: 1, poster: { ...wire, subject: '' } } })).toBeNull();
+    expect(posterOf({ cover_spec: { v: 1, poster: { ...wire, word: '' } } })).toBeNull();
+    const damaged = { ...wire, subject_grid: undefined } as unknown as typeof wire;
+    expect(posterOf({ cover_spec: { v: 1, poster: damaged } })).toBeNull();
   });
 });

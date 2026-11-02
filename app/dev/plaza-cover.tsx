@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { useLocalSearchParams } from 'expo-router';
 import type { ComponentProps } from 'react';
 import { ScrollView, Text, View, useWindowDimensions } from 'react-native';
@@ -497,6 +496,21 @@ function PosterCard({ label, ...cover }: { label: string } & ComponentProps<type
   );
 }
 
+function posterPost(
+  sample: (typeof POSTER_SAMPLES)[number],
+  { id = 'poster', version = 1, spec }: { id?: string; version?: number; spec?: Partial<PosterSpec> } = {},
+): CommunityPost {
+  return {
+    ...PACK_POSTS[0],
+    id,
+    media_items: [],
+    title: sample.titles.zh,
+    translated_title: sample.titles.en,
+    translated_cover_word: sample.words.en,
+    cover_spec: { v: version, poster: { ...sample.spec, word: sample.words.zh, ...spec } },
+  };
+}
+
 function PosterRows() {
   const sample = POSTER_SAMPLES[0];
   return (
@@ -527,22 +541,32 @@ function PosterRows() {
         <PosterCard label="de · 490dp" spec={sample.spec} word={sample.words.de} title={sample.titles.de} width={490} />
       </ScrollView>
 
-      <SectionLabel>To decide — baked with halftone (left, one language) against live and clean (right, any language)</SectionLabel>
-      <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 10 }} testID="dev.poster.tradeoff">
-        <View style={{ width: 300, height: 400, borderRadius: 12, overflow: 'hidden' }}>
-          <Image source={require('../../assets/poster-layers/t26/baked-zh.jpg')} contentFit="fill" style={{ width: 300, height: 400 }} />
+      <SectionLabel>The real feed card — a text post beside a poster post in one phone column</SectionLabel>
+      <View style={{ flexDirection: 'row', gap: 6, paddingHorizontal: 10, alignItems: 'flex-start' }}>
+        <View style={{ width: 184.5 }}>
+          <CommunityPostCard post={{ ...PACK_POSTS[0], media_items: [] }} onPress={() => {}} columnWidth={190.5} />
         </View>
-        <View style={{ width: 300, height: 400, borderRadius: 12, overflow: 'hidden' }}>
-          <PosterCover spec={sample.spec} word={sample.words.zh} title="" width={300} />
+        <View style={{ width: 184.5 }} testID="dev.poster.card">
+          <CommunityPostCard post={posterPost(sample)} onPress={() => {}} columnWidth={190.5} />
         </View>
       </View>
 
-      <SectionLabel>On the wall — a text cover beside a poster in one phone column</SectionLabel>
+      <SectionLabel>The real feed card — browser column</SectionLabel>
+      <View style={{ width: 484, marginLeft: 10 }} testID="dev.poster.card">
+        <CommunityPostCard post={posterPost(sample)} onPress={() => {}} columnWidth={490} />
+      </View>
+
+      <SectionLabel>Falls back to the text cover — dead layer · a version this build has not heard of · damaged row</SectionLabel>
       <View style={{ flexDirection: 'row', gap: 6, paddingHorizontal: 10, alignItems: 'flex-start' }}>
-        <View style={{ width: 184.5, borderRadius: 12, overflow: 'hidden' }}>
-          <PostCover post={COMPARE} width={184.5} />
-        </View>
-        <PosterCard label="" spec={sample.spec} word={sample.words.en} title={sample.titles.en} width={184.5} />
+        {[
+          posterPost(sample, { id: 'dead-layer', spec: { base: 'https://media.postervia.app/posters/gone/base.jpg' } }),
+          posterPost(sample, { id: 'future-spec', version: 2 }),
+          posterPost(sample, { id: 'damaged-row', spec: { subject_grid: undefined as unknown as string[] } }),
+        ].map((post) => (
+          <View key={post.id} style={{ width: 184.5 }} testID="dev.poster.fallback">
+            <CommunityPostCard post={post} onPress={() => {}} columnWidth={190.5} />
+          </View>
+        ))}
       </View>
     </View>
   );

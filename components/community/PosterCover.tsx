@@ -30,12 +30,15 @@ export function PosterCover({
   word,
   title,
   width,
+  onError,
 }: {
   spec: PosterSpec;
   /** Both already in the reader's language. */
   word: string;
   title: string;
   width: number;
+  /** A layer will not load. A word with nothing in front of it is not a poster. */
+  onError?: () => void;
 }) {
   const height = width / POSTER_ASPECT;
   const plan = posterPlan(word, title);
@@ -65,7 +68,14 @@ export function PosterCover({
   return (
     <View style={{ width, height, backgroundColor: spec.paper, overflow: 'hidden' }}>
       {spec.base ? (
-        <Image testID="poster.base" source={spec.base} contentFit="fill" style={StyleSheet.absoluteFill} />
+        <Image
+          testID="poster.base"
+          source={spec.base}
+          recyclingKey={String(spec.base)}
+          onError={onError}
+          contentFit="fill"
+          style={StyleSheet.absoluteFill}
+        />
       ) : null}
 
       <View testID="poster.word-box" style={StyleSheet.absoluteFill}>
@@ -126,7 +136,14 @@ export function PosterCover({
       ) : null}
 
       {spec.subject ? (
-        <Image testID="poster.subject" source={spec.subject} contentFit="fill" style={StyleSheet.absoluteFill} />
+        <Image
+          testID="poster.subject"
+          source={spec.subject}
+          recyclingKey={String(spec.subject)}
+          onError={onError}
+          contentFit="fill"
+          style={StyleSheet.absoluteFill}
+        />
       ) : null}
 
       {/* Stays mounted: on web a font counts as loaded before its file lands, and

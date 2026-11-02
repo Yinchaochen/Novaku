@@ -33,6 +33,8 @@ import { WIDE_LAYOUT_MIN_WIDTH } from '../../theme/layout';
 import { requireSignIn } from '../../store/signInPromptStore';
 import { paginateBody } from '../../lib/coverPages';
 import { PostCover } from '../../components/community/PostCover';
+import { PosterCover } from '../../components/community/PosterCover';
+import { posterOf } from '../../lib/posterCover';
 import { PostUpdateBanner } from '../../components/community/PostUpdateBanner';
 import { PostCoverPage } from '../../components/community/PostCoverPage';
 import { formatDisplayLocation } from '../../lib/displayLocation';
@@ -139,10 +141,31 @@ function PostCoverPager({ post, maxWidth }: { post: CommunityPost; maxWidth: num
     () => paginateBody(post.translated_body ?? post.body, post.cover_template),
     [post.translated_body, post.body, post.cover_template],
   );
+  const poster = useMemo(() => posterOf(post), [post.cover_spec, post.translated_cover_word]);
+  const [failedPoster, setFailedPoster] = useState<string | null>(null);
+  const posterKey = poster ? String(poster.spec.base) : null;
   const total = pages.length + 1;
+  const width = Math.min(maxWidth, 520);
+
+  // On its own, with the body as ordinary text under it: a 3:4 poster and the
+  // square body pages cannot share one pager height.
+  if (poster && failedPoster !== posterKey) {
+    return (
+      <View style={{ alignItems: 'center', paddingTop: 12 }}>
+        <View style={{ width, borderRadius: 16, overflow: 'hidden' }}>
+          <PosterCover
+            spec={poster.spec}
+            word={poster.word}
+            title={post.translated_title ?? post.title}
+            width={width}
+            onError={() => setFailedPoster(posterKey)}
+          />
+        </View>
+      </View>
+    );
+  }
   if (total < 2) return null;
 
-  const width = Math.min(maxWidth, 520);
   return (
     <View style={{ alignItems: 'center', paddingTop: 12 }}>
       <View style={{ width }}>

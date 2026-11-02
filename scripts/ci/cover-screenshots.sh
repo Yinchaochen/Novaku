@@ -25,3 +25,13 @@ for i in $(seq 2 18); do
   sleep 5
   shoot "$(printf '%02d' "$i")-wall"
 done
+
+# The poster covers: words measured on the device, set between two pictures.
+adb shell am start -W -a android.intent.action.VIEW -d "postervia://dev/plaza-cover?poster=1" app.novaku.mobile
+sleep 30
+shoot 30-poster
+for i in $(seq 31 42); do
+  adb shell input swipe 540 1900 540 700 700
+  sleep 5
+  shoot "$i-poster"
+done

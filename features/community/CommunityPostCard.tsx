@@ -1,7 +1,7 @@
 ﻿import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 
 import { colors } from '../../theme/tokens';
@@ -23,6 +23,8 @@ import {
   useUnmarkCommunityHelpful,
 } from './useCommunity';
 import { PostCover } from '../../components/community/PostCover';
+import { PosterCover } from '../../components/community/PosterCover';
+import { POSTER_ASPECT, posterOf } from '../../lib/posterCover';
 import { VerifiedBadge } from '../../components/VerifiedBadge';
 import type { CardOrigin } from './CommunityPostDetailModal';
 import { PrivacyMask, PrivateText } from '../../components/PrivacyMask';
@@ -246,6 +248,11 @@ export function CommunityPostCard({ post, onPress, titleHighlight, columnWidth }
   // posts, and once the Image is unmounted no onLoad can clear a stale flag.
   const [failedCoverUrl, setFailedCoverUrl] = useState<string | null>(null);
   const coverFailed = coverUrl != null && failedCoverUrl === coverUrl;
+  const poster = useMemo(
+    () => (post.media_items[0] ? null : posterOf(post)),
+    [post.media_items, post.cover_spec, post.translated_cover_word],
+  );
+  const posterKey = poster ? String(poster.spec.base) : null;
 
   // Card-level "..." menu: per-user hide so the post stops showing on this user's feed.
   // Own posts skip this entry — you can't hide yourself from yourself.
@@ -394,6 +401,22 @@ export function CommunityPostCard({ post, onPress, titleHighlight, columnWidth }
                 </Text>
               </View>
             ) : null}
+          </View>
+        ) : poster && failedCoverUrl !== posterKey ? (
+          // The height is pinned here because the width only arrives with
+          // onLayout, and a card that grows after layout shoves its column (D-078).
+          <View
+            testID="plaza.card.poster"
+            style={{ aspectRatio: POSTER_ASPECT }}
+            onLayout={(event) => setCoverWidth(event.nativeEvent.layout.width)}
+          >
+            <PosterCover
+              spec={poster.spec}
+              word={poster.word}
+              title={post.translated_title ?? post.title}
+              width={coverWidth}
+              onError={() => setFailedCoverUrl(posterKey)}
+            />
           </View>
         ) : (
           // A designed cover, not a tinted box with the body poured into it.

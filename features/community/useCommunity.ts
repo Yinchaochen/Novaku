@@ -1,4 +1,5 @@
 import type { InfoUpdate, InfoUpdateKind } from '../../lib/postUpdates';
+import type { CoverSpecWire } from '../../lib/posterCover';
 import { Platform } from 'react-native';
 import {
   InfiniteData,
@@ -177,6 +178,9 @@ export interface CommunityPost {
   /** The drawn cover the author chose, or null for the default (D-141). */
   cover_template?: string | null;
   cover_palette?: number | null;
+  /** A poster cover's layers, or null for the drawn cover above. */
+  cover_spec?: CoverSpecWire | null;
+  translated_cover_word?: string | null;
   language: string;
   source_language: string;
   title_source_language: string;

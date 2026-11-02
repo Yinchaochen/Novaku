@@ -1,4 +1,5 @@
 import { COVER_FACES, faceText, pickFace, type CoverFace } from './coverFonts';
+import { resolveMediaUrl } from './media';
 import { wrappedLines } from './postCover';
 
 /**
@@ -39,7 +40,33 @@ export interface PosterSpec {
   subject_grid: string[];
 }
 
+/** `community_posts.cover_spec` as the API sends it. */
+export interface CoverSpecWire {
+  v: number;
+  poster?: (PosterSpec & { word: string }) | null;
+}
+
 export const POSTER_ASPECT = 3 / 4;
+
+/**
+ * A post's poster with its word in the reader's language, or null for the text
+ * cover. Checked because the spec is a JSON column: a version this build has not
+ * heard of, or a damaged row, costs the card its poster and nothing else.
+ */
+export function posterOf(post: {
+  cover_spec?: CoverSpecWire | null;
+  translated_cover_word?: string | null;
+}): { spec: PosterSpec; word: string } | null {
+  const poster = post.cover_spec?.poster;
+  if (post.cover_spec?.v !== 1 || !poster) return null;
+  const layer = (value: string | number) => (typeof value === 'string' ? resolveMediaUrl(value) : value);
+  const base = layer(poster.base);
+  const subject = layer(poster.subject);
+  const word = post.translated_cover_word || poster.word;
+  if (!base || !subject || !word) return null;
+  if (!poster.word_box || !poster.title_box || !Array.isArray(poster.subject_grid)) return null;
+  return { spec: { ...poster, base, subject }, word };
+}
 
 /** Right to left: Hebrew, Arabic, Syriac and their presentation forms. */
 const RTL_RE = /[֐-ࣿיִ-﷿ﹰ-﻿]/;
@@ -101,7 +128,8 @@ export interface PosterPlan {
 }
 
 export function posterPlan(word: string, title: string): PosterPlan {
-  const phrase = word.trim();
+  // Machine translation closes even a two-word phrase with a full stop.
+  const phrase = word.trim().replace(/[.。]+$/, '');
   // A face is chosen for the string it will draw, and a Latin face draws capitals.
   const wordFace = pickFace(WORD_FACES, 0, phrase.toUpperCase());
   const drawn = faceText(wordFace, phrase);

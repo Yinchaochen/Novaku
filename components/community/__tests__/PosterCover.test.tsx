@@ -112,6 +112,17 @@ describe('PosterCover', () => {
     expect(title.props.numberOfLines * (lineHeight as number)).toBeLessThanOrEqual((0.1585 * 148) / 0.75);
   });
 
+  it('reports a layer that will not load, and keys each layer to its own file', async () => {
+    const onError = jest.fn();
+    const view = await render(<PosterCover spec={SPEC} word="slow" title="" width={184.5} onError={onError} />);
+    expect(view.getByTestId('poster.base').props.recyclingKey).toBe(SPEC.base);
+    expect(view.getByTestId('poster.subject').props.recyclingKey).toBe(SPEC.subject);
+
+    view.getByTestId('poster.base').props.onError();
+    view.getByTestId('poster.subject').props.onError();
+    expect(onError).toHaveBeenCalledTimes(2);
+  });
+
   it('survives a missing word, title, subject or base', async () => {
     const view = await render(<PosterCover spec={{ ...SPEC, base: '', subject: '' }} word="" title="" width={184.5} />);
     expect(view.queryByTestId('poster.word')).toBeNull();
