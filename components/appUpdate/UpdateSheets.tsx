@@ -47,27 +47,38 @@ interface SheetShellProps {
   eyebrow?: string;
   title: string;
   children: React.ReactNode;
+  /** Bottom by default. A sheet that interrupts to say something, rather than
+   *  offering an action on the screen below, reads better in the middle. */
+  placement?: 'bottom' | 'center';
 }
 
-export function SheetShell({ visible, onDismiss, eyebrow, title, children }: SheetShellProps) {
+export function SheetShell({
+  visible,
+  onDismiss,
+  eyebrow,
+  title,
+  children,
+  placement = 'bottom',
+}: SheetShellProps) {
   const insets = useSafeAreaInsets();
   // A sheet pinned to the full width of a browser window is a band, not a
   // sheet. Same breakpoint and the same answer as the sign-in sheet (D-151).
   const { width: windowWidth } = useWindowDimensions();
   const wide = windowWidth >= WIDE_LAYOUT_MIN_WIDTH;
+  const centred = placement === 'center';
 
   return (
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType={centred ? 'fade' : 'slide'}
       // A forced update passes no onDismiss: Android back must not escape it.
       onRequestClose={onDismiss ?? (() => {})}
     >
       <Pressable
         onPress={onDismiss}
-        className="flex-1 justify-end"
-        style={{ backgroundColor: BACKDROP }}
+        className={centred ? 'flex-1 justify-center' : 'flex-1 justify-end'}
+        style={{ backgroundColor: BACKDROP, ...(centred ? { paddingHorizontal: 20 } : null) }}
       >
         <Pressable
           onPress={(e) => e.stopPropagation()}
@@ -76,10 +87,18 @@ export function SheetShell({ visible, onDismiss, eyebrow, title, children }: She
             borderTopLeftRadius: 28,
             borderTopRightRadius: 28,
             paddingHorizontal: 24,
-            paddingTop: 20,
-            paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 28) : 28,
+            paddingTop: centred ? 28 : 20,
+            paddingBottom: !centred && Platform.OS === 'ios' ? Math.max(insets.bottom, 28) : 28,
             maxHeight: '82%',
-            ...(wide
+            ...(centred
+              ? {
+                  width: '100%',
+                  maxWidth: SHEET_MAX_WIDTH,
+                  alignSelf: 'center',
+                  borderRadius: 28,
+                }
+              : null),
+            ...(!centred && wide
               ? {
                   width: '100%',
                   maxWidth: SHEET_MAX_WIDTH,
@@ -91,7 +110,7 @@ export function SheetShell({ visible, onDismiss, eyebrow, title, children }: She
               : null),
           }}
         >
-          {onDismiss ? (
+          {centred ? null : onDismiss ? (
             <View
               style={{
                 alignSelf: 'center',

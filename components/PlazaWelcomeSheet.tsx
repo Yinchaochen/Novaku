@@ -18,7 +18,12 @@ export function PlazaWelcomeSheetView({
 }) {
   const { t } = useLanguage();
   return (
-    <SheetShell visible={visible} onDismiss={onOk} title={t.plaza_welcome.title}>
+    <SheetShell
+      visible={visible}
+      onDismiss={onOk}
+      title={t.plaza_welcome.title}
+      placement="center"
+    >
       <Text
         className="text-[15px] leading-6"
         style={{ color: colors.textBrown }}
