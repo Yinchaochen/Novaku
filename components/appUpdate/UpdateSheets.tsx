@@ -1,9 +1,10 @@
-import { Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GradientButton } from '../GradientButton';
 import { useLanguage } from '../../context/LanguageContext';
 import type { ReleaseNotes } from '../../lib/appVersion';
+import { WIDE_LAYOUT_MIN_WIDTH } from '../../theme/layout';
 import { colors, radius } from '../../theme/tokens';
 
 const BACKDROP = 'rgba(36, 26, 22, 0.55)';
@@ -36,16 +37,24 @@ function Highlights({ notes }: { notes: ReleaseNotes | null }) {
   );
 }
 
+/** How wide a sheet gets before it stops being a sheet. */
+const SHEET_MAX_WIDTH = 520;
+
 interface SheetShellProps {
   visible: boolean;
   onDismiss?: () => void;
-  eyebrow: string;
+  /** Optional: the welcome sheet carries its whole message in the title. */
+  eyebrow?: string;
   title: string;
   children: React.ReactNode;
 }
 
 export function SheetShell({ visible, onDismiss, eyebrow, title, children }: SheetShellProps) {
   const insets = useSafeAreaInsets();
+  // A sheet pinned to the full width of a browser window is a band, not a
+  // sheet. Same breakpoint and the same answer as the sign-in sheet (D-151).
+  const { width: windowWidth } = useWindowDimensions();
+  const wide = windowWidth >= WIDE_LAYOUT_MIN_WIDTH;
 
   return (
     <Modal
@@ -70,6 +79,16 @@ export function SheetShell({ visible, onDismiss, eyebrow, title, children }: She
             paddingTop: 20,
             paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 28) : 28,
             maxHeight: '82%',
+            ...(wide
+              ? {
+                  width: '100%',
+                  maxWidth: SHEET_MAX_WIDTH,
+                  alignSelf: 'center',
+                  borderBottomLeftRadius: 28,
+                  borderBottomRightRadius: 28,
+                  marginBottom: 32,
+                }
+              : null),
           }}
         >
           {onDismiss ? (
@@ -87,14 +106,16 @@ export function SheetShell({ visible, onDismiss, eyebrow, title, children }: She
             <View style={{ height: 4, marginBottom: 18 }} />
           )}
 
+          {eyebrow ? (
+            <Text
+              className="text-[11px] font-bold uppercase tracking-widest"
+              style={{ color: colors.brandCoral }}
+            >
+              {eyebrow}
+            </Text>
+          ) : null}
           <Text
-            className="text-[11px] font-bold uppercase tracking-widest"
-            style={{ color: colors.brandCoral }}
-          >
-            {eyebrow}
-          </Text>
-          <Text
-            className="mt-2 text-[22px] font-extrabold leading-7"
+            className={`${eyebrow ? "mt-2" : ""} text-[22px] font-extrabold leading-7`}
             style={{ color: colors.textMain }}
           >
             {title}

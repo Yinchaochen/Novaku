@@ -1188,6 +1188,11 @@ export type Translations = {
     organisers_unclaimed: string;
     organisers_invite_blocked: string;
   };
+  plaza_welcome: {
+    title: string;
+    body: string;
+    ok: string;
+  };
   interest_notice: {
     eyebrow: string;
     title: string;

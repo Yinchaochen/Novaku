@@ -1531,6 +1531,11 @@
     "admin_mark_new": "标为未处理",
     "admin_guest": "访客"
   },
+  "plaza_welcome": {
+    "title": "欢迎来到 Postervia",
+    "body": "Postervia 是一个线上社区。刚搬到一个新城市的人在这里讲自己的难处，或者讲自己是怎么解决这个难处的。我们帮他们把这些难处和生活经验传出去，帮到更多人！",
+    "ok": "知道了"
+  },
   "interest_notice": {
     "eyebrow": "通知",
     "title": "每天最多三条推荐",

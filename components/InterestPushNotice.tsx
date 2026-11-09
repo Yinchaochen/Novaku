@@ -10,6 +10,7 @@ import { useUpdateInterestPush } from '../features/social/useSocial';
 import { decideAppUpdate, installedAppVersion } from '../lib/appVersion';
 import { useAppUpdateStore } from '../store/appUpdateStore';
 import { useAuthStore } from '../store/authStore';
+import { plazaWelcomePending, usePlazaWelcomeStore } from '../store/plazaWelcomeStore';
 import { useProductGuideStore } from '../store/guideStore';
 import { colors } from '../theme/tokens';
 
@@ -66,6 +67,7 @@ export function InterestPushNotice() {
   const installed = installedAppVersion();
   const { data: release, isPending: releasePending } = useAppRelease();
   const guideStep = useProductGuideStore((s) => s.step);
+  const welcomePending = usePlazaWelcomeStore(plazaWelcomePending);
   const hydrated = useAppUpdateStore((s) => s.hydrated);
   const lastSeenVersion = useAppUpdateStore((s) => s.lastSeenVersion);
   const snoozedVersion = useAppUpdateStore((s) => s.snoozedVersion);
@@ -103,6 +105,7 @@ export function InterestPushNotice() {
     Platform.OS !== 'web' &&
     granted &&
     updateSheetIdle &&
+    !welcomePending &&
     guideStep === null &&
     !closed &&
     !!user &&

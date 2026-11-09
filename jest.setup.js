@@ -37,3 +37,11 @@ jest.mock('axios', () => {
   });
   return { __esModule: true, default: axios, AxiosError, isAxiosError: axios.isAxiosError };
 });
+
+// The real module needs a native binding jest does not have, and any store
+// that persists pulls it into unrelated test graphs. The package ships this
+// in-memory mock for exactly that; a test wanting its own still wins.
+jest.mock(
+  '@react-native-async-storage/async-storage',
+  () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);

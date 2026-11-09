@@ -1515,6 +1515,11 @@
     "admin_mark_new": "Als neu markieren",
     "admin_guest": "Gast"
   },
+  "plaza_welcome": {
+    "title": "Willkommen bei Postervia",
+    "body": "Postervia ist eine Online-Community. Leute, die gerade in eine neue Stadt gezogen sind, teilen hier ihre Schwierigkeiten oder ihre Erfahrung damit, wie sie eine Schwierigkeit gelöst haben. Wir helfen ihnen, diese Schwierigkeiten und Lebenserfahrungen weiterzugeben, um mehr Leuten zu helfen!",
+    "ok": "Alles klar"
+  },
   "interest_notice": {
     "eyebrow": "Benachrichtigungen",
     "title": "Höchstens drei Vorschläge am Tag",

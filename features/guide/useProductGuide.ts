@@ -6,6 +6,7 @@ import {
   useUpdateProductGuide,
 } from '../auth/useAuth';
 import { useAuthStore } from '../../store/authStore';
+import { plazaWelcomePending, usePlazaWelcomeStore } from '../../store/plazaWelcomeStore';
 import { ProductGuideStep, useProductGuideStore } from '../../store/guideStore';
 import { guideStepMeta, isComposerStep, nextGuideStep, prevGuideStep } from './guideSteps';
 
@@ -26,8 +27,12 @@ export function useProductGuideController() {
 
   const onboardingCompleted = Boolean(user?.onboarding_completed);
   const guideVersion = user?.product_guide_version ?? 0;
+  // What this place is comes before how to post (D-188), and the spotlight
+  // would otherwise light up a control behind the welcome sheet.
+  const welcomePending = usePlazaWelcomeStore(plazaWelcomePending);
 
   useEffect(() => {
+    if (welcomePending) return;
     if (!onboardingCompleted) return;
     if (guideVersion >= CURRENT_PRODUCT_GUIDE_VERSION) return;
     if (hasStartedThisSession) return;
@@ -37,7 +42,7 @@ export function useProductGuideController() {
     // recordEvent is a stable mutation object per render; deps below are the
     // real triggers (login, onboarding completion, settings re-arm).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onboardingCompleted, guideVersion, hasStartedThisSession]);
+  }, [welcomePending, onboardingCompleted, guideVersion, hasStartedThisSession]);
 }
 
 export function useProductGuide() {

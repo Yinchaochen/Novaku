@@ -1531,6 +1531,11 @@
     "admin_mark_new": "Mark as new",
     "admin_guest": "Guest"
   },
+  "plaza_welcome": {
+    "title": "Welcome to Postervia",
+    "body": "Postervia is an online community. People who have just moved to a new city share their struggle, or their experience of solving this struggle. We help them spread the struggle and life experience to help more people!",
+    "ok": "Got it"
+  },
   "interest_notice": {
     "eyebrow": "Notifications",
     "title": "Up to three picks a day",

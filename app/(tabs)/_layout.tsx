@@ -1,5 +1,5 @@
 import { BlurView } from 'expo-blur';
-import { router, Tabs } from 'expo-router';
+import { router, Tabs, usePathname } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
 import { Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppUpdateGate } from '../../components/appUpdate/AppUpdateGate';
 import { InterestPushNotice } from '../../components/InterestPushNotice';
+import { PlazaWelcomeSheet } from '../../components/PlazaWelcomeSheet';
 import { ChalkIcon, ChalkIconName } from '../../components/ChalkIcon';
 import { OnboardingModal } from '../../components/OnboardingModal';
 import { useLanguage } from '../../context/LanguageContext';
@@ -72,6 +73,7 @@ export default function TabsLayout() {
   // Arms the D-046 first-value guide once onboarding is complete.
   useProductGuideController();
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!user) {
@@ -268,6 +270,9 @@ export default function TabsLayout() {
 
       {/* Update prompts wait for onboarding — a first run should not open with a changelog. */}
       {showOnboardingModal ? null : <AppUpdateGate />}
+      {/* D-188: what the Plaza is for, said once, on the Plaza and nowhere else.
+          It goes before the walkthrough: what this place is, then how to post. */}
+      <PlazaWelcomeSheet allowed={!showOnboardingModal && pathname === '/plaza'} />
       {/* D-170: what suggestion pushes are, once, before the first one. */}
       {showOnboardingModal ? null : <InterestPushNotice />}
     </>
