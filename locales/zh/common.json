@@ -632,6 +632,7 @@
     "create_menu_open": "发布帮带内容",
     "create_menu_close": "关闭发布菜单",
     "compose_button": "发布",
+    "compose_missing": "还差：{field}",
     "compose_title": "发一条新需求",
     "compose_companion_title": "找搭子",
     "compose_companion_subtitle": "说说您想一起做什么，以及希望有人陪伴的时间。",

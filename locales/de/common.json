@@ -632,6 +632,7 @@
     "create_menu_open": "Buddy-Beitrag erstellen",
     "create_menu_close": "Erstellmenü schließen",
     "compose_button": "Veröffentlichen",
+    "compose_missing": "Fehlt noch: {field}",
     "compose_title": "Neuer Buddy-Beitrag",
     "compose_companion_title": "Buddy finden",
     "compose_companion_subtitle": "Beschreibe, was du gemeinsam machen möchtest und wann du Gesellschaft suchst.",

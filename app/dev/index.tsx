@@ -22,6 +22,7 @@ const PAGES: { href: string; title: string; blurb: string }[] = [
   { href: '/dev/odyssey-calendar', title: 'Odyssey calendar', blurb: 'Marked month, day list, deadlines, device merge, plan-when sheet' },
   { href: '/dev/plaza-search', title: 'Plaza search', blurb: 'Search entry, history, filters, results, zero/error states' },
   { href: '/dev/plaza-composer', title: 'Plaza composer', blurb: 'Empty fields on cream, and Post in all four states (D-127 regression)' },
+  { href: '/dev/buddy-composer', title: 'Buddy composer', blurb: 'The footer: what Post says when the form is unfinished' },
   { href: '/dev/plaza-card', title: 'Plaza card', blurb: 'Feed card at real column width: byline, long German, translated, read' },
   { href: '/dev/plaza-cover', title: 'Plaza text cover', blurb: 'Every text-post cover at its real width, per post type and language' },
   { href: '/dev/plaza-filters', title: 'Plaza filters', blurb: 'Filter row on the yellow band, long German' },

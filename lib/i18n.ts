@@ -654,6 +654,7 @@ export type Translations = {
     create_menu_open: string;
     create_menu_close: string;
     compose_button: string;
+    compose_missing: string;
     compose_title: string;
     compose_companion_title: string;
     compose_companion_subtitle: string;

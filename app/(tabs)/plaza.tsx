@@ -1542,7 +1542,7 @@ export default function PlazaScreen() {
               style={{ paddingBottom: keyboardHeight > 0 ? 12 : Math.max(insets.bottom + 10, 20) }}
             >
               {composerMessage ? (
-                <Text className="mb-3 text-sm" style={{ color: '#F47C7C' }}>
+                <Text className="mb-3 text-sm" style={{ color: colors.textDanger }}>
                   {composerMessage}
                 </Text>
               ) : null}

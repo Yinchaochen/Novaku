@@ -36,6 +36,11 @@ export const colors = {
   // was underneath it. Feed cards lost that card (D-088).
   textMutedOnCream: '#6F625B',
   textSubtle: '#A89A92',
+  // For text that corrects or warns. badgeVerified clears 3:1 and is enough for
+  // a graphic; a 13px sentence needs 4.5:1, and brandCoral measures 2.57:1 on
+  // cream and 2.62:1 on white — the colour a composer error was written in
+  // until 2026-11-14, which is to say it was barely there.
+  textDanger: '#C0453F',
 
   // Accents
   lavender: '#A99BFF',

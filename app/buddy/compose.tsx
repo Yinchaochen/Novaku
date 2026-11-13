@@ -19,7 +19,7 @@ import { Screen } from '../../components/Screen';
 import { SectionLabel } from '../../components/SectionLabel';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { useLanguage } from '../../context/LanguageContext';
-import { measureBuddyTarget } from '../../features/guide/buddyGuide';
+import { type BuddyGuideStep, measureBuddyTarget } from '../../features/guide/buddyGuide';
 import { useBuddyGuide } from '../../features/guide/useBuddyGuide';
 import {
   type BuddyPostCategory,
@@ -33,8 +33,10 @@ import {
   parseBuddyPriceCents,
   type BuddyPricingMode,
 } from '../../features/buddyPosts/pricing';
+import { type BuddyMissingField, firstMissingBuddyField } from '../../lib/buddyComposeMissing';
 import { compressImageForUpload } from '../../lib/imageCompression';
 import { mapWithConcurrency } from '../../lib/mapWithConcurrency';
+import { OPACITY_INCOMPLETE, publishButtonState } from '../../lib/publishButtonState';
 import { reportToSentry } from '../../lib/sentry';
 import { useAuthStore } from '../../store/authStore';
 import { colors, radius, spacing, typography } from '../../theme/tokens';
@@ -99,24 +101,44 @@ export default function BuddyComposeScreen() {
   );
   const priceDecided = isBuddyPricingComplete(priceMode, parsedPriceCents);
   const visibleCategories = CATEGORY_OPTIONS.filter((option) => option.type.includes(postType));
-  const canSubmit = useMemo(() => {
-    if (!body.trim() || !priceDecided || isUploading) return false;
-    if (!isWish) {
-      return Boolean(title.trim() && companionRange.start && companionRange.end && serviceCity.trim());
-    }
-    return Boolean(carryRange.start && carryRange.end && whereToBuy.trim() && destinationCity.trim());
-  }, [
-    body,
-    carryRange,
-    companionRange,
-    destinationCity,
-    isUploading,
-    isWish,
-    priceDecided,
-    serviceCity,
-    title,
-    whereToBuy,
-  ]);
+  // The first thing the form is still waiting for, or null when it is ready.
+  // Uploading is deliberately not part of it: busy and unfinished are two
+  // different states and the button answers them differently.
+  const missingField = useMemo(
+    () => firstMissingBuddyField({
+      isWish,
+      title,
+      body,
+      serviceCity,
+      whereToBuy,
+      destinationCity,
+      companionRange,
+      carryRange,
+      priceDecided,
+    }),
+    [
+      body,
+      carryRange,
+      companionRange,
+      destinationCity,
+      isWish,
+      priceDecided,
+      serviceCity,
+      title,
+      whereToBuy,
+    ],
+  );
+  const canSubmit = missingField === null;
+  const publishButton = publishButtonState({
+    isSubmitting: createPost.isPending,
+    isUploadingMedia: isUploading,
+    canSubmit,
+  });
+  const [missingMessage, setMissingMessage] = useState<string | null>(null);
+
+  // Clears itself as soon as the named field is filled, so the footer never
+  // asks for something the user has already typed.
+  useEffect(() => setMissingMessage(null), [missingField]);
 
   const pickPhotos = async () => {
     const remaining = MAX_WISH_PHOTOS - mediaItems.length;
@@ -156,7 +178,7 @@ export default function BuddyComposeScreen() {
   };
 
   const submit = async () => {
-    if (!canSubmit) return;
+    if (!canSubmit || isUploading) return;
     try {
       await createPost.mutateAsync({
         type: postType,
@@ -196,10 +218,46 @@ export default function BuddyComposeScreen() {
     }
   };
 
+  const missingFieldMeta = (field: BuddyMissingField): { label: string; step: BuddyGuideStep } => {
+    switch (field) {
+      case 'description':
+        return { label: t.buddy.field_description, step: 'wish_description' };
+      case 'title':
+        return { label: t.buddy.field_title, step: 'companion_title' };
+      case 'body':
+        return { label: t.buddy.field_body, step: 'companion_body' };
+      case 'when':
+        return { label: t.buddy.field_when, step: isWish ? 'wish_dates' : 'companion_when' };
+      case 'where_to_buy':
+        return { label: t.buddy.field_where_to_buy, step: 'wish_where_to_buy' };
+      case 'destination_city':
+        return { label: t.buddy.field_destination_city, step: 'wish_deliver_to' };
+      case 'service_city':
+        return { label: t.buddy.field_where_from, step: 'companion_city' };
+      case 'price':
+        return { label: t.buddy.field_price, step: isWish ? 'wish_price' : 'companion_price' };
+    }
+  };
+
+  const scrollToField = async (step: BuddyGuideStep) => {
+    const rect = await measureBuddyTarget(step);
+    if (!rect) return;
+    scrollRef.current?.scrollTo({ y: Math.max(0, scrollOffset.current + rect.y - 150), animated: true });
+  };
+
   // The walkthrough points at the real Post button, so a guided tap opens a
   // confirm card first — the tour never publishes on the user's behalf.
   const guidedPublishStep = isWish ? 'wish_publish' : 'companion_publish';
   const handlePostPress = () => {
+    // An unfinished form answers before anything else, including the
+    // walkthrough: a confirm card that leads to a silent no-op is the bug
+    // this press is here to end (D-127 addendum 3).
+    if (missingField) {
+      const { label, step } = missingFieldMeta(missingField);
+      setMissingMessage(t.buddy.compose_missing.replace('{field}', label));
+      void scrollToField(step);
+      return;
+    }
     if (guide.step === guidedPublishStep) {
       guide.requestPublishConfirm();
       return;
@@ -451,11 +509,13 @@ export default function BuddyComposeScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
+        {missingMessage ? <Text style={styles.footerMessage}>{missingMessage}</Text> : null}
         <BuddyGuideAnchor step={guidedPublishStep}>
           <GradientButton
             label={t.buddy.compose_button}
             loading={createPost.isPending}
-            disabled={!canSubmit}
+            disabled={publishButton.disabled}
+            style={publishButton.disabled || canSubmit ? undefined : styles.postButtonUnfinished}
             fullWidth
             size="lg"
             leadingIcon={<Ionicons name={isWish ? 'sparkles' : 'people'} size={19} color="#FFFFFF" />}
@@ -525,6 +585,16 @@ const styles = StyleSheet.create({
   switchLabel: {
     ...typography.bodyStrong,
     color: colors.textBrown,
+  },
+  footerMessage: {
+    ...typography.caption,
+    color: colors.textDanger,
+    marginBottom: spacing.sm,
+  },
+  // GradientButton dims itself when it is genuinely disabled; this is the
+  // other tier — pressable, and pressing it says what is missing.
+  postButtonUnfinished: {
+    opacity: OPACITY_INCOMPLETE,
   },
   footer: {
     borderTopWidth: StyleSheet.hairlineWidth,
