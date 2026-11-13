@@ -55,6 +55,7 @@ import { captureSentryMessage } from '../../lib/sentry';
 import { colors, shadows } from '../../theme/tokens';
 import { compressImageForUpload } from '../../lib/imageCompression';
 import { nextComposeButtonState } from '../../lib/composeButtonVisibility';
+import { publishButtonState } from '../../lib/publishButtonState';
 import { mapWithConcurrency } from '../../lib/mapWithConcurrency';
 import { resolveMediaUrl } from '../../lib/media';
 import { useGuideAutoAdvance, useProductGuide } from '../../features/guide/useProductGuide';
@@ -351,6 +352,7 @@ export default function PlazaScreen() {
   // Autocomplete; the legacy Nominatim hook (usePlaceSuggestions) and the
   // text-only candidate list have been retired along with the old modal.
   const isSubmitting = Boolean(createPost?.isPending) || Boolean(updatePost?.isPending);
+  const publishButton = publishButtonState({ isSubmitting, isUploadingMedia, canSubmit });
 
   useEffect(() => {
     if (!selectedPost || !data?.length) {
@@ -1307,7 +1309,7 @@ export default function PlazaScreen() {
                     ref={titleTargetRef}
                     testID="plaza.composer.title"
                     placeholder={t.plaza.title_placeholder}
-                    placeholderTextColor="#B9B9B9"
+                    placeholderTextColor={colors.textMutedOnCream}
                     value={value}
                     onChangeText={onChange}
                     style={{
@@ -1316,8 +1318,10 @@ export default function PlazaScreen() {
                       // Android ignores placeholderTextColor here and draws the
                       // hint in the text colour, which made an empty composer
                       // read as a written one (D-127). An empty field has no
-                      // text of its own to tint.
-                      color: value ? '#111111' : '#B9B9B9',
+                      // text of its own to tint. #B9B9B9 measured 1.86:1 on
+                      // this cream page, so the correction left the two fields
+                      // looking like no fields at all.
+                      color: value ? '#111111' : colors.textMutedOnCream,
                       fontWeight: '500',
                       marginBottom: 14,
                     }}
@@ -1334,7 +1338,7 @@ export default function PlazaScreen() {
                     ref={bodyTargetRef}
                     testID="plaza.composer.body"
                     placeholder={t.plaza.body_placeholder}
-                    placeholderTextColor="#C4C4C4"
+                    placeholderTextColor={colors.textMutedOnCream}
                     value={value}
                     onChangeText={onChange}
                     multiline
@@ -1343,7 +1347,7 @@ export default function PlazaScreen() {
                       minHeight: 220,
                       fontSize: 20,
                       lineHeight: 31,
-                      color: value ? '#2B2B2B' : '#C4C4C4',
+                      color: value ? '#2B2B2B' : colors.textMutedOnCream,
                       paddingTop: 4,
                     }}
                   />
@@ -1580,7 +1584,7 @@ export default function PlazaScreen() {
                     borderWidth: 1,
                     borderColor: 'rgba(255, 200, 175, 0.65)',
                     backgroundColor: '#F67673',
-                    opacity: isSubmitting || isUploadingMedia || !canSubmit ? 0.45 : 1,
+                    opacity: publishButton.opacity,
                     ...shadows.cta,
                   }}
                 >
@@ -1602,7 +1606,7 @@ export default function PlazaScreen() {
                       }
                       handleSubmit(onSubmit, onInvalid)();
                     }}
-                    disabled={isSubmitting || isUploadingMedia || !canSubmit}
+                    disabled={publishButton.disabled}
                     accessibilityRole="button"
                     accessibilityLabel={editingPost ? t.common.save : t.plaza.publish_note}
                     style={StyleSheet.absoluteFill}

@@ -571,9 +571,11 @@ Android 在 edge-to-edge(SDK 54)下**不会**为 IME 缩窗口,全屏 `Modal` �
 这个包里 hint 是用 `style.color` 画的,不是用 `placeholderTextColor`(Android `TextView` 在 hint 颜色未设时就拿 `mTextColor` 画 hint)。实测:同字号下 placeholder(规格 #C4C4C4)与真文字(规格 #2B2B2B)的灰度分位数无法区分。
 
 ```tsx
-style={{ ..., color: value ? colors.textMain : colors.textSubtle }}
+style={{ ..., color: value ? colors.textMain : colors.textMutedOnCream }}
 ```
 字段为空时没有自己的文字会被这个颜色影响,所以 iOS / web 无副作用;`placeholderTextColor` 一起留着,哪天 RN 修好了自然生效。
+
+**这条有第二半,2026-11-13 才付学费(D-127 续三)**:placeholder 太深是 bug,太浅同样是 bug。D-127 把 Plaza 的两个 hint 设成 `#B9B9B9` / `#C4C4C4`,在发帖器的奶油底 `#FFF8F1` 上实测 **1.86:1 / 1.66:1**——两个要填的框在白天的手机上等于不存在,用户以为自己填完了,然后发现发帖按钮是灰的。**选 token 要按它实际落在哪块底色上量**:`textSubtle` #A89A92 在奶油上只有 **2.59:1**,连大字的 3.0:1 都不到,别拿它当 placeholder;`textMutedOnCream` #6F625B 是 **5.58:1**,大字小字都过。写进去的正文仍是 `textMain`,和提示一眼分得开。
 
 **什么时候必须这么写**:输入框**无边框、字号大、与正文同样式**时——那种 placeholder 渲染成深色就等于"这篇稿子已经写好了"(Plaza 发帖器的标题和正文)。灰底框里的小输入框可以先不动。
 
