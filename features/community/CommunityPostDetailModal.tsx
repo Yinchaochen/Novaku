@@ -359,6 +359,10 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
   // Sized from the first picture once it loads. Event posters are mostly
   // words, and a fixed frame cut them off at both edges.
   const [measuredMediaHeight, setMeasuredMediaHeight] = useState<number | null>(null);
+  // A URL the device could not turn into a picture: a dead hotlink, or a
+  // format no decoder here handles. The slot shows the post's own drawn cover
+  // instead of the grey rectangle it used to hold forever (D-190).
+  const [unrenderable, setUnrenderable] = useState<ReadonlySet<string>>(new Set());
   const user = useAuthStore((state) => state.user);
   const qc = useQueryClient();
   const { mutate: trackCommunityEvents } = useTrackCommunityEvents();
@@ -474,6 +478,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
     // measured media height — it would open mid-page with the wrong frame.
     scrollViewRef.current?.scrollTo({ y: 0, animated: false });
     setMeasuredMediaHeight(null);
+    setUnrenderable(new Set());
   }, [detailKey, scrollX]);
 
   const recordViewMutate = recordView.mutate;
@@ -535,6 +540,10 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
     measuredMediaHeight ??
     detailMediaHeightFor(post.media_items?.[0], viewportWidth, viewportHeight) ??
     Math.min(Math.round(viewportWidth * 1.02), 440);
+  // The cover is square and draws at width: '100%', so it needs a box that is
+  // square and fits the media strip; handed the full width on a wide screen it
+  // is clipped to a corner of blank paper.
+  const coverFallbackSize = Math.min(viewportWidth, mediaHeight, 420);
   const dotSlot = 14;
   const inactiveDotSize = 6;
   const activeDotSize = 8;
@@ -1007,10 +1016,13 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
                   >
                     {post.media_items.map((media, index) => {
                       const isVideo = isVideoMedia(media);
+                      const broken = unrenderable.has(media.media_url);
                       return (
                         <Pressable
                           key={media.id ?? `${media.media_url}-${index}`}
                           onPress={() => {
+                            // Nothing to enlarge, and the viewer would be grey.
+                            if (broken) return;
                             if (isVideo) {
                               // §6.5: video URLs never fall back to the proxy;
                               // a broken public base means no playback.
@@ -1025,27 +1037,46 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
                           style={{ width: viewportWidth, height: mediaHeight }}
                           testID={isVideo ? 'post.detail.video' : undefined}
                         >
-                          <Image
-                            source={
-                              resolveMediaUrl(isVideo ? media.thumb_url ?? media.media_url : media.media_url) ??
-                              media.media_url
-                            }
-                            contentFit={isVideo ? 'cover' : 'contain'}
-                            transition={120}
-                            onLoad={(event) => {
-                              if (isVideo || index !== 0) {
-                                return;
+                          {broken ? (
+                            <View
+                              style={{
+                                width: viewportWidth,
+                                height: mediaHeight,
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                              testID="post.detail.cover-fallback"
+                            >
+                              <View style={{ width: coverFallbackSize }}>
+                                <PostCover post={post} width={coverFallbackSize} />
+                              </View>
+                            </View>
+                          ) : (
+                            <Image
+                              source={
+                                resolveMediaUrl(isVideo ? media.thumb_url ?? media.media_url : media.media_url) ??
+                                media.media_url
                               }
-                              const size = event?.source;
-                              setMeasuredMediaHeight(
-                                size
-                                  ? detailMediaHeight(size.width, size.height, viewportWidth, viewportHeight)
-                                  : null,
-                              );
-                            }}
-                            style={{ width: viewportWidth, height: mediaHeight, backgroundColor: isVideo ? '#101010' : undefined }}
-                          />
-                          {isVideo ? (
+                              contentFit={isVideo ? 'cover' : 'contain'}
+                              transition={120}
+                              onError={() =>
+                                setUnrenderable((prev) => new Set(prev).add(media.media_url))
+                              }
+                              onLoad={(event) => {
+                                if (isVideo || index !== 0) {
+                                  return;
+                                }
+                                const size = event?.source;
+                                setMeasuredMediaHeight(
+                                  size
+                                    ? detailMediaHeight(size.width, size.height, viewportWidth, viewportHeight)
+                                    : null,
+                                );
+                              }}
+                              style={{ width: viewportWidth, height: mediaHeight, backgroundColor: isVideo ? '#101010' : undefined }}
+                            />
+                          )}
+                          {isVideo && !broken ? (
                             <View
                               pointerEvents="none"
                               style={{
