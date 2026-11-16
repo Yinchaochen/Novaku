@@ -43,6 +43,10 @@ const options = {
   signin: arg('no-signin') ? false : true,
   envFile: arg('env-file', '../novaku-backend/.devstack/env'),
   keep: Boolean(arg('keep')),
+  // Any expression, evaluated on the finished page and printed with the
+  // report. For asking the page a question the screenshot cannot answer:
+  // computed styles, stacking order, what covers what.
+  probe: arg('probe', null),
 };
 
 // Git Bash rewrites an argument that starts with a slash into a Windows path
@@ -311,6 +315,7 @@ async function main() {
           screenshot: imagePath,
           textChars: (text ?? '').length,
           controls: controls ? JSON.parse(controls) : null,
+          probe: typeof options.probe === 'string' ? await evaluate(cdp, options.probe) : undefined,
         },
         null,
         2,

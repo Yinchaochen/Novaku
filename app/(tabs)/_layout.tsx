@@ -14,7 +14,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useMe } from '../../features/auth/useAuth';
 import { useProductGuideController } from '../../features/guide/useProductGuide';
 import { tap } from '../../lib/haptics';
-import { requireSignIn } from '../../store/signInPromptStore';
+import { requireSignIn, useSignInPromptStore } from '../../store/signInPromptStore';
 import { useAuthStore } from '../../store/authStore';
 import {
   getTabBarHeight,
@@ -74,6 +74,7 @@ export default function TabsLayout() {
   useProductGuideController();
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const pathname = usePathname();
+  const signInSheetOpen = useSignInPromptStore((state) => state.visible);
 
   useEffect(() => {
     if (!user) {
@@ -271,8 +272,15 @@ export default function TabsLayout() {
       {/* Update prompts wait for onboarding — a first run should not open with a changelog. */}
       {showOnboardingModal ? null : <AppUpdateGate />}
       {/* D-188: what the Plaza is for, said once, on the Plaza and nowhere else.
-          It goes before the walkthrough: what this place is, then how to post. */}
-      <PlazaWelcomeSheet allowed={!showOnboardingModal && pathname === '/plaza'} />
+          It goes before the walkthrough: what this place is, then how to post.
+          Not while the sign-in sheet is up: that one is an answer to something
+          the reader asked for, and D-188 says this is said *before* anything
+          asks them to do something, not on top of it. On the web /login lands
+          on the Plaza with the sheet open (D-151), so without this the reader
+          gets an introduction stacked over the form they came for. */}
+      <PlazaWelcomeSheet
+        allowed={!showOnboardingModal && !signInSheetOpen && pathname === '/plaza'}
+      />
       {/* D-170: what suggestion pushes are, once, before the first one. */}
       {showOnboardingModal ? null : <InterestPushNotice />}
     </>
