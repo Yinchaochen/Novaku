@@ -112,7 +112,8 @@ export function useLogin() {
     onSuccess: async (user) => {
       setUser(user);
       await setLangCode(user.locale);
-      await queryClient.invalidateQueries({ queryKey: ['odyssey'] });
+      // Not awaited, same reason as the profile update below: this resolves only once the odyssey has refetched, and a new account generates one server-side. The person waited on a spinner for a screen they were not looking at yet.
+      void queryClient.invalidateQueries({ queryKey: ['odyssey'] });
     },
     onError: (err) => reportAuthMutationError('login', err),
   });
@@ -146,7 +147,7 @@ export function useRegister() {
     onSuccess: async (user) => {
       setUser(user);
       await setLangCode(user.locale);
-      await queryClient.invalidateQueries({ queryKey: ['odyssey'] });
+      void queryClient.invalidateQueries({ queryKey: ['odyssey'] });
     },
     onError: (err) => reportAuthMutationError('register', err),
   });
@@ -195,7 +196,7 @@ export function useUpdateIdentity() {
     },
     onSuccess: async (user) => {
       setUser(user);
-      await queryClient.invalidateQueries({ queryKey: ['odyssey'] });
+      void queryClient.invalidateQueries({ queryKey: ['odyssey'] });
     },
   });
 }
