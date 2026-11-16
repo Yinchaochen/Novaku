@@ -32,6 +32,15 @@ export interface ScrollWheelProps<T extends string | number> {
   fadeColor?: string;
 }
 
+// snapToInterval, snapToOffsets and decelerationRate are native-only props:
+// react-native-web drops them, and the JS fallback that would catch the wheel
+// hangs off onScrollEndDrag, which a mouse wheel never fires. So on the web the
+// wheel came to rest between two items and the pink band straddled two years
+// (measured 2026-11-16: 24px off a 36px row). CSS scroll snap is the browser's
+// own version of the same behaviour, and it runs without any JS at all.
+const WEB_SNAP_CONTAINER = Platform.OS === 'web' ? ({ scrollSnapType: 'y mandatory' } as object) : null;
+const WEB_SNAP_ITEM = Platform.OS === 'web' ? ({ scrollSnapAlign: 'center' } as object) : null;
+
 export function ScrollWheel<T extends string | number>({
   items,
   value,
@@ -200,13 +209,16 @@ export function ScrollWheel<T extends string | number>({
 
       return (
         <Animated.View
-          style={{
-            height: itemHeight,
-            alignItems: 'center',
-            justifyContent: 'center',
-            opacity,
-            transform: [{ perspective: 700 }, { rotateX }, { scale }],
-          }}
+          style={[
+            {
+              height: itemHeight,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity,
+              transform: [{ perspective: 700 }, { rotateX }, { scale }],
+            },
+            WEB_SNAP_ITEM,
+          ]}
         >
           <Text
             style={{
@@ -263,7 +275,7 @@ export function ScrollWheel<T extends string | number>({
         renderItem={renderItem}
         getItemLayout={getItemLayout}
         initialScrollIndex={selectedIndex}
-        style={{ height: wheelHeight }}
+        style={[{ height: wheelHeight }, WEB_SNAP_CONTAINER]}
         showsVerticalScrollIndicator={false}
         snapToInterval={itemHeight}
         snapToOffsets={snapOffsets}
