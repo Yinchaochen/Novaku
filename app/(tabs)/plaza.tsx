@@ -89,6 +89,9 @@ import {
 import { useKeyboardHeight } from '../../hooks/useKeyboardHeight';
 import { useAuthStore } from '../../store/authStore';
 import { usePlazaComposeIntentStore } from '../../store/plazaComposeIntentStore';
+import { PostProductCards } from '../../components/merchant/PostProductCards';
+import { MAX_LINKED_PRODUCTS, ProductPickerPanel } from '../../components/merchant/ProductPickerPanel';
+import type { ProductCard } from '../../features/merchants/types';
 
 const schema = z.object({
   post_type: z.enum(['experience', 'question', 'guide', 'warning', 'recommendation']),
@@ -262,6 +265,9 @@ export default function PlazaScreen() {
   // sheet out of it instead of dropping it in from nowhere (D-141).
   const [detailOrigin, setDetailOrigin] = useState<CardOrigin | null>(null);
   const [selectedPlaces, setSelectedPlaces] = useState<CommunitySelectedPlaceInput[]>([]);
+  // D-195: products the post shows (a shop's own) or reviews (anyone else's), at most three.
+  const [linkedProducts, setLinkedProducts] = useState<ProductCard[]>([]);
+  const [productPickerVisible, setProductPickerVisible] = useState(false);
   const [locationPickerVisible, setLocationPickerVisible] = useState(false);
   const [aiSummaryEnabled, setAiSummaryEnabled] = useState(true);
   // D-141: the drawn cover a text post wears. null = the papery default, which
@@ -470,6 +476,8 @@ export default function PlazaScreen() {
     setComposerMessage(null);
     setAiSummaryEnabled(true);
     setEventTime(EMPTY_EVENT_TIME);
+    setLinkedProducts([]);
+    setProductPickerVisible(false);
   };
 
   const closeComposer = () => {
@@ -498,6 +506,12 @@ export default function PlazaScreen() {
       openComposerForEdit(intent.post);
       return;
     }
+    if (intent.kind === 'review') {
+      openComposerForCreate();
+      setLinkedProducts([intent.product]);
+      if (intent.place) setSelectedPlaces([intent.place]);
+      return;
+    }
     openComposerForCreate();
     setValue('post_type', intent.postType);
     setValue('title', intent.title.slice(0, 160));
@@ -517,6 +531,7 @@ export default function PlazaScreen() {
       }))
     );
     setSelectedPlaces(deriveTaggedPlacesFromPost(post));
+    setLinkedProducts(post.products ?? []);
     setLocationPickerVisible(false);
     setComposerMessage(null);
     setAiSummaryEnabled(post.ai_summary_enabled ?? true);
@@ -595,6 +610,7 @@ export default function PlazaScreen() {
       body: form.body,
       source_url: selectedPlaces[0]?.source_url || undefined,
       selected_places: selectedPlaces,
+      product_ids: linkedProducts.map((product) => product.id),
       save_places_as_odysseys: false,
       ai_summary_enabled: aiSummaryEnabled,
       cover_template: coverTemplate,
@@ -1144,6 +1160,16 @@ export default function PlazaScreen() {
               />
             </Suspense>
           </ErrorBoundary>
+        ) : productPickerVisible ? (
+          <ProductPickerPanel
+            initial={linkedProducts}
+            insets={insets}
+            onClose={() => setProductPickerVisible(false)}
+            onDone={(products) => {
+              setLinkedProducts(products);
+              setProductPickerVisible(false);
+            }}
+          />
         ) : (
         <View
           style={{
@@ -1386,6 +1412,40 @@ export default function PlazaScreen() {
                     </FeedbackPressable>
                   );
                 })}
+              </View>
+
+              <View className="mb-2 border-t border-neutral-100 pt-2">
+                <View className="min-h-[58px] flex-row items-center justify-between">
+                  <View className="flex-row items-center">
+                    <Ionicons name="pricetag-outline" size={20} color="#242424" />
+                    <Text className="ml-3 text-[16px] text-[#242424]">{t.merchant.linked_product}</Text>
+                  </View>
+                  {linkedProducts.length < MAX_LINKED_PRODUCTS ? (
+                    <Pressable
+                      testID="composer.link-products"
+                      accessibilityRole="button"
+                      onPress={() => setProductPickerVisible(true)}
+                      style={{
+                        paddingHorizontal: 16,
+                        paddingVertical: 10,
+                        borderRadius: 999,
+                        backgroundColor: '#FFE8DA',
+                        borderWidth: 1,
+                        borderColor: 'rgba(246,118,115,0.30)',
+                      }}
+                    >
+                      <Text style={{ color: colors.brandCoral, fontSize: 13, fontWeight: '700', letterSpacing: 0.3 }}>
+                        {t.merchant.attach_products}
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+                <View className="pb-3">
+                  <PostProductCards
+                    products={linkedProducts}
+                    onRemove={(id) => setLinkedProducts((current) => current.filter((product) => product.id !== id))}
+                  />
+                </View>
               </View>
 
               <View className="mb-2 border-t border-neutral-100 pt-2">

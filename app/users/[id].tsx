@@ -44,6 +44,10 @@ import { formatDisplayLocation } from '../../lib/displayLocation';
 import { resolveMediaUrl } from '../../lib/media';
 import { useAuthStore } from '../../store/authStore';
 import { OfficialChip, isOfficialAuthor } from '../../components/OfficialChip';
+import { ShopChip } from '../../components/merchant/ShopChip';
+import { ShopHoursPane, ShopProductsPane, ShopStatusLine, mapsUrl } from '../../components/merchant/ShopPanes';
+import { useShop } from '../../features/merchants/useMerchants';
+import { openExternalUrl } from '../../lib/links';
 import { VerifiedBadge } from '../../components/VerifiedBadge';
 import { requireSignIn } from '../../store/signInPromptStore';
 import { PrivacyMask, PrivateText } from '../../components/PrivacyMask';
@@ -56,7 +60,7 @@ function showCopiedToast(message: string) {
   }
 }
 
-type UserProfileTab = 'notes' | 'comments' | 'saves' | 'likes';
+type UserProfileTab = 'notes' | 'comments' | 'saves' | 'likes' | 'products' | 'hours';
 
 function HeroAvatar({ name, avatarUrl }: { name: string; avatarUrl?: string | null }) {
   const resolved = resolveMediaUrl(avatarUrl);
@@ -124,8 +128,19 @@ export default function UserProfileScreen() {
   const displayOriginCity =
     formatDisplayLocation(profileData?.origin_city) ?? profileData?.origin_city ?? null;
 
+  // D-195: a shop's page leads with its products, then its posts and its hours.
+  const shopProfile = profileData?.account_kind === 'merchant';
+  const shopQuery = useShop(shopProfile ? userId : null);
+
   const visibleTabs = useMemo<{ key: UserProfileTab; label: string }[]>(() => {
     if (!profileData) return [];
+    if (profileData.account_kind === 'merchant') {
+      return [
+        { key: 'products', label: t.merchant.tab_products },
+        { key: 'notes', label: t.merchant.tab_posts },
+        { key: 'hours', label: t.merchant.tab_hours },
+      ];
+    }
     const all: { key: UserProfileTab; label: string; visible: boolean }[] = [
       { key: 'notes', label: t.profile.tab_notes, visible: profileData.tab_notes_public },
       { key: 'comments', label: t.profile.tab_comments, visible: profileData.tab_comments_public },
@@ -138,6 +153,9 @@ export default function UserProfileScreen() {
   }, [profileData, t]);
 
   const [activeTab, setActiveTab] = useState<UserProfileTab>('notes');
+  useEffect(() => {
+    if (shopProfile) setActiveTab('products');
+  }, [shopProfile]);
 
   useEffect(() => {
     if (visibleTabs.length === 0) return;
@@ -324,6 +342,7 @@ export default function UserProfileScreen() {
           </PrivateText>
           {profileData.is_verified ? <VerifiedBadge /> : null}
           {isOfficialAuthor(profileData) ? <OfficialChip size="md" /> : null}
+          {shopProfile ? <ShopChip size="md" /> : null}
         </View>
         <Pressable onPress={openProfileActions} hitSlop={8}>
           <Ionicons name="ellipsis-horizontal" size={22} color="#111111" />
@@ -402,6 +421,12 @@ export default function UserProfileScreen() {
             </View>
           ) : null}
 
+          {shopProfile && shopQuery.data ? (
+            <View className="mt-3">
+              <ShopStatusLine shop={shopQuery.data} />
+            </View>
+          ) : null}
+
           <View className="mt-4 flex-row gap-2">
             <Pressable
               // Following needs an account; a guest is asked first (D-151).
@@ -418,51 +443,66 @@ export default function UserProfileScreen() {
                 {profileData.viewer_is_following ? t.profile.following_button : t.profile.follow_button}
               </Text>
             </Pressable>
-            <Pressable
-              onPress={() => {
-                switch (profileData.relationship_state) {
-                  case 'none':
-                    requireSignIn(openFriendRequest);
-                    break;
-                  case 'incoming_pending':
-                    void handleAcceptFriendRequest();
-                    break;
-                  case 'outgoing_pending':
-                    // already sent — no-op (button is disabled visually below)
-                    break;
-                  case 'friends':
-                  default:
-                    requireSignIn(handleMessage);
-                    break;
+            {shopProfile && shopQuery.data ? (
+              <Pressable
+                testID="shop.directions"
+                accessibilityRole="button"
+                onPress={() => shopQuery.data && void openExternalUrl(mapsUrl(shopQuery.data))}
+                className="flex-1 flex-row items-center justify-center gap-1.5 rounded-full py-2.5"
+                style={{ backgroundColor: '#111827' }}
+              >
+                <Ionicons name="navigate-outline" size={15} color="#FFFFFF" />
+                <Text className="text-[14px] font-semibold" style={{ color: '#FFFFFF' }}>
+                  {t.merchant.directions}
+                </Text>
+              </Pressable>
+            ) : (
+              <Pressable
+                onPress={() => {
+                  switch (profileData.relationship_state) {
+                    case 'none':
+                      requireSignIn(openFriendRequest);
+                      break;
+                    case 'incoming_pending':
+                      void handleAcceptFriendRequest();
+                      break;
+                    case 'outgoing_pending':
+                      // already sent — no-op (button is disabled visually below)
+                      break;
+                    case 'friends':
+                    default:
+                      requireSignIn(handleMessage);
+                      break;
+                  }
+                }}
+                disabled={
+                  profileData.relationship_state === 'outgoing_pending' ||
+                  acceptFriendRequest.isPending
                 }
-              }}
-              disabled={
-                profileData.relationship_state === 'outgoing_pending' ||
-                acceptFriendRequest.isPending
-              }
-              className="flex-1 items-center justify-center rounded-full py-2.5"
-              style={{
-                backgroundColor:
-                  profileData.relationship_state === 'none'
-                    ? '#111827'
-                    : profileData.relationship_state === 'incoming_pending'
-                      ? '#F47C7C'
-                      : '#F5F5F7',
-              }}
-            >
-              <Text
-                className="text-[14px] font-semibold"
+                className="flex-1 items-center justify-center rounded-full py-2.5"
                 style={{
-                  color:
-                    profileData.relationship_state === 'none' ||
-                    profileData.relationship_state === 'incoming_pending'
-                      ? '#FFFFFF'
-                      : '#6B7280',
+                  backgroundColor:
+                    profileData.relationship_state === 'none'
+                      ? '#111827'
+                      : profileData.relationship_state === 'incoming_pending'
+                        ? '#F47C7C'
+                        : '#F5F5F7',
                 }}
               >
-                {friendButtonLabel}
-              </Text>
-            </Pressable>
+                <Text
+                  className="text-[14px] font-semibold"
+                  style={{
+                    color:
+                      profileData.relationship_state === 'none' ||
+                      profileData.relationship_state === 'incoming_pending'
+                        ? '#FFFFFF'
+                        : '#6B7280',
+                  }}
+                >
+                  {friendButtonLabel}
+                </Text>
+              </Pressable>
+            )}
           </View>
         </View>
 
@@ -500,7 +540,15 @@ export default function UserProfileScreen() {
               })}
             </View>
 
-            {isLoadingActive ? (
+            {activeTab === 'products' && userId ? (
+              <View className="px-5">
+                <ShopProductsPane userId={userId} owner={false} />
+              </View>
+            ) : activeTab === 'hours' && userId ? (
+              <View className="px-5 pb-8">
+                <ShopHoursPane userId={userId} owner={false} />
+              </View>
+            ) : isLoadingActive ? (
               <View className="items-center py-10">
                 <ActivityIndicator size="small" color="#F47C7C" />
               </View>

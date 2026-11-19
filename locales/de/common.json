@@ -1656,6 +1656,11 @@
     "remove_product": "Produkt entfernen",
     "attach_products": "Produkte anhängen",
     "attach_limit": "Bis zu 3",
-    "products_in_post": "In diesem Beitrag"
+    "products_in_post": "In diesem Beitrag",
+    "pick_title": "Produkte verknüpfen",
+    "shop_search_placeholder": "Laden suchen",
+    "shop_search_empty": "Kein Laden gefunden.",
+    "pick_done": "Fertig",
+    "pick_selected": "{count} von {max} ausgewählt"
   }
 }

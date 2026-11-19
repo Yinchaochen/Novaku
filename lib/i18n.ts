@@ -1663,6 +1663,11 @@ export type Translations = {
     attach_products: string;
     attach_limit: string;
     products_in_post: string;
+    pick_title: string;
+    shop_search_placeholder: string;
+    shop_search_empty: string;
+    pick_done: string;
+    pick_selected: string;
   };
   common: {
     loading: string;

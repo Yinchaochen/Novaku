@@ -1672,6 +1672,11 @@
     "remove_product": "Remove product",
     "attach_products": "Add products",
     "attach_limit": "Up to 3",
-    "products_in_post": "In this post"
+    "products_in_post": "In this post",
+    "pick_title": "Link products",
+    "shop_search_placeholder": "Search for a shop",
+    "shop_search_empty": "No shop found.",
+    "pick_done": "Done",
+    "pick_selected": "{count} of {max} selected"
   }
 }

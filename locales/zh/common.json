@@ -1672,6 +1672,11 @@
     "remove_product": "移除商品",
     "attach_products": "挂商品",
     "attach_limit": "最多 3 件",
-    "products_in_post": "帖子里的商品"
+    "products_in_post": "帖子里的商品",
+    "pick_title": "关联商品",
+    "shop_search_placeholder": "搜店名",
+    "shop_search_empty": "没找到这家店。",
+    "pick_done": "完成",
+    "pick_selected": "已选 {count}/{max}"
   }
 }

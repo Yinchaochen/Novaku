@@ -38,6 +38,30 @@ export function useBecomeMerchant() {
   });
 }
 
+export interface ShopSearchResult {
+  user_id: string;
+  place_name: string;
+  address: string | null;
+  avatar_url: string | null;
+  category: Merchant['category'];
+  category_other: string | null;
+  product_count: number;
+}
+
+export function useShopSearch(query: string, enabled: boolean) {
+  const trimmed = query.trim();
+  return useQuery({
+    queryKey: ['merchant', 'search', trimmed],
+    queryFn: async () => {
+      const res = await api.get('/merchants/search', { params: { q: trimmed } });
+      return res.data.data.items as ShopSearchResult[];
+    },
+    enabled: enabled && trimmed.length >= 2,
+    staleTime: 30_000,
+    retry: false,
+  });
+}
+
 export function useShop(userId: string | null | undefined) {
   return useQuery({
     queryKey: ['merchant', userId],
