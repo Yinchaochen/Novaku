@@ -15,6 +15,7 @@ import { useMe } from '../../features/auth/useAuth';
 import { useProductGuideController } from '../../features/guide/useProductGuide';
 import { tap } from '../../lib/haptics';
 import { requireSignIn, useSignInPromptStore } from '../../store/signInPromptStore';
+import { isMerchant } from '../../features/merchants/useMerchants';
 import { useAuthStore } from '../../store/authStore';
 import {
   getTabBarHeight,
@@ -222,6 +223,8 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="tasks"
           options={{
+            // Shop accounts have no Odyssey (D-195): their own page is where they work.
+            ...(isMerchant(user) ? { href: null } : {}),
             title: t.tasks.title,
             tabBarButtonTestID: 'tab.tasks',
             tabBarIcon: ({ focused }) => <FloatingIcon name="odyssey" focused={focused} />,
