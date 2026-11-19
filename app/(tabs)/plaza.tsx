@@ -268,6 +268,7 @@ export default function PlazaScreen() {
   // D-195: products the post shows (a shop's own) or reviews (anyone else's), at most three.
   const [linkedProducts, setLinkedProducts] = useState<ProductCard[]>([]);
   const [productPickerVisible, setProductPickerVisible] = useState(false);
+  const [reviewingProduct, setReviewingProduct] = useState<ProductCard | null>(null);
   const [locationPickerVisible, setLocationPickerVisible] = useState(false);
   const [aiSummaryEnabled, setAiSummaryEnabled] = useState(true);
   // D-141: the drawn cover a text post wears. null = the papery default, which
@@ -478,6 +479,7 @@ export default function PlazaScreen() {
     setEventTime(EMPTY_EVENT_TIME);
     setLinkedProducts([]);
     setProductPickerVisible(false);
+    setReviewingProduct(null);
   };
 
   const closeComposer = () => {
@@ -509,6 +511,7 @@ export default function PlazaScreen() {
     if (intent.kind === 'review') {
       openComposerForCreate();
       setLinkedProducts([intent.product]);
+      setReviewingProduct(intent.product);
       if (intent.place) setSelectedPlaces([intent.place]);
       return;
     }
@@ -1220,6 +1223,24 @@ export default function PlazaScreen() {
                 paddingBottom: Math.max(insets.bottom + 148, 172),
               }}
             >
+              {reviewingProduct ? (
+                <View
+                  testID="composer.reviewing"
+                  className="mb-4 flex-row items-center gap-3 rounded-[18px] bg-white px-3 py-2.5"
+                  style={{ borderWidth: 1, borderColor: '#ECE4DE' }}
+                >
+                  {reviewingProduct.cover_url ? (
+                    <Image
+                      source={resolveMediaUrl(reviewingProduct.cover_url) ?? reviewingProduct.cover_url}
+                      contentFit="cover"
+                      style={{ width: 40, height: 40, borderRadius: 10 }}
+                    />
+                  ) : null}
+                  <Text className="flex-1 text-[15px] font-bold text-[#241A16]" numberOfLines={2}>
+                    {t.merchant.reviewing.replace('{name}', reviewingProduct.name)}
+                  </Text>
+                </View>
+              ) : null}
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}

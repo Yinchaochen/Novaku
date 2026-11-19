@@ -44,8 +44,8 @@ import { formatDisplayLocation } from '../../lib/displayLocation';
 import { resolveMediaUrl } from '../../lib/media';
 import { useAuthStore } from '../../store/authStore';
 import { OfficialChip, isOfficialAuthor } from '../../components/OfficialChip';
-import { ShopChip } from '../../components/merchant/ShopChip';
-import { ShopHoursPane, ShopProductsPane, ShopStatusLine, mapsUrl } from '../../components/merchant/ShopPanes';
+import { ShopHoursPane, ShopProductsPane, mapsUrl } from '../../components/merchant/ShopPanes';
+import { ShopPublicHeader } from '../../components/merchant/ShopPublicHeader';
 import { useShop } from '../../features/merchants/useMerchants';
 import { openExternalUrl } from '../../lib/links';
 import { VerifiedBadge } from '../../components/VerifiedBadge';
@@ -331,18 +331,21 @@ export default function UserProfileScreen() {
   const isEmpty = !isLoadingActive && !isErrorActive && postList.length === 0;
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-white" edges={['top']} style={shopProfile ? { backgroundColor: '#FFF8F1' } : undefined}>
       <View className="flex-row items-center justify-between border-b border-neutral-100 px-4 py-3">
         <Pressable onPress={() => router.back()} hitSlop={8}>
           <Ionicons name="chevron-back" size={26} color="#111111" />
         </Pressable>
         <View className="flex-1 flex-row items-center justify-center px-4">
-          <PrivateText numberOfLines={1} className="shrink text-[16px] font-semibold text-black">
-            {profileData.display_name}
-          </PrivateText>
-          {profileData.is_verified ? <VerifiedBadge /> : null}
-          {isOfficialAuthor(profileData) ? <OfficialChip size="md" /> : null}
-          {shopProfile ? <ShopChip size="md" /> : null}
+          {shopProfile ? null : (
+            <>
+              <PrivateText numberOfLines={1} className="shrink text-[16px] font-semibold text-black">
+                {profileData.display_name}
+              </PrivateText>
+              {profileData.is_verified ? <VerifiedBadge /> : null}
+              {isOfficialAuthor(profileData) ? <OfficialChip size="md" /> : null}
+            </>
+          )}
         </View>
         <Pressable onPress={openProfileActions} hitSlop={8}>
           <Ionicons name="ellipsis-horizontal" size={22} color="#111111" />
@@ -350,113 +353,108 @@ export default function UserProfileScreen() {
       </View>
 
       <ScrollView className="flex-1">
-        <View className="px-5 pt-5">
-          <View className="flex-row items-center gap-4">
-            <PrivacyMask>
-              <HeroAvatar name={profileData.display_name} avatarUrl={profileData.avatar_url} />
-            </PrivacyMask>
-            <View className="flex-1">
-              <PrivateText className="text-[20px] font-extrabold text-black">{profileData.display_name}</PrivateText>
-              <View className="mt-1 flex-row items-center">
-                <PrivateText className="text-[12px] text-neutral-500">
-                  Postervia ID: {profileData.display_id ?? numericDisplayId(profileData.id)}
-                </PrivateText>
-                <Pressable
-                  onPress={() => void handleCopyDisplayId()}
-                  hitSlop={6}
-                  className="ml-2"
-                >
-                  <Ionicons name="copy-outline" size={14} color="#9CA3AF" />
-                </Pressable>
-                <Pressable
-                  onPress={() => setQrVisible(true)}
-                  hitSlop={6}
-                  className="ml-2"
-                >
-                  <Ionicons name="qr-code-outline" size={14} color="#9CA3AF" />
-                </Pressable>
-              </View>
-              {displayCity ? (
-                <View className="mt-1 flex-row items-center">
-                  <Ionicons name="location-outline" size={12} color="#9CA3AF" />
-                  <Text className="ml-1 text-[12px] text-neutral-500">{displayCity}</Text>
-                </View>
-              ) : null}
-              {displayOriginCity ? (
-                <View className="mt-1 flex-row items-center">
-                  <Ionicons name="home-outline" size={12} color="#9CA3AF" />
-                  <Text className="ml-1 text-[12px] text-neutral-500">
-                    {t.profile.from_label} {displayOriginCity}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-          </View>
-
-          <View className="mt-5 flex-row justify-around">
-            <StatColumn value={profileData.following_count} label={t.profile.stats_following} />
-            <StatColumn value={profileData.follower_count} label={t.profile.stats_followers} />
-            <StatColumn
-              value={profileData.helpful_received_count + profileData.save_received_count}
-              label={t.profile.stats_likes_saves}
+        {shopProfile ? (
+          shopQuery.data ? (
+            <ShopPublicHeader
+              shop={shopQuery.data}
+              following={Boolean(profileData.viewer_is_following)}
+              onToggleFollow={() => requireSignIn(handleToggleFollow)}
+              onDirections={() => shopQuery.data && void openExternalUrl(mapsUrl(shopQuery.data))}
             />
-          </View>
-
-          {profileData.bio?.trim() ? (
-            <PrivateText className="mt-3 text-[14px] leading-5 text-neutral-700">
-              {profileData.bio.trim()}
-            </PrivateText>
-          ) : null}
-
-          {profileData.intent_tags.length > 0 ? (
-            <View className="mt-3 flex-row flex-wrap">
-              {profileData.intent_tags.slice(0, 4).map((tag) => (
-                <View
-                  key={tag}
-                  className="mb-1.5 mr-1.5 rounded-full bg-[#F5F5F7] px-3 py-1"
-                >
-                  <Text className="text-[12px] text-neutral-700">#{tag}</Text>
+          ) : (
+            <View className="items-center py-10">
+              <ActivityIndicator size="small" color="#F47C7C" />
+            </View>
+          )
+        ) : (
+          <>
+          <View className="px-5 pt-5">
+            <View className="flex-row items-center gap-4">
+              <PrivacyMask>
+                <HeroAvatar name={profileData.display_name} avatarUrl={profileData.avatar_url} />
+              </PrivacyMask>
+              <View className="flex-1">
+                <PrivateText className="text-[20px] font-extrabold text-black">{profileData.display_name}</PrivateText>
+                <View className="mt-1 flex-row items-center">
+                  <PrivateText className="text-[12px] text-neutral-500">
+                    Postervia ID: {profileData.display_id ?? numericDisplayId(profileData.id)}
+                  </PrivateText>
+                  <Pressable
+                    onPress={() => void handleCopyDisplayId()}
+                    hitSlop={6}
+                    className="ml-2"
+                  >
+                    <Ionicons name="copy-outline" size={14} color="#9CA3AF" />
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setQrVisible(true)}
+                    hitSlop={6}
+                    className="ml-2"
+                  >
+                    <Ionicons name="qr-code-outline" size={14} color="#9CA3AF" />
+                  </Pressable>
                 </View>
-              ))}
+                {displayCity ? (
+                  <View className="mt-1 flex-row items-center">
+                    <Ionicons name="location-outline" size={12} color="#9CA3AF" />
+                    <Text className="ml-1 text-[12px] text-neutral-500">{displayCity}</Text>
+                  </View>
+                ) : null}
+                {displayOriginCity ? (
+                  <View className="mt-1 flex-row items-center">
+                    <Ionicons name="home-outline" size={12} color="#9CA3AF" />
+                    <Text className="ml-1 text-[12px] text-neutral-500">
+                      {t.profile.from_label} {displayOriginCity}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
             </View>
-          ) : null}
 
-          {shopProfile && shopQuery.data ? (
-            <View className="mt-3">
-              <ShopStatusLine shop={shopQuery.data} />
+            <View className="mt-5 flex-row justify-around">
+              <StatColumn value={profileData.following_count} label={t.profile.stats_following} />
+              <StatColumn value={profileData.follower_count} label={t.profile.stats_followers} />
+              <StatColumn
+                value={profileData.helpful_received_count + profileData.save_received_count}
+                label={t.profile.stats_likes_saves}
+              />
             </View>
-          ) : null}
 
-          <View className="mt-4 flex-row gap-2">
-            <Pressable
-              // Following needs an account; a guest is asked first (D-151).
-              onPress={() => requireSignIn(handleToggleFollow)}
-              className="flex-1 items-center justify-center rounded-full py-2.5"
-              style={{
-                backgroundColor: profileData.viewer_is_following ? '#F5F5F7' : '#F47C7C',
-              }}
-            >
-              <Text
-                className="text-[14px] font-semibold"
-                style={{ color: profileData.viewer_is_following ? '#6B7280' : '#FFFFFF' }}
-              >
-                {profileData.viewer_is_following ? t.profile.following_button : t.profile.follow_button}
-              </Text>
-            </Pressable>
-            {shopProfile && shopQuery.data ? (
+            {profileData.bio?.trim() ? (
+              <PrivateText className="mt-3 text-[14px] leading-5 text-neutral-700">
+                {profileData.bio.trim()}
+              </PrivateText>
+            ) : null}
+
+            {profileData.intent_tags.length > 0 ? (
+              <View className="mt-3 flex-row flex-wrap">
+                {profileData.intent_tags.slice(0, 4).map((tag) => (
+                  <View
+                    key={tag}
+                    className="mb-1.5 mr-1.5 rounded-full bg-[#F5F5F7] px-3 py-1"
+                  >
+                    <Text className="text-[12px] text-neutral-700">#{tag}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+
+            <View className="mt-4 flex-row gap-2">
               <Pressable
-                testID="shop.directions"
-                accessibilityRole="button"
-                onPress={() => shopQuery.data && void openExternalUrl(mapsUrl(shopQuery.data))}
-                className="flex-1 flex-row items-center justify-center gap-1.5 rounded-full py-2.5"
-                style={{ backgroundColor: '#111827' }}
+                // Following needs an account; a guest is asked first (D-151).
+                onPress={() => requireSignIn(handleToggleFollow)}
+                className="flex-1 items-center justify-center rounded-full py-2.5"
+                style={{
+                  backgroundColor: profileData.viewer_is_following ? '#F5F5F7' : '#F47C7C',
+                }}
               >
-                <Ionicons name="navigate-outline" size={15} color="#FFFFFF" />
-                <Text className="text-[14px] font-semibold" style={{ color: '#FFFFFF' }}>
-                  {t.merchant.directions}
+                <Text
+                  className="text-[14px] font-semibold"
+                  style={{ color: profileData.viewer_is_following ? '#6B7280' : '#FFFFFF' }}
+                >
+                  {profileData.viewer_is_following ? t.profile.following_button : t.profile.follow_button}
                 </Text>
               </Pressable>
-            ) : (
               <Pressable
                 onPress={() => {
                   switch (profileData.relationship_state) {
@@ -502,9 +500,10 @@ export default function UserProfileScreen() {
                   {friendButtonLabel}
                 </Text>
               </Pressable>
-            )}
+            </View>
           </View>
-        </View>
+          </>
+        )}
 
         {profileData.restricted ? (
           <View className="mt-10 items-center px-8">

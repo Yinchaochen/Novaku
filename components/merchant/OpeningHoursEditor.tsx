@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
 
 import { useLanguage } from '../../context/LanguageContext';
@@ -22,6 +22,7 @@ export function OpeningHoursEditor({
 }) {
   const { t } = useLanguage();
   const [editing, setEditing] = useState<Editing>(null);
+  const strip = useRef<ScrollView>(null);
   const dayLabels = useMemo(
     () => ({
       mon: t.merchant.day_mon,
@@ -37,6 +38,15 @@ export function OpeningHoursEditor({
 
   const setDay = (day: Weekday, ranges: OpeningHours[Weekday]) => onChange({ ...value, [day]: ranges });
 
+  useEffect(() => {
+    if (!editing) return;
+    const current = value[editing.day]?.[0]?.[editing.edge];
+    const index = current ? HALF_HOURS.indexOf(current) : 0;
+    const timer = setTimeout(() => strip.current?.scrollTo({ x: Math.max(0, index * 62 - 120), animated: false }), 0);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing]);
+
   return (
     <View style={{ gap: 6 }}>
       {WEEKDAYS.map((day) => {
@@ -44,7 +54,7 @@ export function OpeningHoursEditor({
         const open = range !== null;
         const editingThis = editing?.day === day ? editing : null;
         return (
-          <View key={day} style={{ backgroundColor: '#F3F4F6', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6 }}>
+          <View key={day} style={{ borderBottomWidth: 1, borderBottomColor: '#F1E9E3', paddingVertical: 4 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 44, gap: 8 }}>
               <Text style={{ width: 44, fontSize: 15, color: '#111827' }}>{dayLabels[day]}</Text>
               <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -63,7 +73,7 @@ export function OpeningHoursEditor({
                             paddingHorizontal: 10,
                             borderRadius: 999,
                             justifyContent: 'center',
-                            backgroundColor: editingThis?.edge === edge ? '#FFE3D6' : '#FFFFFF',
+                            backgroundColor: editingThis?.edge === edge ? '#FFE3D6' : '#F3ECE6',
                           }}
                         >
                           <Text style={{ fontSize: 15, fontWeight: '700', color: '#111827' }}>{range[edge]}</Text>
@@ -85,10 +95,12 @@ export function OpeningHoursEditor({
                 }}
                 trackColor={{ true: PRIMARY, false: '#D1D5DB' }}
                 thumbColor="#FFFFFF"
+                // React Native Web paints the on-state knob teal unless told otherwise.
+                {...({ activeThumbColor: '#FFFFFF' } as object)}
               />
             </View>
             {editingThis && range ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingBottom: 6 }}>
+              <ScrollView ref={strip} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingBottom: 6 }}>
                 {HALF_HOURS.filter((time) => (editingThis.edge === 'open' ? time !== '24:00' : time !== '00:00')).map((time) => {
                   const active = range[editingThis.edge] === time;
                   return (
@@ -107,7 +119,7 @@ export function OpeningHoursEditor({
                         paddingHorizontal: 10,
                         borderRadius: 999,
                         justifyContent: 'center',
-                        backgroundColor: active ? PRIMARY : '#FFFFFF',
+                        backgroundColor: active ? PRIMARY : '#F3ECE6',
                       }}
                     >
                       <Text style={{ fontSize: 14, fontWeight: '700', color: active ? '#FFFFFF' : '#374151' }}>{time}</Text>

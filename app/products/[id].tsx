@@ -6,7 +6,7 @@ import { ActivityIndicator, Dimensions, Pressable, ScrollView, Text, View } from
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ShopChip } from '../../components/merchant/ShopChip';
-import { categoryLabel, mapsUrl, priceLabel } from '../../components/merchant/ShopPanes';
+import { PAPER, PaperName, categoryLabel, mapsUrl, priceLabel } from '../../components/merchant/ShopPanes';
 import { useLanguage } from '../../context/LanguageContext';
 import { useProduct, useProductReviews, useShop, useToggleProductSave } from '../../features/merchants/useMerchants';
 import { formatRanges } from '../../lib/merchantFormat';
@@ -83,7 +83,12 @@ export default function ProductScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bgCream }} testID="product.screen">
       <ScrollView contentContainerStyle={{ paddingBottom: 110 + insets.bottom }}>
-        <View style={{ height: 300 + insets.top, backgroundColor: colors.bgWarmDeep }}>
+        <View style={{ height: (data.media_items.length > 0 ? 300 : 190) + insets.top, backgroundColor: data.media_items.length > 0 ? colors.bgWarmDeep : PAPER }}>
+          {data.media_items.length === 0 ? (
+            <View style={{ flex: 1, paddingTop: insets.top + 64 }}>
+              <PaperName name={data.name} size={26} />
+            </View>
+          ) : null}
           {data.media_items.length > 0 ? (
             <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
               {data.media_items.map((item, index) => (
@@ -142,7 +147,9 @@ export default function ProductScreen() {
         <View style={{ paddingHorizontal: 20, paddingTop: 20, gap: 12 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Text style={{ fontSize: 16, fontWeight: '800', color: colors.textMain }}>{t.merchant.reviews_title}</Text>
-            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.textSubtle }}>{data.review_count}</Text>
+            {data.review_count > 0 ? (
+              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.textSubtle }}>{data.review_count}</Text>
+            ) : null}
             <Pressable
               testID="product.about-reviews"
               accessibilityRole="button"

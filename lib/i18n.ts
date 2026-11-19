@@ -1540,7 +1540,6 @@ export type Translations = {
     chip_label: string;
     role_title: string;
     role_subtitle: string;
-    role_prompt: string;
     role_personal: string;
     role_personal_hint: string;
     role_shop: string;
@@ -1576,9 +1575,6 @@ export type Translations = {
     next_subtitle: string;
     next_title: string;
     next_hint: string;
-    next_step_photos: string;
-    next_step_name: string;
-    next_step_price: string;
     start_setup: string;
     day_mon: string;
     day_tue: string;
@@ -1668,6 +1664,8 @@ export type Translations = {
     shop_search_empty: string;
     pick_done: string;
     pick_selected: string;
+    price_optional_hint: string;
+    reviewing: string;
   };
   common: {
     loading: string;

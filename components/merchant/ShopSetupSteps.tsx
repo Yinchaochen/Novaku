@@ -281,16 +281,6 @@ export function ShopSetupSteps({
         <View>
           <Text className="mb-2 text-base font-semibold text-gray-900">{t.merchant.next_title}</Text>
           <Text className="mb-4 text-sm leading-6 text-gray-500">{t.merchant.next_hint}</Text>
-          <View className="gap-3">
-            {[t.merchant.next_step_photos, t.merchant.next_step_name, t.merchant.next_step_price].map((label, index) => (
-              <View key={label} className="flex-row items-center gap-3">
-                <View className="h-[30px] w-[30px] items-center justify-center rounded-full bg-primary/10">
-                  <Text className="text-sm font-extrabold text-primary">{index + 1}</Text>
-                </View>
-                <Text className="flex-1 text-base text-gray-800">{label}</Text>
-              </View>
-            ))}
-          </View>
           <Pressable
             testID="shop.next.start"
             accessibilityRole="button"

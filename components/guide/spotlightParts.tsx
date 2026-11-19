@@ -207,16 +207,18 @@ export function GuideStepCard({
         style,
       ]}
     >
-      <Text
-        style={{
-          color: colors.brandCoral,
-          fontSize: 11,
-          fontWeight: '900',
-          letterSpacing: 0.8,
-        }}
-      >
-        {progress}
-      </Text>
+      {stepCount > 1 ? (
+        <Text
+          style={{
+            color: colors.brandCoral,
+            fontSize: 11,
+            fontWeight: '900',
+            letterSpacing: 0.8,
+          }}
+        >
+          {progress}
+        </Text>
+      ) : null}
       <Text style={[typography.bodyStrong, { color: colors.textMain, marginTop: 4 }]}>{title}</Text>
       <Text style={[typography.body, { color: colors.textMuted, marginTop: 4, lineHeight: 19 }]}>{body}</Text>
       <View

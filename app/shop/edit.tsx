@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GradientButton } from '../../components/GradientButton';
 import { Screen } from '../../components/Screen';
 import { SettingsHeader } from '../../components/SettingsRow';
 import { OpeningHoursEditor } from '../../components/merchant/OpeningHoursEditor';
@@ -150,7 +149,15 @@ export default function ShopEditScreen() {
           </View>
 
           {message ? <Text style={{ textAlign: 'center', fontSize: 14, color: colors.textDanger }}>{message}</Text> : null}
-          <GradientButton label={t.common.save} onPress={() => void save()} loading={update.isPending} disabled={update.isPending} fullWidth size="lg" />
+          <Pressable
+            testID="shop.edit.save"
+            accessibilityRole="button"
+            disabled={update.isPending}
+            onPress={() => void save()}
+            style={{ minHeight: 52, borderRadius: 999, backgroundColor: colors.brandCoral, opacity: update.isPending ? 0.6 : 1, alignItems: 'center', justifyContent: 'center' }}
+          >
+            {update.isPending ? <ActivityIndicator color="#FFFFFF" /> : <Text style={{ fontSize: 17, fontWeight: '800', color: '#FFFFFF' }}>{t.common.save}</Text>}
+          </Pressable>
         </>
       )}
     </Screen>

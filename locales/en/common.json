@@ -1550,13 +1550,12 @@
     "chip_label": "This is a shop account",
     "role_title": "Welcome to Postervia",
     "role_subtitle": "Pick an account type first",
-    "role_prompt": "Which account do you need?",
     "role_personal": "Personal account",
     "role_personal_hint": "Find information, ask questions and share what you know",
     "role_shop": "Shop account",
     "role_shop_hint": "You run a shop here and want people to find it and what you sell",
     "shop_title": "Set up your shop",
-    "find_subtitle": "Find your shop on the map",
+    "find_subtitle": "Find your shop",
     "find_prompt": "Search for your shop's name or address",
     "find_hint": "Type the name or address, then tap the best match. People can then find you on the map, and reviews get tagged with your shop.",
     "find_placeholder": "Shop name or address",
@@ -1586,10 +1585,7 @@
     "next_subtitle": "Next: list your products",
     "next_title": "We'll walk you through your first product",
     "next_hint": "You do it on your own page, with a hint at every step.",
-    "next_step_photos": "Take a few photos",
-    "next_step_name": "Write the name",
-    "next_step_price": "Add the price (incl. VAT)",
-    "start_setup": "Start",
+    "start_setup": "List my first product",
     "day_mon": "Mon",
     "day_tue": "Tue",
     "day_wed": "Wed",
@@ -1677,6 +1673,8 @@
     "shop_search_placeholder": "Search for a shop",
     "shop_search_empty": "No shop found.",
     "pick_done": "Done",
-    "pick_selected": "{count} of {max} selected"
+    "pick_selected": "{count} of {max} selected",
+    "price_optional_hint": "Leave the price empty and it shows “Ask in the shop”.",
+    "reviewing": "Review: {name}"
   }
 }

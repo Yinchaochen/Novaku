@@ -290,7 +290,6 @@ export function OnboardingModal({
 
             {showRoleStep ? (
               <View>
-                <Text className="mb-4 text-base font-semibold text-gray-900">{t.merchant.role_prompt}</Text>
                 <View className="gap-3">
                   {(['personal', 'shop'] as const).map((item) => {
                     const active = roleChoice === item;
@@ -301,14 +300,17 @@ export function OnboardingModal({
                         accessibilityRole="button"
                         accessibilityState={{ selected: active }}
                         onPress={() => setRoleChoice(item)}
-                        className={`rounded-3xl px-4 py-4 ${active ? 'bg-primary' : 'bg-gray-100'}`}
+                        className={`flex-row items-center gap-3 rounded-3xl border-2 px-4 py-4 ${active ? 'border-primary bg-primary/10' : 'border-gray-200 bg-white'}`}
                       >
-                        <Text className={`text-base font-bold ${active ? 'text-white' : 'text-gray-900'}`}>
-                          {item === 'personal' ? t.merchant.role_personal : t.merchant.role_shop}
-                        </Text>
-                        <Text className={`mt-1 text-sm leading-5 ${active ? 'text-white' : 'text-gray-500'}`}>
-                          {item === 'personal' ? t.merchant.role_personal_hint : t.merchant.role_shop_hint}
-                        </Text>
+                        <View className="flex-1">
+                          <Text className="text-base font-bold text-gray-900">
+                            {item === 'personal' ? t.merchant.role_personal : t.merchant.role_shop}
+                          </Text>
+                          <Text className="mt-1 text-sm leading-5 text-gray-600">
+                            {item === 'personal' ? t.merchant.role_personal_hint : t.merchant.role_shop_hint}
+                          </Text>
+                        </View>
+                        <Ionicons name={active ? 'checkmark-circle' : 'ellipse-outline'} size={24} color={active ? '#FF9F6E' : '#D1D5DB'} />
                       </Pressable>
                     );
                   })}

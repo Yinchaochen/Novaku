@@ -1550,13 +1550,12 @@
     "chip_label": "这是一个店家账号",
     "role_title": "欢迎来到 Postervia",
     "role_subtitle": "先选一种账号",
-    "role_prompt": "您要用哪种账号？",
     "role_personal": "个人账号",
     "role_personal_hint": "找信息、问问题，也分享您的经验",
     "role_shop": "店家账号",
     "role_shop_hint": "您在这里开店，想让大家找到您的店和商品",
     "shop_title": "设置您的店铺",
-    "find_subtitle": "在地图上找到您的店",
+    "find_subtitle": "找到您的店",
     "find_prompt": "搜索您的店名或地址",
     "find_hint": "输入店名或地址，然后点最匹配的结果。这样大家能在地图上找到您，写评价时也会自动标上您的店。",
     "find_placeholder": "店名或地址",
@@ -1586,10 +1585,7 @@
     "next_subtitle": "接下来：上架商品",
     "next_title": "我们一步一步带您上架第一件商品",
     "next_hint": "在您的主页里完成，每一步都有提示。",
-    "next_step_photos": "拍几张商品照片",
-    "next_step_name": "写商品名",
-    "next_step_price": "填价格（含税）",
-    "start_setup": "开始设置",
+    "start_setup": "去上架商品",
     "day_mon": "周一",
     "day_tue": "周二",
     "day_wed": "周三",
@@ -1677,6 +1673,8 @@
     "shop_search_placeholder": "搜店名",
     "shop_search_empty": "没找到这家店。",
     "pick_done": "完成",
-    "pick_selected": "已选 {count}/{max}"
+    "pick_selected": "已选 {count}/{max}",
+    "price_optional_hint": "不填价格，就显示「到店问价」。",
+    "reviewing": "评价：{name}"
   }
 }

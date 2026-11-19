@@ -1534,13 +1534,12 @@
     "chip_label": "Das ist ein Ladenkonto",
     "role_title": "Willkommen bei Postervia",
     "role_subtitle": "Wähle zuerst eine Kontoart",
-    "role_prompt": "Welches Konto brauchst du?",
     "role_personal": "Persönliches Konto",
     "role_personal_hint": "Infos finden, Fragen stellen und deine Erfahrungen teilen",
     "role_shop": "Ladenkonto",
     "role_shop_hint": "Du hast hier einen Laden und willst, dass man ihn und deine Waren findet",
     "shop_title": "Richte deinen Laden ein",
-    "find_subtitle": "Finde deinen Laden auf der Karte",
+    "find_subtitle": "Finde deinen Laden",
     "find_prompt": "Suche nach Name oder Adresse deines Ladens",
     "find_hint": "Gib Name oder Adresse ein und tippe auf den passenden Treffer. Dann findet man dich auf der Karte, und Bewertungen werden mit deinem Laden verknüpft.",
     "find_placeholder": "Name oder Adresse",
@@ -1570,10 +1569,7 @@
     "next_subtitle": "Als Nächstes: Produkte einstellen",
     "next_title": "Wir zeigen dir Schritt für Schritt, wie du dein erstes Produkt einstellst",
     "next_hint": "Das machst du auf deiner Seite, mit einem Hinweis bei jedem Schritt.",
-    "next_step_photos": "Ein paar Fotos machen",
-    "next_step_name": "Den Namen eintragen",
-    "next_step_price": "Den Preis eintragen (inkl. MwSt.)",
-    "start_setup": "Los geht's",
+    "start_setup": "Erstes Produkt einstellen",
     "day_mon": "Mo",
     "day_tue": "Di",
     "day_wed": "Mi",
@@ -1661,6 +1657,8 @@
     "shop_search_placeholder": "Laden suchen",
     "shop_search_empty": "Kein Laden gefunden.",
     "pick_done": "Fertig",
-    "pick_selected": "{count} von {max} ausgewählt"
+    "pick_selected": "{count} von {max} ausgewählt",
+    "price_optional_hint": "Ohne Preis steht dort „Preis im Laden“.",
+    "reviewing": "Bewertung: {name}"
   }
 }

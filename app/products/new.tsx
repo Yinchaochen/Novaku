@@ -6,7 +6,6 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GradientButton } from '../../components/GradientButton';
 import { Screen } from '../../components/Screen';
 import { SettingsHeader } from '../../components/SettingsRow';
 import { ShopGuideAnchor } from '../../components/guide/ShopGuideAnchor';
@@ -271,7 +270,7 @@ export default function ProductEditorScreen() {
               <Text style={{ fontSize: 13, color: colors.textMuted }}>{t.merchant.price_vat}</Text>
             </View>
           </ShopGuideAnchor>
-          <Text style={{ fontSize: 13, color: colors.textMuted }}>{t.merchant.ask_in_shop}: {t.merchant.optional}</Text>
+          <Text style={{ fontSize: 13, color: colors.textMuted }}>{t.merchant.price_optional_hint}</Text>
         </View>
 
         <View style={{ gap: 8 }}>
@@ -291,23 +290,7 @@ export default function ProductEditorScreen() {
           />
         </View>
 
-        {!editing ? (
-          <View style={{ backgroundColor: '#FFF4EE', borderRadius: 22, padding: 16, gap: 6 }}>
-            <Text style={{ fontSize: 15, fontWeight: '800', color: colors.textMain }}>{t.merchant.email_title}</Text>
-            <Text style={{ fontSize: 14, lineHeight: 22, color: colors.textBrown }}>
-              {t.merchant.email_body.replace('{email}', SHOP_HELP_EMAIL)}
-            </Text>
-            <Pressable
-              testID="product.email-us"
-              accessibilityRole="button"
-              onPress={emailUs}
-              style={{ alignSelf: 'flex-start', marginTop: 4, minHeight: 40, paddingHorizontal: 16, borderRadius: 999, borderWidth: 1.5, borderColor: '#FBC5B5', backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', gap: 6 }}
-            >
-              <Ionicons name="mail-outline" size={16} color="#C0453F" />
-              <Text style={{ fontSize: 14, fontWeight: '800', color: '#C0453F' }}>{t.merchant.email_button}</Text>
-            </Pressable>
-          </View>
-        ) : (
+        {editing ? (
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <Pressable
               testID="product.toggle-hidden"
@@ -332,20 +315,37 @@ export default function ProductEditorScreen() {
               <Text style={{ fontSize: 15, fontWeight: '800', color: colors.textDanger }}>{t.merchant.delete}</Text>
             </Pressable>
           </View>
-        )}
+        ) : null}
 
         {message ? <Text style={{ textAlign: 'center', fontSize: 14, color: colors.textDanger }}>{message}</Text> : null}
 
         <ShopGuideAnchor step="product_publish">
-          <GradientButton
-            label={editing ? t.common.save : t.merchant.publish}
-            onPress={() => void submit()}
-            loading={busy}
+          <Pressable
+            testID="product.publish"
+            accessibilityRole="button"
+            accessibilityState={{ disabled: busy, busy }}
             disabled={busy}
-            fullWidth
-            size="lg"
-          />
+            onPress={() => void submit()}
+            style={{ minHeight: 52, borderRadius: 999, backgroundColor: colors.brandCoral, opacity: busy ? 0.6 : 1, alignItems: 'center', justifyContent: 'center' }}
+          >
+            {busy ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={{ fontSize: 17, fontWeight: '800', color: '#FFFFFF' }}>{editing ? t.common.save : t.merchant.publish}</Text>
+            )}
+          </Pressable>
         </ShopGuideAnchor>
+
+        {!editing ? (
+          <Pressable testID="product.email-us" accessibilityRole="link" onPress={emailUs} style={{ alignItems: 'center', gap: 4, paddingVertical: 6 }}>
+            <Text style={{ fontSize: 14, color: colors.textBrown }}>
+              {t.merchant.email_title} <Text style={{ fontWeight: '800', color: '#C0453F', textDecorationLine: 'underline' }}>{t.merchant.email_button}</Text>
+            </Text>
+            <Text style={{ fontSize: 12, lineHeight: 18, textAlign: 'center', color: colors.textMuted }}>
+              {t.merchant.email_body.replace('{email}', SHOP_HELP_EMAIL)}
+            </Text>
+          </Pressable>
+        ) : null}
       </Screen>
 
       {!editing && !listedId ? <ShopGuideSpotlight chapter="product" /> : null}

@@ -57,6 +57,20 @@ export function ShopStatusLine({ shop, color = colors.textMuted }: { shop: Merch
   );
 }
 
+// A product without photos is a page in the notebook, not a missing image.
+export const PAPER = '#FFFDE2';
+
+export function PaperName({ name, size }: { name: string; size: number }) {
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', paddingLeft: 26, paddingRight: 14 }}>
+      <View style={{ position: 'absolute', left: 12, top: 0, bottom: 0, width: 1.5, backgroundColor: '#E2DBB8' }} />
+      <Text style={{ fontSize: size, lineHeight: size * 1.35, fontWeight: '800', color: '#2B2620' }} numberOfLines={4}>
+        {name}
+      </Text>
+    </View>
+  );
+}
+
 function ProductTile({ product, owner }: { product: ProductCard; owner: boolean }) {
   const { t, langCode } = useLanguage();
   const cover = resolveMediaUrl(product.cover_url);
@@ -68,8 +82,12 @@ function ProductTile({ product, owner }: { product: ProductCard; owner: boolean 
       onPress={() => router.push(`/products/${product.id}`)}
       style={{ width: '48%', marginBottom: 16 }}
     >
-      <View style={{ aspectRatio: 1, borderRadius: 18, overflow: 'hidden', backgroundColor: colors.bgWarmDeep }}>
-        {cover ? <Image source={{ uri: cover }} style={{ width: '100%', height: '100%' }} contentFit="cover" /> : null}
+      <View style={{ aspectRatio: 1, borderRadius: 18, overflow: 'hidden', backgroundColor: cover ? colors.bgWarmDeep : PAPER }}>
+        {cover ? (
+          <Image source={{ uri: cover }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+        ) : (
+          <PaperName name={product.name} size={17} />
+        )}
         {owner && product.status === 'hidden' ? (
           <View
             style={{
@@ -127,6 +145,16 @@ export function ShopProductsPane({ userId, owner }: { userId: string; owner: boo
         <Text style={{ marginTop: 6, fontSize: 14, lineHeight: 22, textAlign: 'center', color: colors.textMuted }}>
           {owner ? t.merchant.no_products_owner : t.merchant.no_products_visitor}
         </Text>
+        {owner ? (
+          <Pressable
+            testID="shop.products.add"
+            accessibilityRole="button"
+            onPress={() => router.push('/products/new')}
+            style={{ marginTop: 14, minHeight: 46, paddingHorizontal: 22, borderRadius: 999, backgroundColor: colors.brandCoral, alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF' }}>{t.merchant.add_product}</Text>
+          </Pressable>
+        ) : null}
       </View>
     );
   }
