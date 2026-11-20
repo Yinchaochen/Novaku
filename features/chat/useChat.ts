@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api } from '../../lib/api';
+import { formDataWithFile } from '../../lib/formDataWithFile';
 import { CHAT_SEND_MUTATION_KEY } from '../../lib/queryPersister';
 import { useAuthStore } from '../../store/authStore';
 import { useChatOutboxStore } from '../../store/chatOutboxStore';
@@ -273,9 +274,7 @@ export function useUploadChatMedia(conversationId: string) {
       name: string;
       type: string;
     }) => {
-      const form = new FormData();
-      // React Native FormData accepts { uri, name, type } objects
-      form.append('file', file as unknown as Blob);
+      const form = await formDataWithFile(file);
       const res = await api.post(`/chat/conversations/${conversationId}/upload`, form, {
         headers: { 'Content-Type': 'multipart/form-data' },
         // MS-16: multipart uploads need more than the 10s global default.
@@ -289,8 +288,7 @@ export function useUploadChatMedia(conversationId: string) {
 export function useUploadStickerMedia() {
   return useMutation({
     mutationFn: async (file: { uri: string; name: string; type: string }) => {
-      const form = new FormData();
-      form.append('file', file as unknown as Blob);
+      const form = await formDataWithFile(file);
       const res = await api.post('/chat/stickers/upload', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
         // MS-16: multipart uploads need more than the 10s global default.

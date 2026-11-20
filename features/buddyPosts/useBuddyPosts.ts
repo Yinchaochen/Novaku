@@ -2,6 +2,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 
 import { useLanguage } from '../../context/LanguageContext';
 import { api } from '../../lib/api';
+import { formDataWithFile } from '../../lib/formDataWithFile';
 import { useAuthStore } from '../../store/authStore';
 import type { BuddyPricingMode } from './pricing';
 
@@ -162,8 +163,7 @@ export function useCreateBuddyPost() {
 export function useUploadBuddyMedia() {
   return useMutation({
     mutationFn: async ({ uri, mimeType, fileName }: { uri: string; mimeType: string; fileName: string }) => {
-      const form = new FormData();
-      form.append('file', { uri, name: fileName, type: mimeType } as any);
+      const form = await formDataWithFile({ uri, name: fileName, type: mimeType });
       const res = await api.post('/buddy/posts/media/upload', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 60_000,

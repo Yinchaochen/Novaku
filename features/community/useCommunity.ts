@@ -15,6 +15,7 @@ import { useCallback } from 'react';
 
 import { useLanguage } from '../../context/LanguageContext';
 import { api } from '../../lib/api';
+import { formDataWithFile } from '../../lib/formDataWithFile';
 import { retryReads } from '../../lib/queryClient';
 import { firstPageOnly, useFeedForegroundRefresh } from './useFeedForegroundRefresh';
 import { addSentryBreadcrumb } from '../../lib/sentry';
@@ -768,8 +769,7 @@ export function useUpdateCommunityPost(postId?: string | null) {
 export function useUploadCommunityMedia() {
   return useMutation({
     mutationFn: async ({ uri, mimeType, fileName }: { uri: string; mimeType: string; fileName: string }) => {
-      const form = new FormData();
-      form.append('file', { uri, name: fileName, type: mimeType } as any);
+      const form = await formDataWithFile({ uri, name: fileName, type: mimeType });
       const res = await api.post('/community/media/upload', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
         // MS-16: multipart uploads need far more than the 10s global default —

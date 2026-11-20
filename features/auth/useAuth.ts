@@ -3,6 +3,7 @@ import { AxiosError } from 'axios';
 
 import { useLanguage } from '../../context/LanguageContext';
 import { api } from '../../lib/api';
+import { formDataWithFile } from '../../lib/formDataWithFile';
 import { addSentryBreadcrumb, reportToSentry } from '../../lib/sentry';
 import { useAuthStore } from '../../store/authStore';
 import { approximateCityLookupCoordinates } from './cityLocation';
@@ -311,8 +312,7 @@ export function useUploadAvatar() {
 
   return useMutation({
     mutationFn: async ({ uri, mimeType, fileName }: { uri: string; mimeType: string; fileName: string }) => {
-      const form = new FormData();
-      form.append('file', { uri, name: fileName, type: mimeType } as any);
+      const form = await formDataWithFile({ uri, name: fileName, type: mimeType });
       const res = await api.post('/auth/me/avatar', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
@@ -335,8 +335,7 @@ export function useUploadProfileBackground() {
 
   return useMutation({
     mutationFn: async ({ uri, mimeType, fileName }: { uri: string; mimeType: string; fileName: string }) => {
-      const form = new FormData();
-      form.append('file', { uri, name: fileName, type: mimeType } as any);
+      const form = await formDataWithFile({ uri, name: fileName, type: mimeType });
       const res = await api.post('/auth/me/profile-background', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 60000,

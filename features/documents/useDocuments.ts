@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api } from '../../lib/api';
+import { formDataWithFile } from '../../lib/formDataWithFile';
 import { useAuthStore } from '../../store/authStore';
 
 export interface DocumentRecord {
@@ -69,8 +70,7 @@ export function useUploadDocument() {
 
   return useMutation({
     mutationFn: async ({ uri, mimeType, fileName }: { uri: string; mimeType: string; fileName: string }) => {
-      const form = new FormData();
-      form.append('file', { uri, name: fileName, type: mimeType } as any);
+      const form = await formDataWithFile({ uri, name: fileName, type: mimeType });
       const res = await api.post('/documents/upload', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
