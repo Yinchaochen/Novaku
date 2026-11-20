@@ -1,4 +1,5 @@
 import type { InfoUpdate, InfoUpdateKind } from '../../lib/postUpdates';
+import type { CoverSpecWire } from '../../lib/posterCover';
 import type { ProductCard } from '../merchants/types';
 import { Platform } from 'react-native';
 import {
@@ -16,6 +17,7 @@ import { useCallback } from 'react';
 
 import { useLanguage } from '../../context/LanguageContext';
 import { api } from '../../lib/api';
+import { formDataWithFile } from '../../lib/formDataWithFile';
 import { retryReads } from '../../lib/queryClient';
 import { firstPageOnly, useFeedForegroundRefresh } from './useFeedForegroundRefresh';
 import { addSentryBreadcrumb } from '../../lib/sentry';
@@ -177,6 +179,9 @@ export interface CommunityPost {
   /** The drawn cover the author chose, or null for the default (D-141). */
   cover_template?: string | null;
   cover_palette?: number | null;
+  /** A poster cover's layers, or null for the drawn cover above. */
+  cover_spec?: CoverSpecWire | null;
+  translated_cover_word?: string | null;
   language: string;
   source_language: string;
   title_source_language: string;
@@ -771,8 +776,7 @@ export function useUpdateCommunityPost(postId?: string | null) {
 export function useUploadCommunityMedia() {
   return useMutation({
     mutationFn: async ({ uri, mimeType, fileName }: { uri: string; mimeType: string; fileName: string }) => {
-      const form = new FormData();
-      form.append('file', { uri, name: fileName, type: mimeType } as any);
+      const form = await formDataWithFile({ uri, name: fileName, type: mimeType });
       const res = await api.post('/community/media/upload', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
         // MS-16: multipart uploads need far more than the 10s global default —

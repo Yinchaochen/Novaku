@@ -19,6 +19,7 @@ import { render } from '@testing-library/react-native';
 
 import { CommunityPostCard } from '../CommunityPostCard';
 import * as PostCoverModule from '../../../components/community/PostCover';
+import * as PosterCoverModule from '../../../components/community/PosterCover';
 import type { CommunityPost } from '../useCommunity';
 
 jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
@@ -27,6 +28,7 @@ jest.mock('expo-image', () => {
   return { Image: (props: object) => <View testID="expo-image" {...props} /> };
 });
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
+jest.mock('../../../hooks/useCoverFaceReady', () => ({ useCoverFaceReady: () => true }));
 jest.mock('../../../store/authStore', () => ({
   useAuthStore: (selector: (state: unknown) => unknown) =>
     selector({ user: { id: 'viewer-1' } }),
@@ -197,6 +199,95 @@ describe('CommunityPostCard', () => {
     await tree.rerender(<CommunityPostCard post={next} />);
 
     expect(images(tree).some((node) => node.props.recyclingKey === 'post-xyz')).toBe(true);
+  });
+
+  describe('a poster post', () => {
+    const coverSpec = {
+      v: 1,
+      poster: {
+        base: 'https://media.postervia.app/posters/a/base.jpg',
+        subject: 'https://media.postervia.app/posters/a/subject.webp',
+        word: 'langsam',
+        paper: '#FBF0DE',
+        ink: '#668C1C',
+        title_ink: '#3B5110',
+        word_box: { x: 0.016, y: 0.245, w: 0.968, h: 0.36 },
+        title_box: { x: 0.06, y: 0.05, w: 0.88, h: 0.183 },
+        subject_grid: [],
+      },
+    };
+    const posterPost = (overrides: Partial<CommunityPost> = {}) =>
+      makePost({ media_items: [], cover_spec: coverSpec, ...overrides });
+
+    function spies() {
+      const poster = jest.spyOn(PosterCoverModule, 'PosterCover');
+      const text = jest.spyOn(PostCoverModule, 'PostCover');
+      return { poster, text };
+    }
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it('draws the poster in the reader\'s language, from the column it is given', async () => {
+      const { poster, text } = spies();
+      await render(
+        <CommunityPostCard
+          post={posterPost({ translated_cover_word: 'slow', translated_title: 'The first friend' })}
+          columnWidth={490}
+        />,
+      );
+      const props = poster.mock.calls[0][0];
+      expect(props).toMatchObject({ word: 'slow', title: 'The first friend', width: 484 });
+      expect(text).not.toHaveBeenCalled();
+    });
+
+    it('pins the height before layout, so the column does not jump when the width arrives', async () => {
+      const tree = await render(<CommunityPostCard post={posterPost()} />);
+      expect(tree.getByTestId('plaza.card.poster').props.style).toMatchObject({ aspectRatio: 3 / 4 });
+    });
+
+    it('leaves a post with a picture on its picture', async () => {
+      const { poster } = spies();
+      await render(<CommunityPostCard post={makePost({ cover_spec: coverSpec })} />);
+      expect(poster).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the text cover when a layer will not load', async () => {
+      const { act } = require('@testing-library/react-native');
+      const { text } = spies();
+      const tree = await render(<CommunityPostCard post={posterPost()} />);
+      expect(text).not.toHaveBeenCalled();
+
+      await act(async () => {
+        tree.getByTestId('poster.base').props.onError();
+      });
+      expect(text).toHaveBeenCalled();
+      expect(tree.queryByTestId('poster.word-box')).toBeNull();
+    });
+
+    it('does not carry a failure over to the next post in a recycled cell', async () => {
+      const { act } = require('@testing-library/react-native');
+      const tree = await render(<CommunityPostCard post={posterPost()} />);
+      await act(async () => {
+        tree.getByTestId('poster.base').props.onError();
+      });
+
+      const next = posterPost({
+        id: 'post-xyz',
+        cover_spec: {
+          ...coverSpec,
+          poster: { ...coverSpec.poster, base: 'https://media.postervia.app/posters/b/base.jpg' },
+        },
+      });
+      await tree.rerender(<CommunityPostCard post={next} />);
+      expect(tree.queryByTestId('poster.word-box')).toBeTruthy();
+    });
+
+    it('draws the text cover for a spec from a newer app', async () => {
+      const { poster, text } = spies();
+      await render(<CommunityPostCard post={posterPost({ cover_spec: { ...coverSpec, v: 2 } })} />);
+      expect(poster).not.toHaveBeenCalled();
+      expect(text).toHaveBeenCalled();
+    });
   });
 
   it('shows no chip for a post by a real person', async () => {

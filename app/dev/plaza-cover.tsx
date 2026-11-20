@@ -1,12 +1,15 @@
 import { useLocalSearchParams } from 'expo-router';
+import type { ComponentProps } from 'react';
 import { ScrollView, Text, View, useWindowDimensions } from 'react-native';
 
 import { Screen } from '../../components/Screen';
 import { SectionLabel } from '../../components/SectionLabel';
 import { PostCover } from '../../components/community/PostCover';
+import { PosterCover } from '../../components/community/PosterCover';
 import { CommunityPostCard } from '../../features/community/CommunityPostCard';
 import type { CommunityPost } from '../../features/community/useCommunity';
 import { COVER_PACK_IDS, COVER_TEMPLATE_IDS, COVER_TEMPLATES } from '../../lib/postCover';
+import type { PosterSpec } from '../../lib/posterCover';
 import { paginateBody } from '../../lib/coverPages';
 import { PostCoverPage } from '../../components/community/PostCoverPage';
 import { colors } from '../../theme/tokens';
@@ -399,8 +402,187 @@ function PhoneWall() {
   );
 }
 
+/**
+ * The poster cover (plan/plaza-cover-asset-library.md §12): the layers of the
+ * samples in outputs/growth-plan/visual-samples, with the word and the title
+ * drawn for each reader. The zh strings are the samples'; the others stand in
+ * for what the translation pipeline will return.
+ */
+const POSTER_LOCALES = ['zh', 'en', 'de', 'ar', 'th'] as const;
+type PosterLocale = (typeof POSTER_LOCALES)[number];
+
+const POSTER_SAMPLES: {
+  id: string;
+  spec: PosterSpec;
+  words: Record<PosterLocale, string>;
+  titles: Record<PosterLocale, string>;
+}[] = [
+  {
+    id: 't26 · first friend',
+    spec: {
+      ...require('../../assets/poster-layers/t26/spec.json'),
+      base: require('../../assets/poster-layers/t26/base.jpg'),
+      subject: require('../../assets/poster-layers/t26/subject.webp'),
+    },
+    words: { zh: '慢慢来', en: 'slow', de: 'langsam', ar: 'على مهلك', th: 'ค่อยๆ' },
+    titles: {
+      zh: '来德国后，第一个朋友花了多久',
+      en: 'How long the first friend took after moving to Germany',
+      de: 'Wie lange es bis zum ersten Freund in Deutschland dauerte',
+      ar: 'كم من الوقت استغرق أول صديق بعد الانتقال إلى ألمانيا',
+      th: 'ย้ายมาเยอรมนีแล้ว กว่าจะมีเพื่อนคนแรกใช้เวลานานแค่ไหน',
+    },
+  },
+  {
+    id: 't02 · residence permit',
+    spec: {
+      ...require('../../assets/poster-layers/t02/spec.json'),
+      base: require('../../assets/poster-layers/t02/base.jpg'),
+      subject: require('../../assets/poster-layers/t02/subject.webp'),
+    },
+    words: { zh: '别干等', en: "don't wait", de: 'nicht warten', ar: 'لا تنتظر', th: 'อย่ารอ' },
+    titles: {
+      zh: '居留快到期约不上？先把申请交了',
+      en: 'Permit running out and no appointment? File the application first',
+      de: 'Aufenthaltstitel läuft ab, kein Termin? Erst den Antrag stellen',
+      ar: 'إقامتك تنتهي قريبا ولا يوجد موعد؟ قدّم الطلب أولا',
+      th: 'วีซ่าใกล้หมดแต่จองคิวไม่ได้? ยื่นคำร้องไปก่อน',
+    },
+  },
+  {
+    id: 't01 · the letter',
+    spec: {
+      ...require('../../assets/poster-layers/t01/spec.json'),
+      base: require('../../assets/poster-layers/t01/base.jpg'),
+      subject: require('../../assets/poster-layers/t01/subject.webp'),
+    },
+    words: { zh: '先别慌', en: "don't panic", de: 'keine Panik', ar: 'لا تقلق', th: 'อย่าเพิ่งตกใจ' },
+    titles: {
+      zh: '德国来信，先看这 4 个词',
+      en: 'A letter from Germany? Read these 4 words first',
+      de: 'Post vom Amt? Erst diese 4 Wörter lesen',
+      ar: 'وصلتك رسالة في ألمانيا؟ اقرأ هذه الكلمات الأربع أولا',
+      th: 'ได้จดหมายจากเยอรมนี? อ่าน 4 คำนี้ก่อน',
+    },
+  },
+];
+
+const POSTER_CASES: { label: string; word: string; title: string; spec?: Partial<PosterSpec> }[] = [
+  { label: 'machine translation of 慢慢来', word: 'take your time', title: POSTER_SAMPLES[0].titles.en },
+  { label: 'one long compound', word: 'Ankunftsbescheinigung', title: POSTER_SAMPLES[0].titles.de },
+  {
+    label: 'long German title',
+    word: 'langsam',
+    title: 'Wie lange es bis zum ersten Freund in Deutschland dauerte, und warum das auch nach einem Jahr noch völlig normal ist',
+  },
+  { label: 'long Thai word', word: 'ค่อยเป็นค่อยไป', title: POSTER_SAMPLES[0].titles.th },
+  { label: 'Russian: the Chinese serif has Cyrillic', word: 'не спеши', title: 'Сколько времени ушло на первого друга' },
+  { label: 'Japanese: the Chinese serif has kana', word: 'ゆっくり', title: 'ドイツで最初の友達ができるまで' },
+  { label: 'Hindi: system face', word: 'धीरे धीरे', title: 'जर्मनी में पहला दोस्त बनने में कितना समय लगा' },
+  { label: 'no word', word: '', title: POSTER_SAMPLES[0].titles.en },
+  { label: 'no title', word: 'slow', title: '' },
+  { label: 'layers still loading', word: 'slow', title: POSTER_SAMPLES[0].titles.en, spec: { base: '', subject: '' } },
+  { label: 'no cut-out: the word behind it', word: '慢慢来', title: POSTER_SAMPLES[0].titles.zh, spec: { subject: '' } },
+];
+
+function PosterCard({ label, ...cover }: { label: string } & ComponentProps<typeof PosterCover>) {
+  return (
+    <View testID="dev.poster" style={{ width: cover.width }}>
+      <View style={{ borderRadius: 12, overflow: 'hidden' }}>
+        <PosterCover {...cover} />
+      </View>
+      <Text style={{ fontSize: 10, color: colors.textMuted, paddingTop: 4 }}>{label}</Text>
+    </View>
+  );
+}
+
+function posterPost(
+  sample: (typeof POSTER_SAMPLES)[number],
+  { id = 'poster', version = 1, spec }: { id?: string; version?: number; spec?: Partial<PosterSpec> } = {},
+): CommunityPost {
+  return {
+    ...PACK_POSTS[0],
+    id,
+    media_items: [],
+    title: sample.titles.zh,
+    translated_title: sample.titles.en,
+    translated_cover_word: sample.words.en,
+    cover_spec: { v: version, poster: { ...sample.spec, word: sample.words.zh, ...spec } },
+  };
+}
+
+function PosterRows() {
+  const sample = POSTER_SAMPLES[0];
+  return (
+    <View>
+      {POSTER_SAMPLES.map(({ id, spec, words, titles }) => (
+        <View key={id}>
+          <SectionLabel>{`Poster ${id} — the word and title follow the reader`}</SectionLabel>
+          <ScrollView horizontal contentContainerStyle={{ gap: 10, paddingHorizontal: 10 }}>
+            {POSTER_LOCALES.map((locale) => (
+              <PosterCard key={locale} label={locale} spec={spec} word={words[locale]} title={titles[locale]} width={184.5} />
+            ))}
+          </ScrollView>
+        </View>
+      ))}
+
+      <SectionLabel>Hard cases and states</SectionLabel>
+      <ScrollView horizontal contentContainerStyle={{ gap: 10, paddingHorizontal: 10 }}>
+        {POSTER_CASES.map(({ label, word, title, spec }) => (
+          <PosterCard key={label} label={label} spec={{ ...sample.spec, ...spec }} word={word} title={title} width={184.5} />
+        ))}
+      </ScrollView>
+
+      <SectionLabel>The smallest phone, a wide column</SectionLabel>
+      <ScrollView horizontal contentContainerStyle={{ gap: 10, paddingHorizontal: 10, alignItems: 'flex-start' }}>
+        {POSTER_LOCALES.map((locale) => (
+          <PosterCard key={locale} label={`${locale} · 148dp`} spec={sample.spec} word={sample.words[locale]} title={sample.titles[locale]} width={148} />
+        ))}
+        <PosterCard label="de · 490dp" spec={sample.spec} word={sample.words.de} title={sample.titles.de} width={490} />
+      </ScrollView>
+
+      <SectionLabel>The real feed card — a text post beside a poster post in one phone column</SectionLabel>
+      <View style={{ flexDirection: 'row', gap: 6, paddingHorizontal: 10, alignItems: 'flex-start' }}>
+        <View style={{ width: 184.5 }}>
+          <CommunityPostCard post={{ ...PACK_POSTS[0], media_items: [] }} onPress={() => {}} columnWidth={190.5} />
+        </View>
+        <View style={{ width: 184.5 }} testID="dev.poster.card">
+          <CommunityPostCard post={posterPost(sample)} onPress={() => {}} columnWidth={190.5} />
+        </View>
+      </View>
+
+      <SectionLabel>The real feed card — browser column</SectionLabel>
+      <View style={{ width: 484, marginLeft: 10 }} testID="dev.poster.card">
+        <CommunityPostCard post={posterPost(sample)} onPress={() => {}} columnWidth={490} />
+      </View>
+
+      <SectionLabel>Falls back to the text cover — dead layer · a version this build has not heard of · damaged row</SectionLabel>
+      <View style={{ flexDirection: 'row', gap: 6, paddingHorizontal: 10, alignItems: 'flex-start' }}>
+        {[
+          posterPost(sample, { id: 'dead-layer', spec: { base: 'https://media.postervia.app/posters/gone/base.jpg' } }),
+          posterPost(sample, { id: 'future-spec', version: 2 }),
+          posterPost(sample, { id: 'damaged-row', spec: { subject_grid: undefined as unknown as string[] } }),
+        ].map((post) => (
+          <View key={post.id} style={{ width: 184.5 }} testID="dev.poster.fallback">
+            <CommunityPostCard post={post} onPress={() => {}} columnWidth={190.5} />
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 export default function PlazaCoverGallery() {
-  const { wall } = useLocalSearchParams<{ wall?: string }>();
+  const { wall, poster } = useLocalSearchParams<{ wall?: string; poster?: string }>();
+  if (poster) {
+    return (
+      <Screen>
+        <ScrollView contentContainerStyle={{ paddingBottom: 48 }}>
+          <PosterRows />
+        </ScrollView>
+      </Screen>
+    );
+  }
   if (wall) {
     return (
       <Screen>
@@ -413,6 +595,7 @@ export default function PlazaCoverGallery() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={{ paddingBottom: 48 }}>
+        <PosterRows />
         <PackRows />
         <TheirColoursRow />
         <FamilyRows />

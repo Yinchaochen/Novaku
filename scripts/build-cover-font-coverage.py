@@ -41,6 +41,8 @@ CJK_FACES = [
     "ZhiMangXing_Cover",
     "NotoSerifSC900_Cover",
     "SmileySans_Cover",
+    # Latin, the poster's big word; an unmodified copy of Abril Fatface.
+    "AbrilFatface_Cover",
 ]
 
 

@@ -1,5 +1,6 @@
-These six fonts are subsets (GB2312 level 1 + punctuation + Latin) made by
+The first six fonts are subsets (GB2312 level 1 + punctuation + Latin) made by
 scripts/build-cover-cjk-fonts.py from the fonts below. None declares a Reserved Font Name.
+AbrilFatface_Cover.ttf is an unmodified copy, renamed on disk only.
 
 ZCOOLKuaiLe_Cover.ttf — ZCOOL KuaiLe. Copyright 2018 The ZCOOL KuaiLe Project Authors (https://github.com/googlefonts/zcool-kuaile)
 MaShanZheng_Cover.ttf — Ma Shan Zheng. Copyright 2018 The Ma Shan Zheng Project Authors (https://github.com/googlefonts/mashanzheng)
@@ -7,6 +8,7 @@ LongCang_Cover.ttf — Long Cang. Copyright 2018 The Long Cang Project Authors (
 ZhiMangXing_Cover.ttf — Zhi Mang Xing. Copyright 2018 The Zhi Mang Xing Project Authors (https://github.com/googlefonts/zhimangxing)
 NotoSerifSC900_Cover.ttf — Noto Serif SC Black. Copyright 2012 Google Inc. All Rights Reserved.
 SmileySans_Cover.ttf — Smiley Sans Oblique. Copyright (c) 2022-2024 atelierAnchor (https://github.com/atelier-anchor/smiley-sans)
+AbrilFatface_Cover.ttf — Abril Fatface. Copyright (c) 2011, TypeTogether (www.type-together.com), with Reserved Font Names "Abril" and "Abril Fatface"
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:
