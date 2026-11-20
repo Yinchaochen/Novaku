@@ -397,7 +397,7 @@
     "photos": "Fotos",
     "add_photo": "Foto hinzufügen",
     "photo_empty": "Du kannst bis zu neun Bilder hinzufügen.",
-    "photo_limit": "Du kannst pro Beitrag bis zu neun Bilder hinzufügen.",
+    "photo_limit": "Du kannst pro Beitrag bis zu {count} Bilder hinzufügen.",
     "photo_permission_denied": "Der Zugriff auf deine Fotos ist nötig, um Bilder anzuhängen.",
     "previous_image": "Vorheriges Bild",
     "next_image": "Nächstes Bild",

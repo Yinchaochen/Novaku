@@ -57,6 +57,7 @@ import { compressImageForUpload } from '../../lib/imageCompression';
 import { nextComposeButtonState } from '../../lib/composeButtonVisibility';
 import { publishButtonState } from '../../lib/publishButtonState';
 import { mapWithConcurrency } from '../../lib/mapWithConcurrency';
+import { MAX_POST_MEDIA_ITEMS } from '../../lib/postMediaLimit';
 import { resolveMediaUrl } from '../../lib/media';
 import { useGuideAutoAdvance, useProductGuide } from '../../features/guide/useProductGuide';
 import { useGuideTarget } from '../../features/guide/guideTargets';
@@ -99,7 +100,6 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 const POST_TYPES: FormData['post_type'][] = ['experience', 'question', 'guide', 'warning', 'recommendation'];
-const MAX_MEDIA_ITEMS = 9;
 const MEDIA_UPLOAD_CONCURRENCY = 2;
 const POST_BUTTON_WIDTH = 130;
 const POST_BUTTON_HEIGHT = 55;
@@ -400,9 +400,9 @@ export default function PlazaScreen() {
   };
 
   const onPickImages = async () => {
-    const remaining = MAX_MEDIA_ITEMS - mediaItems.length;
+    const remaining = MAX_POST_MEDIA_ITEMS - mediaItems.length;
     if (remaining <= 0) {
-      setComposerMessage(t.plaza.photo_limit);
+      setComposerMessage(t.plaza.photo_limit.replace('{count}', String(MAX_POST_MEDIA_ITEMS)));
       return;
     }
 
@@ -447,7 +447,7 @@ export default function PlazaScreen() {
           return uploadMedia.mutateAsync(compressed);
         },
       );
-      setMediaItems((current) => [...current, ...uploaded].slice(0, MAX_MEDIA_ITEMS));
+      setMediaItems((current) => [...current, ...uploaded].slice(0, MAX_POST_MEDIA_ITEMS));
     } catch {
       setComposerMessage(t.common.error);
     } finally {
@@ -1260,7 +1260,7 @@ export default function PlazaScreen() {
                   </View>
                 ) : null}
 
-                {mediaItems.length < MAX_MEDIA_ITEMS && !videoDraft ? (
+                {mediaItems.length < MAX_POST_MEDIA_ITEMS && !videoDraft ? (
                   <Pressable
                     ref={photoTargetRef}
                     onPress={onPickImages}

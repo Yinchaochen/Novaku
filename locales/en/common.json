@@ -397,7 +397,7 @@
     "photos": "Photos",
     "add_photo": "Add Photo",
     "photo_empty": "You can add up to nine images.",
-    "photo_limit": "You can add up to nine images to one post.",
+    "photo_limit": "You can add up to {count} images to one post.",
     "photo_permission_denied": "Photo library access is required to attach images.",
     "previous_image": "Previous image",
     "next_image": "Next image",
