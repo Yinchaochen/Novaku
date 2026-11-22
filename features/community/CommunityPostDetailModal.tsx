@@ -82,6 +82,8 @@ import {
 } from './useCommunity';
 import { OfficialChip, isOfficialAuthor } from '../../components/OfficialChip';
 import { VerifiedBadge } from '../../components/VerifiedBadge';
+import { PostProductCards } from '../../components/merchant/PostProductCards';
+import { ShopChip } from '../../components/merchant/ShopChip';
 import { PrivacyMask, PrivateText } from '../../components/PrivacyMask';
 
 /** Where on screen the card that opened this sat, in window coordinates. */
@@ -960,6 +962,7 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
                     </PrivateText>
                     {post.author.is_verified ? <VerifiedBadge /> : null}
                     {isOfficialAuthor(post.author) ? <OfficialChip size="md" /> : null}
+                    {post.author.account_kind === 'merchant' ? <ShopChip size="md" /> : null}
                   </View>
                   {displayHeaderCity ? (
                     <Text numberOfLines={1} className="mt-0.5 text-[12px] text-neutral-400">
@@ -1252,6 +1255,12 @@ export function CommunityPostDetailModal({ post: seedPost, visible, onClose, onE
                 textClassName="mt-4 text-[16px] leading-8 text-neutral-800"
                 linkify
               />
+
+              {post.products && post.products.length > 0 ? (
+                <View className="mt-4">
+                  <PostProductCards products={post.products} title={t.merchant.products_in_post} />
+                </View>
+              ) : null}
 
               {post.extracted_summary ? (
                 <View className="mt-5 rounded-[20px] bg-[#FFF6F7] px-4 py-3">

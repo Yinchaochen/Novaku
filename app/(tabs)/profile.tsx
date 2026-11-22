@@ -33,6 +33,11 @@ import { PrivacyModal } from '../../components/PrivacyModal';
 import { ProfileShareCard } from '../../components/ProfileShareCard';
 import { Screen } from '../../components/Screen';
 import { VerifiedBadge } from '../../components/VerifiedBadge';
+import { ShopGuideAnchor } from '../../components/guide/ShopGuideAnchor';
+import { ShopGuideSpotlight } from '../../components/guide/ShopGuideSpotlight';
+import { ShopChip } from '../../components/merchant/ShopChip';
+import { ShopHoursPane, ShopProductsPane } from '../../components/merchant/ShopPanes';
+import { isMerchant, useShop } from '../../features/merchants/useMerchants';
 import { ShareSheet } from '../../components/ShareSheet';
 import { UserQRCodeModal } from '../../components/UserQRCodeModal';
 import { useLanguage } from '../../context/LanguageContext';
@@ -62,7 +67,7 @@ import { resolveMediaUrl } from '../../lib/media';
 import { useAuthStore } from '../../store/authStore';
 import { PrivacyMask, PrivateText } from '../../components/PrivacyMask';
 
-type ProfileTab = 'notes' | 'comments' | 'saves' | 'likes';
+type ProfileTab = 'notes' | 'comments' | 'saves' | 'likes' | 'products' | 'hours';
 
 const PROFILE_ACTION_BUTTON_SIZE = 48;
 const PROFILE_ACTION_ICON_SIZE = 27;
@@ -526,6 +531,13 @@ export default function ProfileScreen() {
   } | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ProfileTab>('notes');
+  // D-195: a shop's own page leads with its products, then its posts and hours; no Odyssey.
+  const shopOwner = isMerchant(user);
+  const ownShop = useShop(shopOwner ? user?.id : null);
+  const shopProductCount = ownShop.data?.product_count ?? 0;
+  useEffect(() => {
+    setActiveTab(shopOwner ? 'products' : 'notes');
+  }, [shopOwner]);
   const [notesSubTab, setNotesSubTab] = useState<'public' | 'private'>('public');
   const [showBrowsingHistory, setShowBrowsingHistory] = useState(false);
   const [showMenuSheet, setShowMenuSheet] = useState(false);
@@ -788,12 +800,18 @@ export default function ProfileScreen() {
     }
   };
 
-  const TABS: { key: ProfileTab; label: string; locked: boolean; minWidth: number }[] = [
-    { key: 'notes', label: t.profile.tab_notes, locked: false, minWidth: 82 },
-    { key: 'comments', label: t.profile.tab_comments, locked: false, minWidth: 118 },
-    { key: 'saves', label: t.profile.tab_saves, locked: false, minWidth: 86 },
-    { key: 'likes', label: t.profile.tab_likes, locked: false, minWidth: 82 },
-  ];
+  const TABS: { key: ProfileTab; label: string; locked: boolean; minWidth: number }[] = shopOwner
+    ? [
+        { key: 'products', label: t.merchant.tab_products, locked: false, minWidth: 82 },
+        { key: 'notes', label: t.merchant.tab_posts, locked: false, minWidth: 82 },
+        { key: 'hours', label: t.merchant.tab_hours, locked: false, minWidth: 104 },
+      ]
+    : [
+        { key: 'notes', label: t.profile.tab_notes, locked: false, minWidth: 82 },
+        { key: 'comments', label: t.profile.tab_comments, locked: false, minWidth: 118 },
+        { key: 'saves', label: t.profile.tab_saves, locked: false, minWidth: 86 },
+        { key: 'likes', label: t.profile.tab_likes, locked: false, minWidth: 82 },
+      ];
 
   return (
     <Screen topInset tabBar>
@@ -944,6 +962,7 @@ export default function ProfileScreen() {
                     {user?.display_name ?? 'Postervia'}
                   </PrivateText>
                   {user?.is_verified ? <VerifiedBadge size={20} tone="onDark" /> : null}
+                  {shopOwner ? <ShopChip size="md" inverse /> : null}
                 </View>
                 <View className="mt-1 flex-row items-center">
                   <PrivateText style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.7)', letterSpacing: 0.3 }}>
@@ -1078,42 +1097,79 @@ export default function ProfileScreen() {
                   </Text>
                 </View>
               </FeedbackPressable>
-              <FeedbackPressable
-                onPress={() => router.navigate('/(tabs)/tasks')}
-                style={{
-                  flex: 1,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 12,
-                  borderRadius: 18,
-                  paddingHorizontal: 14,
-                  paddingVertical: 12,
-                  backgroundColor: 'rgba(255,255,255,0.16)',
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.24)',
-                }}
-                pressedStyle={{ transform: [{ scale: 0.99 }] }}
-              >
-                <View
+              {shopOwner ? (
+                <ShopGuideAnchor step="home_products" style={{ flex: 1 }}>
+                  <FeedbackPressable
+                    testID="profile.shop.setup-products"
+                    accessibilityRole="button"
+                    onPress={() => router.push('/products/new')}
+                    style={{
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 12,
+                      borderRadius: 18,
+                      paddingHorizontal: 14,
+                      paddingVertical: 12,
+                      backgroundColor: 'rgba(255,255,255,0.16)',
+                      borderWidth: 1,
+                      borderColor: 'rgba(255,255,255,0.24)',
+                    }}
+                    pressedStyle={{ transform: [{ scale: 0.99 }] }}
+                  >
+                    <View style={{ width: 42, height: 42, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Ionicons name="bag-handle-outline" size={30} color="rgba(255,255,255,0.85)" />
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#FFFFFF' }} numberOfLines={1}>
+                        {t.merchant.setup_products}
+                      </Text>
+                      <Text style={{ marginTop: 2, fontSize: 11, color: 'rgba(255,255,255,0.7)' }} numberOfLines={1}>
+                        {shopProductCount > 0
+                          ? t.merchant.products_count.replace('{count}', String(shopProductCount))
+                          : t.merchant.no_products}
+                      </Text>
+                    </View>
+                  </FeedbackPressable>
+                </ShopGuideAnchor>
+              ) : (
+                <FeedbackPressable
+                  onPress={() => router.navigate('/(tabs)/tasks')}
                   style={{
-                    width: 42,
-                    height: 42,
+                    flex: 1,
+                    flexDirection: 'row',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
+                    gap: 12,
+                    borderRadius: 18,
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                    backgroundColor: 'rgba(255,255,255,0.16)',
+                    borderWidth: 1,
+                    borderColor: 'rgba(255,255,255,0.24)',
                   }}
+                  pressedStyle={{ transform: [{ scale: 0.99 }] }}
                 >
-                  <ChalkIcon name="odyssey" size={34} color="rgba(255,255,255,0.85)" />
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#FFFFFF' }} numberOfLines={1}>
-                    {t.profile.odyssey_shortcut}
-                  </Text>
-                  <Text style={{ marginTop: 2, fontSize: 11, color: 'rgba(255,255,255,0.7)' }} numberOfLines={1}>
-                    {displayBaseCityOrPrompt}
-                  </Text>
-                </View>
-              </FeedbackPressable>
+                  <View
+                    style={{
+                      width: 42,
+                      height: 42,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <ChalkIcon name="odyssey" size={34} color="rgba(255,255,255,0.85)" />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#FFFFFF' }} numberOfLines={1}>
+                      {t.profile.odyssey_shortcut}
+                    </Text>
+                    <Text style={{ marginTop: 2, fontSize: 11, color: 'rgba(255,255,255,0.7)' }} numberOfLines={1}>
+                      {displayBaseCityOrPrompt}
+                    </Text>
+                  </View>
+                </FeedbackPressable>
+              )}
             </View>
           </View>
         </Pressable>
@@ -1215,7 +1271,11 @@ export default function ProfileScreen() {
             </GlassCard>
           ) : null}
 
-          {activeTab === 'notes' ? (
+          {activeTab === 'products' && user ? (
+            <ShopProductsPane userId={user.id} owner />
+          ) : activeTab === 'hours' && user ? (
+            <ShopHoursPane userId={user.id} owner />
+          ) : activeTab === 'notes' ? (
             myPostsQuery.isLoading ? (
               <View className="mt-10 items-center">
                 <ActivityIndicator size="large" color={colors.brandCoral} />
@@ -1332,6 +1392,14 @@ export default function ProfileScreen() {
           )}
         </View>
       </ScrollView>
+
+      {shopOwner ? (
+        <ShopGuideSpotlight
+          chapter="home"
+          enabled={ownShop.isSuccess && shopProductCount === 0}
+          onLastContinue={() => router.push('/products/new')}
+        />
+      ) : null}
 
       {/* BROWSING HISTORY */}
       <Modal visible={showBrowsingHistory} animationType="slide" onRequestClose={() => setShowBrowsingHistory(false)}>

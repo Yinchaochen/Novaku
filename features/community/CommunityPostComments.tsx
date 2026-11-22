@@ -24,6 +24,7 @@ import {
 } from './useCommunity';
 import { OfficialChip, isOfficialAuthor } from '../../components/OfficialChip';
 import { VerifiedBadge } from '../../components/VerifiedBadge';
+import { ShopChip } from '../../components/merchant/ShopChip';
 import { requireSignIn } from '../../store/signInPromptStore';
 import { PrivacyMask, PrivateText } from '../../components/PrivacyMask';
 
@@ -405,6 +406,7 @@ export function CommentRow({
             </PrivateText>
             {comment.author.is_verified ? <VerifiedBadge size={13} /> : null}
             {isOfficialAuthor(comment.author) ? <OfficialChip /> : null}
+            {comment.author.account_kind === 'merchant' ? <ShopChip /> : null}
           </Pressable>
           {pending ? null : (
             <Pressable onPress={onPressMore} hitSlop={8} className="ml-2">

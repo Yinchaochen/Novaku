@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
-import type { CommunityPost } from '../features/community/useCommunity';
+import type { CommunityPost, CommunitySelectedPlaceInput } from '../features/community/useCommunity';
+import type { ProductCard } from '../features/merchants/types';
 
 // One-shot handoff into the Plaza composer, which lives on the Plaza tab and
 // nowhere else. Plaza search's zero-result CTA asks a question; the post
@@ -9,7 +10,9 @@ import type { CommunityPost } from '../features/community/useCommunity';
 // consumes it exactly once and opens the composer accordingly.
 export type PlazaComposeIntent =
   | { kind: 'ask'; title: string; postType: 'question' }
-  | { kind: 'edit'; post: CommunityPost };
+  | { kind: 'edit'; post: CommunityPost }
+  // "Write a review" on a product page (D-195): the product is linked and the shop is the place.
+  | { kind: 'review'; product: ProductCard; place: CommunitySelectedPlaceInput | null };
 
 interface PlazaComposeIntentState {
   intent: PlazaComposeIntent | null;

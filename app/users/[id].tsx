@@ -44,6 +44,10 @@ import { formatDisplayLocation } from '../../lib/displayLocation';
 import { resolveMediaUrl } from '../../lib/media';
 import { useAuthStore } from '../../store/authStore';
 import { OfficialChip, isOfficialAuthor } from '../../components/OfficialChip';
+import { ShopHoursPane, ShopProductsPane, mapsUrl } from '../../components/merchant/ShopPanes';
+import { ShopPublicHeader } from '../../components/merchant/ShopPublicHeader';
+import { useShop } from '../../features/merchants/useMerchants';
+import { openExternalUrl } from '../../lib/links';
 import { VerifiedBadge } from '../../components/VerifiedBadge';
 import { requireSignIn } from '../../store/signInPromptStore';
 import { PrivacyMask, PrivateText } from '../../components/PrivacyMask';
@@ -56,7 +60,7 @@ function showCopiedToast(message: string) {
   }
 }
 
-type UserProfileTab = 'notes' | 'comments' | 'saves' | 'likes';
+type UserProfileTab = 'notes' | 'comments' | 'saves' | 'likes' | 'products' | 'hours';
 
 function HeroAvatar({ name, avatarUrl }: { name: string; avatarUrl?: string | null }) {
   const resolved = resolveMediaUrl(avatarUrl);
@@ -124,8 +128,19 @@ export default function UserProfileScreen() {
   const displayOriginCity =
     formatDisplayLocation(profileData?.origin_city) ?? profileData?.origin_city ?? null;
 
+  // D-195: a shop's page leads with its products, then its posts and its hours.
+  const shopProfile = profileData?.account_kind === 'merchant';
+  const shopQuery = useShop(shopProfile ? userId : null);
+
   const visibleTabs = useMemo<{ key: UserProfileTab; label: string }[]>(() => {
     if (!profileData) return [];
+    if (profileData.account_kind === 'merchant') {
+      return [
+        { key: 'products', label: t.merchant.tab_products },
+        { key: 'notes', label: t.merchant.tab_posts },
+        { key: 'hours', label: t.merchant.tab_hours },
+      ];
+    }
     const all: { key: UserProfileTab; label: string; visible: boolean }[] = [
       { key: 'notes', label: t.profile.tab_notes, visible: profileData.tab_notes_public },
       { key: 'comments', label: t.profile.tab_comments, visible: profileData.tab_comments_public },
@@ -138,6 +153,9 @@ export default function UserProfileScreen() {
   }, [profileData, t]);
 
   const [activeTab, setActiveTab] = useState<UserProfileTab>('notes');
+  useEffect(() => {
+    if (shopProfile) setActiveTab('products');
+  }, [shopProfile]);
 
   useEffect(() => {
     if (visibleTabs.length === 0) return;
@@ -313,17 +331,21 @@ export default function UserProfileScreen() {
   const isEmpty = !isLoadingActive && !isErrorActive && postList.length === 0;
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-white" edges={['top']} style={shopProfile ? { backgroundColor: '#FFF8F1' } : undefined}>
       <View className="flex-row items-center justify-between border-b border-neutral-100 px-4 py-3">
         <Pressable onPress={() => router.back()} hitSlop={8}>
           <Ionicons name="chevron-back" size={26} color="#111111" />
         </Pressable>
         <View className="flex-1 flex-row items-center justify-center px-4">
-          <PrivateText numberOfLines={1} className="shrink text-[16px] font-semibold text-black">
-            {profileData.display_name}
-          </PrivateText>
-          {profileData.is_verified ? <VerifiedBadge /> : null}
-          {isOfficialAuthor(profileData) ? <OfficialChip size="md" /> : null}
+          {shopProfile ? null : (
+            <>
+              <PrivateText numberOfLines={1} className="shrink text-[16px] font-semibold text-black">
+                {profileData.display_name}
+              </PrivateText>
+              {profileData.is_verified ? <VerifiedBadge /> : null}
+              {isOfficialAuthor(profileData) ? <OfficialChip size="md" /> : null}
+            </>
+          )}
         </View>
         <Pressable onPress={openProfileActions} hitSlop={8}>
           <Ionicons name="ellipsis-horizontal" size={22} color="#111111" />
@@ -331,140 +353,157 @@ export default function UserProfileScreen() {
       </View>
 
       <ScrollView className="flex-1">
-        <View className="px-5 pt-5">
-          <View className="flex-row items-center gap-4">
-            <PrivacyMask>
-              <HeroAvatar name={profileData.display_name} avatarUrl={profileData.avatar_url} />
-            </PrivacyMask>
-            <View className="flex-1">
-              <PrivateText className="text-[20px] font-extrabold text-black">{profileData.display_name}</PrivateText>
-              <View className="mt-1 flex-row items-center">
-                <PrivateText className="text-[12px] text-neutral-500">
-                  Postervia ID: {profileData.display_id ?? numericDisplayId(profileData.id)}
-                </PrivateText>
-                <Pressable
-                  onPress={() => void handleCopyDisplayId()}
-                  hitSlop={6}
-                  className="ml-2"
-                >
-                  <Ionicons name="copy-outline" size={14} color="#9CA3AF" />
-                </Pressable>
-                <Pressable
-                  onPress={() => setQrVisible(true)}
-                  hitSlop={6}
-                  className="ml-2"
-                >
-                  <Ionicons name="qr-code-outline" size={14} color="#9CA3AF" />
-                </Pressable>
-              </View>
-              {displayCity ? (
-                <View className="mt-1 flex-row items-center">
-                  <Ionicons name="location-outline" size={12} color="#9CA3AF" />
-                  <Text className="ml-1 text-[12px] text-neutral-500">{displayCity}</Text>
-                </View>
-              ) : null}
-              {displayOriginCity ? (
-                <View className="mt-1 flex-row items-center">
-                  <Ionicons name="home-outline" size={12} color="#9CA3AF" />
-                  <Text className="ml-1 text-[12px] text-neutral-500">
-                    {t.profile.from_label} {displayOriginCity}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-          </View>
-
-          <View className="mt-5 flex-row justify-around">
-            <StatColumn value={profileData.following_count} label={t.profile.stats_following} />
-            <StatColumn value={profileData.follower_count} label={t.profile.stats_followers} />
-            <StatColumn
-              value={profileData.helpful_received_count + profileData.save_received_count}
-              label={t.profile.stats_likes_saves}
+        {shopProfile ? (
+          shopQuery.data ? (
+            <ShopPublicHeader
+              shop={shopQuery.data}
+              following={Boolean(profileData.viewer_is_following)}
+              onToggleFollow={() => requireSignIn(handleToggleFollow)}
+              onDirections={() => shopQuery.data && void openExternalUrl(mapsUrl(shopQuery.data))}
             />
-          </View>
-
-          {profileData.bio?.trim() ? (
-            <PrivateText className="mt-3 text-[14px] leading-5 text-neutral-700">
-              {profileData.bio.trim()}
-            </PrivateText>
-          ) : null}
-
-          {profileData.intent_tags.length > 0 ? (
-            <View className="mt-3 flex-row flex-wrap">
-              {profileData.intent_tags.slice(0, 4).map((tag) => (
-                <View
-                  key={tag}
-                  className="mb-1.5 mr-1.5 rounded-full bg-[#F5F5F7] px-3 py-1"
-                >
-                  <Text className="text-[12px] text-neutral-700">#{tag}</Text>
-                </View>
-              ))}
+          ) : (
+            <View className="items-center py-10">
+              <ActivityIndicator size="small" color="#F47C7C" />
             </View>
-          ) : null}
+          )
+        ) : (
+          <>
+          <View className="px-5 pt-5">
+            <View className="flex-row items-center gap-4">
+              <PrivacyMask>
+                <HeroAvatar name={profileData.display_name} avatarUrl={profileData.avatar_url} />
+              </PrivacyMask>
+              <View className="flex-1">
+                <PrivateText className="text-[20px] font-extrabold text-black">{profileData.display_name}</PrivateText>
+                <View className="mt-1 flex-row items-center">
+                  <PrivateText className="text-[12px] text-neutral-500">
+                    Postervia ID: {profileData.display_id ?? numericDisplayId(profileData.id)}
+                  </PrivateText>
+                  <Pressable
+                    onPress={() => void handleCopyDisplayId()}
+                    hitSlop={6}
+                    className="ml-2"
+                  >
+                    <Ionicons name="copy-outline" size={14} color="#9CA3AF" />
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setQrVisible(true)}
+                    hitSlop={6}
+                    className="ml-2"
+                  >
+                    <Ionicons name="qr-code-outline" size={14} color="#9CA3AF" />
+                  </Pressable>
+                </View>
+                {displayCity ? (
+                  <View className="mt-1 flex-row items-center">
+                    <Ionicons name="location-outline" size={12} color="#9CA3AF" />
+                    <Text className="ml-1 text-[12px] text-neutral-500">{displayCity}</Text>
+                  </View>
+                ) : null}
+                {displayOriginCity ? (
+                  <View className="mt-1 flex-row items-center">
+                    <Ionicons name="home-outline" size={12} color="#9CA3AF" />
+                    <Text className="ml-1 text-[12px] text-neutral-500">
+                      {t.profile.from_label} {displayOriginCity}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            </View>
 
-          <View className="mt-4 flex-row gap-2">
-            <Pressable
-              // Following needs an account; a guest is asked first (D-151).
-              onPress={() => requireSignIn(handleToggleFollow)}
-              className="flex-1 items-center justify-center rounded-full py-2.5"
-              style={{
-                backgroundColor: profileData.viewer_is_following ? '#F5F5F7' : '#F47C7C',
-              }}
-            >
-              <Text
-                className="text-[14px] font-semibold"
-                style={{ color: profileData.viewer_is_following ? '#6B7280' : '#FFFFFF' }}
-              >
-                {profileData.viewer_is_following ? t.profile.following_button : t.profile.follow_button}
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => {
-                switch (profileData.relationship_state) {
-                  case 'none':
-                    requireSignIn(openFriendRequest);
-                    break;
-                  case 'incoming_pending':
-                    void handleAcceptFriendRequest();
-                    break;
-                  case 'outgoing_pending':
-                    // already sent — no-op (button is disabled visually below)
-                    break;
-                  case 'friends':
-                  default:
-                    requireSignIn(handleMessage);
-                    break;
-                }
-              }}
-              disabled={
-                profileData.relationship_state === 'outgoing_pending' ||
-                acceptFriendRequest.isPending
-              }
-              className="flex-1 items-center justify-center rounded-full py-2.5"
-              style={{
-                backgroundColor:
-                  profileData.relationship_state === 'none'
-                    ? '#111827'
-                    : profileData.relationship_state === 'incoming_pending'
-                      ? '#F47C7C'
-                      : '#F5F5F7',
-              }}
-            >
-              <Text
-                className="text-[14px] font-semibold"
+            <View className="mt-5 flex-row justify-around">
+              <StatColumn value={profileData.following_count} label={t.profile.stats_following} />
+              <StatColumn value={profileData.follower_count} label={t.profile.stats_followers} />
+              <StatColumn
+                value={profileData.helpful_received_count + profileData.save_received_count}
+                label={t.profile.stats_likes_saves}
+              />
+            </View>
+
+            {profileData.bio?.trim() ? (
+              <PrivateText className="mt-3 text-[14px] leading-5 text-neutral-700">
+                {profileData.bio.trim()}
+              </PrivateText>
+            ) : null}
+
+            {profileData.intent_tags.length > 0 ? (
+              <View className="mt-3 flex-row flex-wrap">
+                {profileData.intent_tags.slice(0, 4).map((tag) => (
+                  <View
+                    key={tag}
+                    className="mb-1.5 mr-1.5 rounded-full bg-[#F5F5F7] px-3 py-1"
+                  >
+                    <Text className="text-[12px] text-neutral-700">#{tag}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+
+            <View className="mt-4 flex-row gap-2">
+              <Pressable
+                // Following needs an account; a guest is asked first (D-151).
+                onPress={() => requireSignIn(handleToggleFollow)}
+                className="flex-1 items-center justify-center rounded-full py-2.5"
                 style={{
-                  color:
-                    profileData.relationship_state === 'none' ||
-                    profileData.relationship_state === 'incoming_pending'
-                      ? '#FFFFFF'
-                      : '#6B7280',
+                  backgroundColor: profileData.viewer_is_following ? '#F5F5F7' : '#F47C7C',
                 }}
               >
-                {friendButtonLabel}
-              </Text>
-            </Pressable>
+                <Text
+                  className="text-[14px] font-semibold"
+                  style={{ color: profileData.viewer_is_following ? '#6B7280' : '#FFFFFF' }}
+                >
+                  {profileData.viewer_is_following ? t.profile.following_button : t.profile.follow_button}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  switch (profileData.relationship_state) {
+                    case 'none':
+                      requireSignIn(openFriendRequest);
+                      break;
+                    case 'incoming_pending':
+                      void handleAcceptFriendRequest();
+                      break;
+                    case 'outgoing_pending':
+                      // already sent — no-op (button is disabled visually below)
+                      break;
+                    case 'friends':
+                    default:
+                      requireSignIn(handleMessage);
+                      break;
+                  }
+                }}
+                disabled={
+                  profileData.relationship_state === 'outgoing_pending' ||
+                  acceptFriendRequest.isPending
+                }
+                className="flex-1 items-center justify-center rounded-full py-2.5"
+                style={{
+                  backgroundColor:
+                    profileData.relationship_state === 'none'
+                      ? '#111827'
+                      : profileData.relationship_state === 'incoming_pending'
+                        ? '#F47C7C'
+                        : '#F5F5F7',
+                }}
+              >
+                <Text
+                  className="text-[14px] font-semibold"
+                  style={{
+                    color:
+                      profileData.relationship_state === 'none' ||
+                      profileData.relationship_state === 'incoming_pending'
+                        ? '#FFFFFF'
+                        : '#6B7280',
+                  }}
+                >
+                  {friendButtonLabel}
+                </Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
+          </>
+        )}
 
         {profileData.restricted ? (
           <View className="mt-10 items-center px-8">
@@ -500,7 +539,15 @@ export default function UserProfileScreen() {
               })}
             </View>
 
-            {isLoadingActive ? (
+            {activeTab === 'products' && userId ? (
+              <View className="px-5">
+                <ShopProductsPane userId={userId} owner={false} />
+              </View>
+            ) : activeTab === 'hours' && userId ? (
+              <View className="px-5 pb-8">
+                <ShopHoursPane userId={userId} owner={false} />
+              </View>
+            ) : isLoadingActive ? (
               <View className="items-center py-10">
                 <ActivityIndicator size="small" color="#F47C7C" />
               </View>

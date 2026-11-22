@@ -26,6 +26,7 @@ import { PostCover } from '../../components/community/PostCover';
 import { PosterCover } from '../../components/community/PosterCover';
 import { POSTER_ASPECT, posterOf } from '../../lib/posterCover';
 import { VerifiedBadge } from '../../components/VerifiedBadge';
+import { ShopChip } from '../../components/merchant/ShopChip';
 import type { CardOrigin } from './CommunityPostDetailModal';
 import { PrivacyMask, PrivateText } from '../../components/PrivacyMask';
 
@@ -532,6 +533,7 @@ export function CommunityPostCard({ post, onPress, titleHighlight, columnWidth }
               {post.author.display_name}
             </PrivateText>
             {post.author.is_verified ? <VerifiedBadge size={12} /> : null}
+            {post.author.account_kind === 'merchant' ? <ShopChip /> : null}
           </Pressable>
 
           <Pressable

@@ -1,5 +1,6 @@
 import type { InfoUpdate, InfoUpdateKind } from '../../lib/postUpdates';
 import type { CoverSpecWire } from '../../lib/posterCover';
+import type { ProductCard } from '../merchants/types';
 import { Platform } from 'react-native';
 import {
   InfiniteData,
@@ -222,6 +223,8 @@ export interface CommunityPost {
   content_context?: CommunityRecommendationContentContext | null;
   /** Capability token for the public share URL postervia.app/p/{id}?s=… (D-040). */
   share_token?: string | null;
+  /** Product cards on the post (D-195): a shop's own goods, or the one a review is about. */
+  products?: ProductCard[];
 }
 
 export interface PersonalOdyssey {

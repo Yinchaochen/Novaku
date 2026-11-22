@@ -63,6 +63,8 @@ export interface AuthUser {
   tab_saves_public: boolean;
   tab_likes_public: boolean;
   is_staff: boolean;
+  /** D-159: a merchant account is a shop (no Odyssey, products on its page). */
+  account_kind?: 'human' | 'organiser' | 'official' | 'merchant';
   /** Account badge (D-063) — not the same as a source's verification_status. */
   is_verified?: boolean;
   is_vianter_plus: boolean;
