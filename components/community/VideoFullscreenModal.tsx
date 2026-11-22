@@ -196,7 +196,8 @@ function FullscreenPlayer({
           <Animated.View style={[{ flex: 1 }, containerStyle]} testID="video.fullscreen">
             <VideoView
               player={player}
-              style={StyleSheet.absoluteFill}
+              // On web this style lands on a <video>, which absoluteFill alone does not stretch.
+              style={[StyleSheet.absoluteFill, { width: '100%', height: '100%' }]}
               contentFit="cover"
               nativeControls={false}
             />

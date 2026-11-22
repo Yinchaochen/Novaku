@@ -53,6 +53,7 @@ import { compressImageForUpload } from '../../lib/imageCompression';
 import { CommunityPostDetailModal } from '../../features/community/CommunityPostDetailModal';
 import {
   CommunityPost,
+  isVideoMedia,
   useMyCommunityPosts,
   useMyCommentedPosts,
   useMyLikedPosts,
@@ -218,6 +219,13 @@ function getArchiveVisualHeight(post: CommunityPost) {
   return seed === 0 ? 150 : seed === 1 ? 190 : 170;
 }
 
+// A video's media_url is the .mp4, which an image cannot draw; its cover is the frame in thumb_url.
+function postCoverUri(post: CommunityPost): string | null {
+  const first = post.media_items[0];
+  const source = first && isVideoMedia(first) ? first.thumb_url : first?.media_url;
+  return resolveMediaUrl(source) ?? source ?? null;
+}
+
 function ArchiveCard({
   post,
   langCode,
@@ -229,7 +237,7 @@ function ArchiveCard({
   postTypeLabel: string;
   onPress: (post: CommunityPost) => void;
 }) {
-  const coverUri = resolveMediaUrl(post.media_items[0]?.media_url) ?? post.media_items[0]?.media_url ?? null;
+  const coverUri = postCoverUri(post);
   const title = post.translated_title ?? post.title;
   const body = post.translated_body ?? post.body;
   // Warm accent palette — recommendation = coral, guide = cream, others = lavender.
@@ -335,7 +343,7 @@ function CommentRecordRow({
   langCode: string;
   onPress: (post: CommunityPost) => void;
 }) {
-  const coverUri = resolveMediaUrl(post.media_items[0]?.media_url) ?? post.media_items[0]?.media_url ?? null;
+  const coverUri = postCoverUri(post);
   const postDate = formatPostDate(post.created_at, langCode);
   const excerpt = post.viewer_commented_excerpt ?? '';
 
