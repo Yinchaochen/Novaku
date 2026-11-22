@@ -1,8 +1,8 @@
-import * as VideoThumbnails from 'expo-video-thumbnails';
-
 import { compressImageForUpload } from '../../lib/imageCompression';
+import { pickedVideoDurationMs, videoDurationSeconds } from '../../lib/videoDuration';
 import { UploadedVideoMedia, uploadVideoDirect } from '../../lib/videoUpload';
 import type { CommunityPostMedia } from './useCommunity';
+import { openVideoFrameSource } from './videoFrames';
 
 // D-033 client pipeline: validate → compress (720p/~2Mbps, native builds
 // only) → sample frames for moderation → presigned direct upload. The
@@ -23,7 +23,7 @@ export interface PickedVideoAsset {
   uri: string;
   mimeType?: string | null;
   fileSize?: number | null;
-  /** expo-image-picker reports milliseconds. */
+  /** expo-image-picker: milliseconds on iOS / Android, seconds on web. */
   duration?: number | null;
 }
 
@@ -87,7 +87,8 @@ export async function processAndUploadVideo({
   if (!mimeType) {
     throw new VideoValidationError('unsupported');
   }
-  const durationSeconds = Math.round((asset.duration ?? 0) / 1000);
+  const pickedMs = pickedVideoDurationMs(asset.duration);
+  const durationSeconds = videoDurationSeconds(pickedMs);
   if (durationSeconds > VIDEO_MAX_DURATION_SECONDS) {
     throw new VideoValidationError('too_long');
   }
@@ -108,28 +109,30 @@ export async function processAndUploadVideo({
   // ~1 frame/minute, 5–15 total (plan §3): moderation samples plus the cover.
   onPhase?.('frames', 0);
   const frameCount = Math.min(15, Math.max(5, Math.round(durationSeconds / 60) || 5));
-  const durationMs = Math.max(1000, (asset.duration ?? durationSeconds * 1000) as number);
+  const durationMs = Math.max(1000, pickedMs || durationSeconds * 1000);
   const frameUrls: string[] = [];
-  for (let index = 0; index < frameCount; index += 1) {
-    const time = Math.floor(((index + 0.5) / frameCount) * durationMs);
-    try {
-      const thumbnail = await VideoThumbnails.getThumbnailAsync(asset.uri, {
-        time,
-        quality: 0.6,
-      });
-      const compressed = await compressImageForUpload({
-        uri: thumbnail.uri,
-        width: thumbnail.width,
-        height: thumbnail.height,
-      });
-      const uploaded = await uploadImage(compressed);
-      frameUrls.push(uploaded.media_url);
-    } catch {
-      // A missing frame narrows the moderation sample; the backend demands
-      // at least 3, so partial failures are tolerated here and surfaced by
-      // create-time validation when extraction went badly wrong.
+  const source = await openVideoFrameSource(asset.uri).catch(() => null);
+  try {
+    for (let index = 0; source && index < frameCount; index += 1) {
+      const time = Math.floor(((index + 0.5) / frameCount) * durationMs);
+      try {
+        const frame = await source.capture(time);
+        const compressed = await compressImageForUpload({
+          uri: frame.uri,
+          width: frame.width,
+          height: frame.height,
+        });
+        const uploaded = await uploadImage(compressed);
+        frameUrls.push(uploaded.media_url);
+      } catch {
+        // A missing frame narrows the moderation sample; the backend demands
+        // at least 3, so partial failures are tolerated here and surfaced by
+        // create-time validation when extraction went badly wrong.
+      }
+      onPhase?.('frames', (index + 1) / frameCount);
     }
-    onPhase?.('frames', (index + 1) / frameCount);
+  } finally {
+    source?.close();
   }
   if (frameUrls.length < 3) {
     throw new VideoValidationError('unsupported');

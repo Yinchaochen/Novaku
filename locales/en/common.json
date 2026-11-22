@@ -396,6 +396,7 @@
     "composer_save_draft": "Save draft",
     "photos": "Photos",
     "add_photo": "Add Photo",
+    "add_video": "Add video",
     "photo_empty": "You can add up to nine images.",
     "photo_limit": "You can add up to {count} images to one post.",
     "photo_permission_denied": "Photo library access is required to attach images.",

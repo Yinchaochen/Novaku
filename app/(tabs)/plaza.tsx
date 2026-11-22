@@ -462,6 +462,23 @@ export default function PlazaScreen() {
     }
   };
 
+  const onPickVideoOnly = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+        allowsEditing: false,
+        allowsMultipleSelection: false,
+        quality: 0.8,
+      });
+      if (result.canceled || !result.assets[0]) {
+        return;
+      }
+      await onPickVideo(result.assets[0]);
+    } catch {
+      setComposerMessage(t.common.error);
+    }
+  };
+
   const removeMedia = (index: number) => {
     setMediaItems((current) => current.filter((_, currentIndex) => currentIndex !== index));
   };
@@ -1344,6 +1361,29 @@ export default function PlazaScreen() {
                         </Text>
                       </View>
                     )}
+                  </Pressable>
+                ) : null}
+
+                {mediaItems.length === 0 && !videoDraft && !isUploadingMedia ? (
+                  <Pressable
+                    testID="plaza.composer.add_video"
+                    onPress={onPickVideoOnly}
+                    className="items-center justify-center rounded-[24px] border border-neutral-200 bg-[#FCFCFC]"
+                    style={{ width: 146, height: 146 }}
+                  >
+                    <View style={{ alignItems: 'center', gap: 6, paddingHorizontal: 10 }}>
+                      <Ionicons name="videocam-outline" size={30} color={colors.brandCoral} />
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontWeight: '700',
+                          color: colors.textMuted,
+                          textAlign: 'center',
+                        }}
+                      >
+                        {t.plaza.add_video}
+                      </Text>
+                    </View>
                   </Pressable>
                 ) : null}
               </ScrollView>

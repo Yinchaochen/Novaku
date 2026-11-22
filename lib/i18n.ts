@@ -418,6 +418,7 @@ export type Translations = {
     composer_save_draft: string;
     photos: string;
     add_photo: string;
+    add_video: string;
     photo_empty: string;
     photo_limit: string;
     photo_permission_denied: string;

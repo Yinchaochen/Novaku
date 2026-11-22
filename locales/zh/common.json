@@ -396,6 +396,7 @@
     "composer_save_draft": "保存草稿",
     "photos": "图片",
     "add_photo": "添加图片",
+    "add_video": "添加视频",
     "photo_empty": "最多可以上传九张图片。",
     "photo_limit": "一条帖子最多可以添加 {count} 张图片。",
     "photo_permission_denied": "需要相册权限才能添加图片。",
