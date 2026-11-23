@@ -279,9 +279,10 @@ export default function TabsLayout() {
           the reader asked for, and D-188 says this is said *before* anything
           asks them to do something, not on top of it. On the web /login lands
           on the Plaza with the sheet open (D-151), so without this the reader
-          gets an introduction stacked over the form they came for. */}
+          gets an introduction stacked over the form they came for.
+          Shops got the shop welcome instead (D-200). */}
       <PlazaWelcomeSheet
-        allowed={!showOnboardingModal && !signInSheetOpen && pathname === '/plaza'}
+        allowed={!showOnboardingModal && !signInSheetOpen && pathname === '/plaza' && !isMerchant(user)}
       />
     </>
   );

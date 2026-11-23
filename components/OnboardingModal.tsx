@@ -97,7 +97,14 @@ export function OnboardingModal({
   // straight into the shop setup, everyone else into the personal welcome.
   const pendingShop = Boolean(user?.signup_shop) && !isMerchant(user);
   const shopOnly = mode === 'shop';
-  const inShop = pendingShop || shopOnly;
+  // When the shop is created the account turns into a merchant while the window is
+  // still animating out; keep drawing the shop setup until the next opening.
+  const shopLatch = useRef(false);
+  const wasVisible = useRef(visible);
+  if (visible && !wasVisible.current) shopLatch.current = false;
+  wasVisible.current = visible;
+  if (pendingShop || shopOnly) shopLatch.current = true;
+  const inShop = pendingShop || shopOnly || shopLatch.current;
 
   const debouncedCityQuery = useDebouncedValue(cityQuery.trim(), 350);
   const activeCityQuery = deepQuery || debouncedCityQuery;
