@@ -10,6 +10,8 @@ import {
   Alert,
   KeyboardAvoidingView,
   Modal,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Platform,
   Pressable,
   ScrollView,
@@ -50,6 +52,7 @@ import {
 } from '../../features/auth/useAuth';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { compressImageForUpload } from '../../lib/imageCompression';
+import { isNearScrollEnd } from '../../lib/scrollEnd';
 import { CommunityPostDetailModal } from '../../features/community/CommunityPostDetailModal';
 import {
   CommunityPost,
@@ -564,7 +567,9 @@ export default function ProfileScreen() {
       activeOriginQuery !== (user?.origin_city ?? '').trim(),
     { deep: originDeepQuery.length > 0 },
   );
-  const myPostsQuery = useMyCommunityPosts(24);
+  const publicPostsQuery = useMyCommunityPosts('public', notesSubTab === 'public');
+  const privatePostsQuery = useMyCommunityPosts('private', notesSubTab === 'private');
+  const myPostsQuery = notesSubTab === 'public' ? publicPostsQuery : privatePostsQuery;
   const myCommentedQuery = useMyCommentedPosts(activeTab === 'comments');
   const mySavedQuery = useMySavedPosts(activeTab === 'saves');
   const myLikedQuery = useMyLikedPosts(activeTab === 'likes');
@@ -572,11 +577,20 @@ export default function ProfileScreen() {
   const clearHistory = useClearViewHistory();
   const socialOverview = useSocialOverview();
 
-  const posts = myPostsQuery.data ?? [];
   const visibleNotes = useMemo(
-    () => posts.filter((post) => (post.visibility ?? 'public') === notesSubTab),
-    [posts, notesSubTab],
+    () => myPostsQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    [myPostsQuery.data],
   );
+  // Totals cover every post, so take them from whichever list has loaded.
+  const postTotals =
+    myPostsQuery.data?.pages[0] ??
+    (notesSubTab === 'public' ? privatePostsQuery : publicPostsQuery).data?.pages[0];
+  const publicPostCount = postTotals?.public_count ?? 0;
+  const privatePostCount = postTotals?.private_count ?? 0;
+  const loadMoreNotes = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (activeTab !== 'notes' || !myPostsQuery.hasNextPage || myPostsQuery.isFetching) return;
+    if (isNearScrollEnd(event.nativeEvent)) void myPostsQuery.fetchNextPage();
+  };
   const archiveColumns = useMemo(() => splitArchivePosts(visibleNotes), [visibleNotes]);
   // Hero background is user-set only (lisum 2026-08-08): everyone starts on
   // the shared translucent-coral default — never derived from posts or avatar.
@@ -590,8 +604,7 @@ export default function ProfileScreen() {
   const displayOriginCity = formatDisplayLocation(user?.origin_city) ?? user?.origin_city ?? null;
   const identityLabel = user ? t.auth[`identity_${user.identity}`] : '';
   const arrivalStageLabel = user?.arrival_stage ? t.onboarding[`stage_${user.arrival_stage}`] : null;
-  const postsStat = posts.length;
-  const likesAndSavesStat = posts.reduce((sum, post) => sum + post.helpful_count + post.save_count, 0);
+  const likesAndSavesStat = postTotals?.likes_and_saves_count ?? 0;
   const friendsCount = socialOverview.data?.friends.length ?? 0;
   const shortId = user?.display_id ?? (user?.id ? numericDisplayId(user.id) : '—');
   const [qrModalVisible, setQrModalVisible] = useState(false);
@@ -823,7 +836,12 @@ export default function ProfileScreen() {
 
   return (
     <Screen topInset tabBar>
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        onScroll={loadMoreNotes}
+        scrollEventThrottle={100}
+      >
 
         {/* ── HERO ── */}
         {/* The hero itself is pressable: tapping blank space opens the
@@ -1257,10 +1275,11 @@ export default function ProfileScreen() {
             }}
           >
             <Text style={{ fontSize: 14, fontWeight: '800', color: colors.textMain }}>
-              {t.profile.notes_public} {postsStat}
+              {t.profile.notes_public} {publicPostCount}
             </Text>
-            <Text style={{ fontSize: 14, color: colors.textSubtle }}>Private 0</Text>
-            <Text style={{ fontSize: 14, color: colors.textSubtle }}>Album 0</Text>
+            <Text style={{ fontSize: 14, color: colors.textSubtle }}>
+              {t.plaza.profile_tab_private} {privatePostCount}
+            </Text>
           </View>
         ) : null}
 
@@ -1284,15 +1303,15 @@ export default function ProfileScreen() {
           ) : activeTab === 'hours' && user ? (
             <ShopHoursPane userId={user.id} owner />
           ) : activeTab === 'notes' ? (
-            myPostsQuery.isLoading ? (
+            !postTotals && myPostsQuery.isLoading ? (
               <View className="mt-10 items-center">
                 <ActivityIndicator size="large" color={colors.brandCoral} />
               </View>
-            ) : myPostsQuery.isError ? (
+            ) : !postTotals && myPostsQuery.isError ? (
               <GlassCard tone="white" radiusKey="3xl" padding={28} style={{ marginTop: 16, alignItems: 'center' }}>
                 <Text style={{ color: colors.danger, fontSize: 14 }}>{t.common.error}</Text>
               </GlassCard>
-            ) : posts.length > 0 ? (
+            ) : publicPostCount + privatePostCount > 0 ? (
               <View className="mt-4">
                 <View
                   style={{
@@ -1342,31 +1361,46 @@ export default function ProfileScreen() {
                     );
                   })}
                 </View>
-                {visibleNotes.length > 0 ? (
-                  <View className="flex-row gap-3">
-                    <View className="flex-1">
-                      {archiveColumns.left.map((post) => (
-                        <ArchiveCard
-                          key={post.id}
-                          post={post}
-                          langCode={langCode}
-                          postTypeLabel={t.plaza[`type_${post.post_type}`]}
-                          onPress={setSelectedPost}
-                        />
-                      ))}
-                    </View>
-                    <View className="flex-1">
-                      {archiveColumns.right.map((post) => (
-                        <ArchiveCard
-                          key={post.id}
-                          post={post}
-                          langCode={langCode}
-                          postTypeLabel={t.plaza[`type_${post.post_type}`]}
-                          onPress={setSelectedPost}
-                        />
-                      ))}
-                    </View>
+                {!myPostsQuery.data && myPostsQuery.isError ? (
+                  <GlassCard tone="white" radiusKey="3xl" padding={28} style={{ alignItems: 'center' }}>
+                    <Text style={{ color: colors.danger, fontSize: 14 }}>{t.common.error}</Text>
+                  </GlassCard>
+                ) : !myPostsQuery.data ? (
+                  <View className="mt-6 items-center">
+                    <ActivityIndicator color={colors.brandCoral} />
                   </View>
+                ) : visibleNotes.length > 0 ? (
+                  <>
+                    <View className="flex-row gap-3">
+                      <View className="flex-1">
+                        {archiveColumns.left.map((post) => (
+                          <ArchiveCard
+                            key={post.id}
+                            post={post}
+                            langCode={langCode}
+                            postTypeLabel={t.plaza[`type_${post.post_type}`]}
+                            onPress={setSelectedPost}
+                          />
+                        ))}
+                      </View>
+                      <View className="flex-1">
+                        {archiveColumns.right.map((post) => (
+                          <ArchiveCard
+                            key={post.id}
+                            post={post}
+                            langCode={langCode}
+                            postTypeLabel={t.plaza[`type_${post.post_type}`]}
+                            onPress={setSelectedPost}
+                          />
+                        ))}
+                      </View>
+                    </View>
+                    {myPostsQuery.isFetchingNextPage ? (
+                      <View className="mt-4 items-center">
+                        <ActivityIndicator color={colors.brandCoral} />
+                      </View>
+                    ) : null}
+                  </>
                 ) : (
                   <GlassCard tone="white" radiusKey="3xl" padding={32} style={{ alignItems: 'center' }}>
                     <Text style={{ fontSize: 22, opacity: 0.45, marginBottom: 8 }}>✦</Text>

@@ -8,6 +8,8 @@ import {
   Alert,
   KeyboardAvoidingView,
   Modal,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Platform,
   Pressable,
   ScrollView,
@@ -42,6 +44,7 @@ import { ReportSheet } from '../../components/ReportSheet';
 import { numericDisplayId } from '../../lib/displayId';
 import { formatDisplayLocation } from '../../lib/displayLocation';
 import { resolveMediaUrl } from '../../lib/media';
+import { isNearScrollEnd } from '../../lib/scrollEnd';
 import { useAuthStore } from '../../store/authStore';
 import { OfficialChip, isOfficialAuthor } from '../../components/OfficialChip';
 import { ShopHoursPane, ShopProductsPane, mapsUrl } from '../../components/merchant/ShopPanes';
@@ -180,6 +183,10 @@ export default function UserProfileScreen() {
 
   const postList = activeQuery.data ?? [];
   const columns = useMemo(() => splitColumns(postList), [postList]);
+  const loadMoreNotes = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (activeTab !== 'notes' || !notesQuery.hasNextPage || notesQuery.isFetching) return;
+    if (isNearScrollEnd(event.nativeEvent)) void notesQuery.fetchNextPage();
+  };
 
   const [selectedPost, setSelectedPost] = useState<CommunityPost | null>(null);
   const [qrVisible, setQrVisible] = useState(false);
@@ -352,7 +359,7 @@ export default function UserProfileScreen() {
         </Pressable>
       </View>
 
-      <ScrollView className="flex-1">
+      <ScrollView className="flex-1" onScroll={loadMoreNotes} scrollEventThrottle={100}>
         {shopProfile ? (
           shopQuery.data ? (
             <ShopPublicHeader
@@ -578,6 +585,11 @@ export default function UserProfileScreen() {
                 </View>
               </View>
             )}
+            {activeTab === 'notes' && notesQuery.isFetchingNextPage ? (
+              <View className="items-center pb-10">
+                <ActivityIndicator size="small" color="#F47C7C" />
+              </View>
+            ) : null}
           </View>
         ) : (
           <View className="mt-10 items-center px-8">

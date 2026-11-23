@@ -567,23 +567,43 @@ export function useSearchDiscover(enabled = true) {
   });
 }
 
-export function useMyCommunityPosts(limit = 30) {
+// Profile grids load one page at a time as the reader nears the end, like Instagram's.
+export const PROFILE_POSTS_PAGE_SIZE = 24;
+
+export interface MyPostsPage extends CommunityFeedPage {
+  // Totals over all of the author's posts, for the profile header; `items` is one page.
+  public_count: number;
+  private_count: number;
+  likes_and_saves_count: number;
+}
+
+export function useMyCommunityPosts(visibility: 'public' | 'private', enabled = true) {
   const { langCode } = useLanguage();
   const user = useAuthStore((state) => state.user);
 
-  return useQuery({
-    queryKey: ['community', 'me', 'posts', user?.id, limit, langCode],
-    queryFn: async () => {
+  return useInfiniteQuery({
+    queryKey: ['community', 'me', 'posts', user?.id, visibility, langCode],
+    queryFn: async ({ pageParam }) => {
       const res = await api.get('/community/me/posts', {
-        params: { limit },
+        params: { limit: PROFILE_POSTS_PAGE_SIZE, visibility, cursor: pageParam },
       });
-      return res.data.data.items as CommunityPost[];
+      return res.data.data as MyPostsPage;
     },
-    enabled: Boolean(user),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
+    enabled: enabled && Boolean(user),
     retry: 1,
     refetchOnMount: 'always',
     refetchOnReconnect: true,
     staleTime: 30_000,
+  });
+}
+
+// Each "my posts" list (one per visibility) is paged; edit every loaded page in place.
+function updateMyPostsPages(qc: QueryClient, update: (items: CommunityPost[]) => CommunityPost[]) {
+  qc.setQueriesData<InfiniteData<MyPostsPage>>({ queryKey: ['community', 'me', 'posts'] }, (old) => {
+    if (!old) return old;
+    return { ...old, pages: old.pages.map((page) => ({ ...page, items: update(page.items) })) };
   });
 }
 
@@ -656,14 +676,10 @@ export function useUpdatePostVisibility() {
         ['community', 'post', data.id, langCode],
         () => data,
       );
-      // Patch every "my posts" cache entry so the Profile tabs split correctly.
-      qc.setQueriesData<CommunityPost[]>(
-        { queryKey: ['community', 'me', 'posts'] },
-        (old) => {
-          if (!old) return old;
-          return old.map((post) => (post.id === data.id ? { ...post, visibility: data.visibility } : post));
-        },
-      );
+      // The profile keeps one list per visibility: take the post out of the list it
+      // left now, and refetch so it lands in the other one and the header counts move.
+      updateMyPostsPages(qc, (items) => items.filter((post) => post.id !== data.id));
+      qc.invalidateQueries({ queryKey: ['community', 'me', 'posts'] });
       // Plaza feed: if now private, drop from all loaded pages so the user
       // doesn't keep seeing a post that's no longer public.
       if (data.visibility === 'private') {
@@ -708,13 +724,9 @@ export function useDeleteCommunityPost() {
           };
         },
       );
-      qc.setQueriesData<CommunityPost[]>(
-        { queryKey: ['community', 'me', 'posts'] },
-        (old) => {
-          if (!old) return old;
-          return old.filter((post) => post.id !== data.post_id);
-        },
-      );
+      updateMyPostsPages(qc, (items) => items.filter((post) => post.id !== data.post_id));
+      // The profile header counts come from the server.
+      qc.invalidateQueries({ queryKey: ['community', 'me', 'posts'] });
       // Detail cache already patched by patchPostInFeedCaches — no refetch needed.
       qc.invalidateQueries({ queryKey: ['community', 'me', 'liked'] });
       qc.invalidateQueries({ queryKey: ['community', 'me', 'saved'] });
@@ -1378,14 +1390,22 @@ export function useUserProfile(userId: string | null | undefined) {
   });
 }
 
+const flattenFeedPages = (data: InfiniteData<CommunityFeedPage>) =>
+  data.pages.flatMap((page) => page.items);
+
 export function useUserPosts(userId: string | null | undefined) {
   const { langCode } = useLanguage();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['community', 'user-posts', userId, langCode],
-    queryFn: async () => {
-      const res = await api.get(`/community/users/${userId}/posts`, { params: { limit: 30 } });
-      return res.data.data.items as CommunityPost[];
+    queryFn: async ({ pageParam }) => {
+      const res = await api.get(`/community/users/${userId}/posts`, {
+        params: { limit: PROFILE_POSTS_PAGE_SIZE, cursor: pageParam },
+      });
+      return res.data.data as CommunityFeedPage;
     },
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
+    select: flattenFeedPages,
     enabled: Boolean(userId),
   });
 }
@@ -1548,14 +1568,7 @@ function patchPostInFeedCaches(
       };
     },
   );
-  // Profile "my posts" is a flat list — patch directly.
-  qc.setQueriesData<CommunityPost[]>(
-    { queryKey: ['community', 'me', 'posts'] },
-    (old) => {
-      if (!old) return old;
-      return old.map((post) => (post.id === postId ? patch(post) : post));
-    },
-  );
+  updateMyPostsPages(qc, (items) => items.map((post) => (post.id === postId ? patch(post) : post)));
   // Detail page (`useCommunityPost`) — patch the single-post cache so an open detail
   // modal flips its star/heart/count instantly without waiting for the slow
   // `GET /posts/{id}` refetch (which re-runs Wikipedia/geocode enrichment).
