@@ -1545,6 +1545,7 @@ export type Translations = {
     role_personal_hint: string;
     role_shop: string;
     role_shop_hint: string;
+    switch_to_shop: string;
     shop_title: string;
     find_subtitle: string;
     find_prompt: string;

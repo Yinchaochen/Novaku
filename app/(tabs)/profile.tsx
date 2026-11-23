@@ -39,7 +39,7 @@ import { ShopGuideAnchor } from '../../components/guide/ShopGuideAnchor';
 import { ShopGuideSpotlight } from '../../components/guide/ShopGuideSpotlight';
 import { ShopChip } from '../../components/merchant/ShopChip';
 import { ShopHoursPane, ShopProductsPane } from '../../components/merchant/ShopPanes';
-import { isMerchant, useShop } from '../../features/merchants/useMerchants';
+import { isMerchant, useMerchantSignupStatus, useShop } from '../../features/merchants/useMerchants';
 import { ShareSheet } from '../../components/ShareSheet';
 import { UserQRCodeModal } from '../../components/UserQRCodeModal';
 import { useLanguage } from '../../context/LanguageContext';
@@ -544,6 +544,11 @@ export default function ProfileScreen() {
   const [activeTab, setActiveTab] = useState<ProfileTab>('notes');
   // D-195: a shop's own page leads with its products, then its posts and hours; no Odyssey.
   const shopOwner = isMerchant(user);
+  // Next to Settings, so people see that a shop account exists (lisum 2026-11-23).
+  const personalAccount = (user?.account_kind ?? 'human') === 'human';
+  const shopSignup = useMerchantSignupStatus(personalAccount);
+  const canSwitchToShop = personalAccount && shopSignup.data === true;
+  const [showShopSetup, setShowShopSetup] = useState(false);
   const ownShop = useShop(shopOwner ? user?.id : null);
   const shopProductCount = ownShop.data?.product_count ?? 0;
   useEffect(() => {
@@ -1514,6 +1519,9 @@ export default function ProfileScreen() {
               { label: t.profile.menu_privacy_settings, icon: 'lock-closed-outline' as const, on: () => { setShowMenuSheet(false); setShowPrivacyModal(true); } },
               { label: t.profile.edit_setup_action, icon: 'settings-outline' as const, on: () => { setShowMenuSheet(false); setShowOnboardingModal(true); } },
               { label: t.profile.menu_settings, icon: 'shield-checkmark-outline' as const, on: () => { setShowMenuSheet(false); router.push('/settings' as never); } },
+              ...(canSwitchToShop
+                ? [{ label: t.merchant.switch_to_shop, icon: 'storefront-outline' as const, on: () => { setShowMenuSheet(false); setShowShopSetup(true); } }]
+                : []),
             ].map((row, i) => (
               <Pressable
                 key={row.label}
@@ -2009,6 +2017,12 @@ export default function ProfileScreen() {
         mode="edit"
         onDone={() => setShowOnboardingModal(false)}
         onCancel={() => setShowOnboardingModal(false)}
+      />
+      <OnboardingModal
+        visible={showShopSetup}
+        mode="shop"
+        onDone={() => setShowShopSetup(false)}
+        onCancel={() => setShowShopSetup(false)}
       />
 
       <PrivacyModal

@@ -1555,6 +1555,7 @@
     "role_personal_hint": "Find information, ask questions and share what you know",
     "role_shop": "Shop account",
     "role_shop_hint": "You run a shop here and want people to find it and what you sell",
+    "switch_to_shop": "Switch to a shop account",
     "shop_title": "Set up your shop",
     "find_subtitle": "Find your shop",
     "find_prompt": "Search for your shop's name or address",

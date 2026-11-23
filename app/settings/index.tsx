@@ -83,7 +83,7 @@ export default function SettingsHubScreen() {
           {personalAccount && shopSignup.data === true ? (
             <SettingsRow
               icon="storefront-outline"
-              label={t.merchant.shop_title}
+              label={t.merchant.switch_to_shop}
               hint={t.merchant.role_shop_hint}
               onPress={() => setShopSetupOpen(true)}
             />
