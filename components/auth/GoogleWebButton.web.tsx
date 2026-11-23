@@ -9,6 +9,20 @@ import { loadScript } from '../../lib/loadScript';
 const GOOGLE_WEB_CLIENT_ID = env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
 const GIS_SRC = 'https://accounts.google.com/gsi/client';
 
+// App languages Google's button has text for (checked 2026-11-23); for the rest Google
+// swaps in another language, sometimes the IP country's, so they get English.
+const GOOGLE_LOCALES = new Set([
+  'af', 'am', 'ar', 'az', 'be', 'bg', 'bn', 'bs', 'ca', 'cs', 'cy', 'da', 'de', 'el', 'en', 'es',
+  'et', 'eu', 'fa', 'fi', 'fr', 'ga', 'gl', 'gu', 'he', 'hi', 'hr', 'hu', 'hy', 'id', 'is', 'it',
+  'ja', 'ka', 'kk', 'km', 'kn', 'ko', 'ky', 'lo', 'lt', 'lv', 'mk', 'ml', 'mn', 'mr', 'ms', 'my',
+  'ne', 'nl', 'no', 'or', 'pa', 'pl', 'pt', 'ro', 'ru', 'si', 'sk', 'sl', 'sq', 'sr', 'sv', 'sw',
+  'ta', 'te', 'th', 'tl', 'tr', 'uk', 'ur', 'uz', 'vi', 'zh', 'zh-TW', 'zu',
+]);
+
+// `hl` on the script, not `locale`, sets the stand-in Google draws until its iframe loads
+// (for good on localhost); without it English browsers in Germany got German. Loaded once.
+let gisSrc: string | null = null;
+
 type GoogleId = {
   initialize: (config: {
     client_id: string;
@@ -85,7 +99,9 @@ export function GoogleWebButton({
     }
     if (!width || !container.current) return;
     let cancelled = false;
-    loadScript(GIS_SRC)
+    const locale = GOOGLE_LOCALES.has(langCode) ? langCode : 'en';
+    gisSrc ??= `${GIS_SRC}?hl=${locale}`;
+    loadScript(gisSrc)
       .then(() => {
         const id = window.google?.accounts.id;
         if (cancelled || !id || !container.current) return;
@@ -99,7 +115,7 @@ export function GoogleWebButton({
           text: 'continue_with',
           logo_alignment: 'center',
           width,
-          locale: langCode,
+          locale,
         });
       })
       .catch(() => {
