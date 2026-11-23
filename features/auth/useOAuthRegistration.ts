@@ -3,7 +3,9 @@ import { isAxiosError } from 'axios';
 
 import { useLanguage } from '../../context/LanguageContext';
 import { api } from '../../lib/api';
+import type { ShopSignupPayload } from '../../lib/shopSignup';
 import { useAuthStore } from '../../store/authStore';
+import { useSignupChoiceStore } from '../../store/signupChoiceStore';
 import type { AuthUser } from './useAuth';
 import {
   clearOAuthRegistrationSession,
@@ -11,12 +13,15 @@ import {
 } from './oauthRegistrationSession';
 
 export interface OAuthRegistrationInput {
-  birth_date: string;
+  birth_date?: string;
   consents: {
     consent_type: string;
     granted: boolean;
     document_version?: string;
   }[];
+  // D-200: a shop gives its opening month and category instead of a birth date.
+  account_type?: 'personal' | 'shop';
+  shop?: ShopSignupPayload;
 }
 
 export function useCompleteOAuthRegistration() {
@@ -47,6 +52,7 @@ export function useCompleteOAuthRegistration() {
     },
     onSuccess: async (user) => {
       clearOAuthRegistrationSession();
+      useSignupChoiceStore.getState().reset();
       await setLangCode(user.locale);
       await queryClient.invalidateQueries({ queryKey: ['odyssey'] });
     },

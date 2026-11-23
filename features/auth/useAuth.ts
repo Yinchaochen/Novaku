@@ -5,6 +5,8 @@ import { useLanguage } from '../../context/LanguageContext';
 import { api } from '../../lib/api';
 import { formDataWithFile } from '../../lib/formDataWithFile';
 import { addSentryBreadcrumb, reportToSentry } from '../../lib/sentry';
+import type { ShopSignupPayload } from '../../lib/shopSignup';
+import type { SignupShop } from '../merchants/types';
 import { useAuthStore } from '../../store/authStore';
 import { approximateCityLookupCoordinates } from './cityLocation';
 
@@ -65,6 +67,8 @@ export interface AuthUser {
   is_staff: boolean;
   /** D-159: a merchant account is a shop (no Odyssey, products on its page). */
   account_kind?: 'human' | 'organiser' | 'official' | 'merchant';
+  /** D-200: signed up as a shop and not set up yet; the app opens the shop welcome. */
+  signup_shop?: SignupShop | null;
   /** Account badge (D-063) — not the same as a source's verification_status. */
   is_verified?: boolean;
   is_vianter_plus: boolean;
@@ -133,9 +137,11 @@ export function useRegister() {
       password: string;
       display_name: string;
       locale?: string;
-      birth_date: string;
+      birth_date?: string;
       gender?: 'male' | 'female' | 'non_binary' | 'prefer_not_to_say';
       consents: { consent_type: string; granted: boolean; document_version?: string }[];
+      account_type?: 'personal' | 'shop';
+      shop?: ShopSignupPayload;
     }) => {
       await api.post('/auth/register', data);
       const login = await api.post('/auth/login', {

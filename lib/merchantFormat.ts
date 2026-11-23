@@ -84,3 +84,12 @@ export function hhmm(totalMinutes: number): string {
   const minutes = clamped % 60;
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
+
+/** "March 2019" in the reader's language, for a shop's opening month (D-200). */
+export function formatOpenedMonth(year: number, month: number, locale: string): string {
+  try {
+    return new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'long' }).format(new Date(year, month - 1, 1));
+  } catch {
+    return `${month}/${year}`;
+  }
+}

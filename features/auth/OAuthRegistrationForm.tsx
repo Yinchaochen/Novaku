@@ -4,15 +4,20 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
+import { AccountTypeChoice, ShopSignupFields } from '../../components/auth/AccountTypeFields';
 import { DatePicker } from '../../components/datetime/DatePicker';
 import { FeedbackPressable } from '../../components/FeedbackPressable';
 import { GradientButton } from '../../components/GradientButton';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { useLanguage } from '../../context/LanguageContext';
+import { shopSignupPayload } from '../../lib/shopSignup';
+import { useSignupChoiceStore } from '../../store/signupChoiceStore';
 import { colors, radius, spacing, typography } from '../../theme/tokens';
+import { useMerchantSignupStatus } from '../merchants/useMerchants';
 import type { OAuthRegistrationSession } from './oauthRegistrationSession';
 import { oauthErrorMessage } from './oauthErrorMessage';
-import { requiredOAuthRegistrationConsents } from './oauthRegistrationLegal';
+import { CONSENT_DOCUMENT_VERSION, requiredOAuthRegistrationConsents } from './oauthRegistrationLegal';
+import type { OAuthRegistrationInput } from './useOAuthRegistration';
 
 const MIN_BIRTH_DATE = new Date(1900, 0, 1);
 
@@ -20,14 +25,7 @@ interface Props {
   session: OAuthRegistrationSession;
   pending: boolean;
   errorCode: string | null;
-  onComplete: (input: {
-    birth_date: string;
-    consents: {
-      consent_type: string;
-      granted: boolean;
-      document_version: string;
-    }[];
-  }) => void;
+  onComplete: (input: OAuthRegistrationInput) => void;
   onCancel: () => void;
 }
 
@@ -48,14 +46,44 @@ export function OAuthRegistrationForm({
   const [birthDate, setBirthDate] = useState<Date | null>(null);
   const [acceptTos, setAcceptTos] = useState(false);
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
+  const [acceptUsageStats, setAcceptUsageStats] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const maximumBirthDate = useMemo(() => {
     const today = new Date();
     return new Date(today.getFullYear() - 16, today.getMonth(), today.getDate());
   }, []);
   const providerName = session.profile.provider === 'google' ? 'Google' : 'Apple';
+  // D-200: the choice made on the sign-up screen carries over; this screen can change it.
+  const shopSignupOpen = useMerchantSignupStatus(true).data === true;
+  const accountType = useSignupChoiceStore((s) => s.accountType);
+  const setAccountType = useSignupChoiceStore((s) => s.setAccountType);
+  const shopDraft = useSignupChoiceStore((s) => s.shopDraft);
+  const setShopDraft = useSignupChoiceStore((s) => s.setShopDraft);
+  const isShop = shopSignupOpen && accountType === 'shop';
+  const consents = () => [
+    ...requiredOAuthRegistrationConsents(),
+    {
+      consent_type: 'cookies_analytics',
+      granted: acceptUsageStats,
+      document_version: CONSENT_DOCUMENT_VERSION,
+    },
+  ];
 
   const submit = () => {
+    if (isShop) {
+      const shop = shopSignupPayload(shopDraft);
+      if (!shop) {
+        setLocalError(t.merchant.signup_incomplete);
+        return;
+      }
+      if (!acceptTos || !acceptPrivacy) {
+        setLocalError(t.auth.errors.consent_required);
+        return;
+      }
+      setLocalError(null);
+      onComplete({ account_type: 'shop', shop, consents: consents() });
+      return;
+    }
     if (!birthDate) {
       setLocalError(t.auth.birth_year_hint);
       return;
@@ -71,7 +99,7 @@ export function OAuthRegistrationForm({
     setLocalError(null);
     onComplete({
       birth_date: localDateValue(birthDate),
-      consents: requiredOAuthRegistrationConsents(),
+      consents: consents(),
     });
   };
 
@@ -122,27 +150,47 @@ export function OAuthRegistrationForm({
         </View>
       </SurfaceCard>
 
-      <View>
-        <Text style={[typography.bodyStrong, { color: colors.textMain, marginBottom: spacing.sm }]}>
-          {t.auth.birth_year_label}
-        </Text>
-        <DatePicker
-          testID="auth.oauth.birth-date"
-          value={birthDate}
+      {shopSignupOpen ? (
+        <AccountTypeChoice
+          value={accountType}
           onChange={(value) => {
-            setBirthDate(value);
+            setAccountType(value);
             setLocalError(null);
           }}
-          placeholder={t.auth.birth_year_placeholder}
-          minDate={MIN_BIRTH_DATE}
-          maxDate={maximumBirthDate}
-          initialViewDate={new Date(maximumBirthDate.getFullYear() - 2, 0, 1)}
-          height={54}
         />
-        <Text style={[typography.caption, { color: colors.textMuted, marginTop: spacing.sm }]}>
-          {t.auth.birth_year_hint}
-        </Text>
-      </View>
+      ) : null}
+
+      {isShop ? (
+        <ShopSignupFields
+          draft={shopDraft}
+          onChange={(draft) => {
+            setShopDraft(draft);
+            setLocalError(null);
+          }}
+        />
+      ) : (
+        <View>
+          <Text style={[typography.bodyStrong, { color: colors.textMain, marginBottom: spacing.sm }]}>
+            {t.auth.birth_year_label}
+          </Text>
+          <DatePicker
+            testID="auth.oauth.birth-date"
+            value={birthDate}
+            onChange={(value) => {
+              setBirthDate(value);
+              setLocalError(null);
+            }}
+            placeholder={t.auth.birth_year_placeholder}
+            minDate={MIN_BIRTH_DATE}
+            maxDate={maximumBirthDate}
+            initialViewDate={new Date(maximumBirthDate.getFullYear() - 2, 0, 1)}
+            height={54}
+          />
+          <Text style={[typography.caption, { color: colors.textMuted, marginTop: spacing.sm }]}>
+            {t.auth.birth_year_hint}
+          </Text>
+        </View>
+      )}
 
       <View style={{ gap: spacing.md }}>
         <ConsentRow
@@ -164,6 +212,11 @@ export function OAuthRegistrationForm({
             setLocalError(null);
           }}
           onLink={() => router.push('/legal/datenschutz' as never)}
+        />
+        <ConsentRow
+          checked={acceptUsageStats}
+          label={t.auth.consent_usage_label}
+          onToggle={() => setAcceptUsageStats((value) => !value)}
         />
       </View>
 
@@ -206,9 +259,9 @@ function ConsentRow({
 }: {
   checked: boolean;
   label: string;
-  linkLabel: string;
+  linkLabel?: string;
   onToggle: () => void;
-  onLink: () => void;
+  onLink?: () => void;
 }) {
   const parts = label.split(/\{(?:tos|privacy)\}/);
   return (
@@ -216,7 +269,7 @@ function ConsentRow({
       <FeedbackPressable
         onPress={onToggle}
         accessibilityRole="checkbox"
-        accessibilityLabel={label.replace(/\{(?:tos|privacy)\}/, linkLabel)}
+        accessibilityLabel={linkLabel ? label.replace(/\{(?:tos|privacy)\}/, linkLabel) : label}
         accessibilityState={{ checked }}
         style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
         pressedStyle={{ opacity: 0.7 }}
@@ -240,17 +293,19 @@ function ConsentRow({
         <Text style={[typography.caption, { flexShrink: 1, color: colors.textMuted, lineHeight: 21 }]}>
           {parts[0]}
         </Text>
-        <FeedbackPressable
-          onPress={onLink}
-          accessibilityRole="link"
-          accessibilityLabel={linkLabel}
-          style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
-          pressedStyle={{ opacity: 0.7 }}
-        >
-          <Text style={[typography.caption, { color: colors.brandCoral, fontWeight: '700' }]}>
-            {linkLabel}
-          </Text>
-        </FeedbackPressable>
+        {linkLabel && onLink ? (
+          <FeedbackPressable
+            onPress={onLink}
+            accessibilityRole="link"
+            accessibilityLabel={linkLabel}
+            style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
+            pressedStyle={{ opacity: 0.7 }}
+          >
+            <Text style={[typography.caption, { color: colors.brandCoral, fontWeight: '700' }]}>
+              {linkLabel}
+            </Text>
+          </FeedbackPressable>
+        ) : null}
         <Text style={[typography.caption, { flexShrink: 1, color: colors.textMuted, lineHeight: 21 }]}>
           {parts[1] ?? ''}
         </Text>

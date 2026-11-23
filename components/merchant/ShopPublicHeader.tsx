@@ -3,9 +3,10 @@ import { Image } from 'expo-image';
 import { Pressable, Text, View } from 'react-native';
 
 import { ShopChip } from './ShopChip';
-import { ShopStatusLine } from './ShopPanes';
+import { ShopStatusLine, openedSinceLabel } from './ShopPanes';
 import { useLanguage } from '../../context/LanguageContext';
 import type { Merchant } from '../../features/merchants/types';
+import { openExternalUrl } from '../../lib/links';
 import { resolveMediaUrl } from '../../lib/media';
 import { colors } from '../../theme/tokens';
 
@@ -22,8 +23,10 @@ export function ShopPublicHeader({
   onToggleFollow: () => void;
   onDirections: () => void;
 }) {
-  const { t } = useLanguage();
+  const { t, langCode } = useLanguage();
   const avatar = resolveMediaUrl(shop.avatar_url);
+  const online = shop.kind === 'online';
+  const openedSince = openedSinceLabel(t, langCode, shop);
   return (
     <View testID="shop.public-header" style={{ paddingHorizontal: 20, paddingTop: 18, paddingBottom: 18, gap: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
@@ -52,15 +55,26 @@ export function ShopPublicHeader({
           </Text>
         </View>
       ) : null}
+      {openedSince ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Ionicons name="calendar-outline" size={16} color={colors.textMuted} />
+          <Text testID="shop.opened-since" style={{ flex: 1, fontSize: 14, color: colors.textBrown }}>
+            {openedSince}
+          </Text>
+        </View>
+      ) : null}
       <View style={{ flexDirection: 'row', gap: 10 }}>
+        {/* An online shop has no way there, only its website. */}
         <Pressable
-          testID="shop.directions"
+          testID={online ? 'shop.website' : 'shop.directions'}
           accessibilityRole="button"
-          onPress={onDirections}
+          onPress={online ? () => shop.website_url && void openExternalUrl(shop.website_url) : onDirections}
           style={{ flex: 1, minHeight: 46, borderRadius: 999, backgroundColor: colors.brandCoral, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
         >
-          <Ionicons name="navigate-outline" size={16} color="#FFFFFF" />
-          <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF' }}>{t.merchant.directions}</Text>
+          <Ionicons name={online ? 'globe-outline' : 'navigate-outline'} size={16} color="#FFFFFF" />
+          <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF' }}>
+            {online ? t.merchant.visit_website : t.merchant.directions}
+          </Text>
         </Pressable>
         <Pressable
           testID="shop.follow"

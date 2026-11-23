@@ -57,6 +57,10 @@ jest.mock('../../../lib/rememberedEmail', () => ({
   setRememberedEmail: jest.fn(),
 }));
 jest.mock('../../../components/datetime/DatePicker', () => ({ DatePicker: () => null }));
+// Shop sign-up closed: the screen renders the personal form, as before D-200.
+jest.mock('../../../features/merchants/useMerchants', () => ({
+  useMerchantSignupStatus: () => ({ data: false }),
+}));
 
 type RenderNode = {
   children?: Array<RenderNode | string> | null;

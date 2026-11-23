@@ -78,6 +78,7 @@ import { addSentryBreadcrumb, reportToSentry } from '../lib/sentry';
 import { consumeAuthReturnPath, rememberAuthReturnPath } from '../lib/authReturnPath';
 import { queryClient } from '../lib/queryClient';
 import { usePushNotifications } from '../lib/push';
+import { useScreenTracking } from '../hooks/useScreenTracking';
 import { useAuthStore } from '../store/authStore';
 
 const STARTUP_TIMEOUT_MS = 3000;
@@ -168,6 +169,12 @@ export default RootLayout;
  *  provider its tap reporting needs. Renders nothing. */
 function PushNotificationsBridge() {
   usePushNotifications();
+  return null;
+}
+
+/** Records how long each screen stays open (D-200). Renders nothing. */
+function ScreenTrackingBridge() {
+  useScreenTracking();
   return null;
 }
 
@@ -331,6 +338,7 @@ function AppBody() {
       }}
     >
       <PushNotificationsBridge />
+      <ScreenTrackingBridge />
       <StatusBar style="dark" />
       {isAuthenticated ? <PendingDeletionBanner /> : null}
       <NetworkHealthBanner />

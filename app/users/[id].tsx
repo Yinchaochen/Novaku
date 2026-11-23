@@ -141,7 +141,10 @@ export default function UserProfileScreen() {
       return [
         { key: 'products', label: t.merchant.tab_products },
         { key: 'notes', label: t.merchant.tab_posts },
-        { key: 'hours', label: t.merchant.tab_hours },
+        {
+          key: 'hours',
+          label: shopQuery.data?.kind === 'online' ? t.merchant.info_subtitle : t.merchant.tab_hours,
+        },
       ];
     }
     const all: { key: UserProfileTab; label: string; visible: boolean }[] = [
@@ -153,7 +156,7 @@ export default function UserProfileScreen() {
     return all
       .filter((tab) => profileData.viewer_is_self || tab.visible)
       .map(({ key, label }) => ({ key, label }));
-  }, [profileData, t]);
+  }, [profileData, shopQuery.data?.kind, t]);
 
   const [activeTab, setActiveTab] = useState<UserProfileTab>('notes');
   useEffect(() => {

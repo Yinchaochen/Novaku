@@ -42,6 +42,13 @@ We collect information in three ways: information you give us, information that'
 - Gender (one of male, female, non-binary, or prefer-not-to-say)
 - Your preferred app language
 
+**Information you give us when you sign up as a shop**
+
+- Instead of a date of birth: the month and year the shop opened, its category, and your confirmation that you are at least 18 and may register the shop
+- For a shop with premises: the place you pick on the map (name, address and position from Google Maps), opening hours and phone number. We fill these in from Google Maps when you pick the place, and you can change them.
+- For an online shop: its name, the address of its website and of its legal notice (Impressum), and a phone number if you add one
+- The products you list: name, price, description and photos
+
 **Information you give us during onboarding and on your profile**
 
 - Current city and (optionally) origin city
@@ -69,8 +76,10 @@ We collect information in three ways: information you give us, information that'
 - Device information: device model, operating system version, app version, language, time zone, screen size, and a device identifier scoped to Postervia
 - Approximate location: if you grant the location permission during onboarding or later, we store the latitude and longitude you confirm. You can also enter your city manually without sharing precise location.
 - Interaction events on Plaza: which cards you saw (impressions), how long you viewed a post (dwell time), and whether you marked it helpful, saved it, added it to your tasks, hid it, or reported it. We use these signals to rank what we show you. We keep these events for 180 days and then delete them.
+- Usage statistics, only if you switch them on (when you sign up, or later under Settings → Consent manager): which screens of the app you open and how long you stay on each, with the app version and platform. We use them to see which parts of the app help people and where they get stuck. We keep them for 180 days. Switching them off stops the recording and deletes what we have.
 - Crash reports and basic diagnostic logs so we can fix bugs
 - IP address, which we use briefly for security checks and to localize content; we do not build a long-term log of your IP history
+- Where your device is when you publish a Plaza post, if you have granted the location permission: the app rounds the position to about a kilometre and sends it once, so we can name the city the post was written in. We keep the city, not the position. Without the permission, or when the text and the tagged places leave the city unclear, we ask an AI model to read the post and name the city it is about.
 
 **Information from third parties**
 
@@ -106,7 +115,7 @@ We use your information to operate Postervia and to keep it safe. Specifically:
 We rely on the following legal bases under Article 6 of the EU General Data Protection Regulation:
 
 - **Performance of a contract (Art. 6(1)(b))** — for account creation, hosting your posts and chats, processing your subscription, and delivering features you've asked for.
-- **Consent (Art. 6(1)(a))** — for optional marketing emails, optional precise-location use, and any cookies or analytics that aren't strictly necessary. You can withdraw consent at any time without affecting prior processing.
+- **Consent (Art. 6(1)(a))** — for optional marketing emails, optional precise-location use, optional usage statistics, and any cookies or analytics that aren't strictly necessary. For usage statistics, consent is also our basis under § 25(1) of the German TDDDG. You can withdraw consent at any time without affecting prior processing.
 - **Legitimate interest (Art. 6(1)(f))** — for anti-abuse, fraud prevention, ranking quality, and aggregate analytics, where these don't override your fundamental rights.
 - **Legal obligation (Art. 6(1)(c))** — for tax records, lawful access requests, and statutory retention requirements.
 
@@ -120,7 +129,9 @@ We do not sell your personal data. We share it only in the narrow ways described
 
 - Your display name, display ID, profile photo, city, identity tag, bio, and the tabs you've made public are visible to anyone who finds your profile in the app.
 - Posts and buddy posts you publish are visible to all users of the app, subject to your privacy preferences.
+- A Plaza post shows the city it is filed under: the place you tagged in it, or else the city your device was in when you published, or else the city the text names.
 - Comments and reactions you leave are attached to your profile.
+- A shop account's name, category, opening month, address or website, opening hours, phone number, legal-notice link and products are public, because shops join Postervia to be found.
 - If you chat one-on-one or in a group, the other participants see your messages.
 
 **On the public web, when a post is shared (share links)**
@@ -139,6 +150,7 @@ We do not sell your personal data. We share it only in the narrow ways described
 - **DeepL** translates posts, comments, and messages on demand.
 - **Perplexity** and **Tavily** answer queries that require fresh real-world information.
 - **Google Sign-In** and **Apple Sign-In** authenticate users who choose those flows.
+- **Google Maps Platform** (Places) finds the places you tag in posts and the place a shop picks on the map, with its opening hours, phone number and website. We send the search text or the chosen place, not your account identity.
 - Standard infrastructure providers (hosting, email delivery, error reporting, push-notification delivery) under written data-processing agreements.
 
 We require every processor to handle your data only on documented instructions, to apply appropriate security, and to delete the data when our agreement ends.
@@ -162,6 +174,8 @@ We keep different categories of data for different periods:
 - **Account profile** — for as long as your account exists. After deletion, we keep a minimal record (your numeric display ID and the fact that an account once existed) for up to 30 days so we can finish processing requests, then we hard-delete it.
 - **Posts, comments, and chat messages you create** — for as long as your account exists. When you delete a post, comment, or chat message, we remove it from the app immediately; backups containing it are overwritten within 30 days.
 - **Recommendation events** (impressions, dwell, helpful, saves, hides, reports) — 180 days, then automatically deleted.
+- **Usage statistics** — 180 days, or until you switch them off.
+- **Shop details and products** — for as long as the shop account exists.
 - **Author trust score** — recomputed nightly from a rolling 60-day event window. The current score is kept while your account exists.
 - **Buddy posts** — active posts disappear from the feed when they expire (the time window or return date has passed). The database row is retained for safety review and to inform future recommendations, unless you ask us to delete it.
 - **Payment records** — we keep invoices and tax records for the period required by German and EU law (currently 10 years for VAT records under § 147 AO).
@@ -189,7 +203,7 @@ You can exercise the access, portability, erasure, rectification, and restrictio
 
 Postervia is intended for users aged 16 and over. We do not knowingly collect data from anyone under 16. If you are under 16, please do not register or use the app.
 
-When you sign up, we ask for your date of birth. If you appear to be under 16, we will not create an account. If we later learn that a registered user is under 16, we will delete the account and associated data.
+When you sign up for a personal account, we ask for your date of birth. If you appear to be under 16, we will not create an account. If we later learn that a registered user is under 16, we will delete the account and associated data. Shop accounts are for people aged 18 and over, and whoever signs up a shop confirms this.
 
 ## Security
 
@@ -256,6 +270,13 @@ Wir erheben Daten auf drei Wegen: Daten, die du uns selbst gibst, Daten, die bei
 - Geschlecht (männlich, weiblich, nicht-binär oder „keine Angabe")
 - Deine bevorzugte App-Sprache
 
+**Daten, die du bei der Registrierung als Laden angibst**
+
+- Statt eines Geburtsdatums: Monat und Jahr der Eröffnung, die Kategorie des Ladens und deine Bestätigung, dass du mindestens 18 bist und den Laden anmelden darfst
+- Bei einem Laden vor Ort: den Ort, den du auf der Karte auswählst (Name, Adresse und Position aus Google Maps), Öffnungszeiten und Telefonnummer. Wir übernehmen diese Angaben aus Google Maps, wenn du den Ort auswählst, und du kannst sie ändern.
+- Bei einem Onlineshop: seinen Namen, die Adresse der Website und des Impressums sowie eine Telefonnummer, wenn du eine angibst
+- Die Produkte, die du einstellst: Name, Preis, Beschreibung und Fotos
+
 **Daten, die du beim Onboarding und im Profil angibst**
 
 - Aktuelle Stadt und (optional) Herkunftsstadt
@@ -283,8 +304,10 @@ Wir erheben Daten auf drei Wegen: Daten, die du uns selbst gibst, Daten, die bei
 - Geräteinformationen: Gerätemodell, Betriebssystemversion, App-Version, Sprache, Zeitzone, Bildschirmgröße sowie eine auf Postervia beschränkte Geräte-ID
 - Ungefährer Standort: Wenn du beim Onboarding oder später die Standortberechtigung erteilst, speichern wir die von dir bestätigten Koordinaten. Du kannst deine Stadt auch manuell eingeben, ohne den genauen Standort zu teilen.
 - Interaktions-Events auf Plaza: welche Karten dir angezeigt wurden (Impressionen), wie lange du einen Beitrag betrachtet hast (Verweildauer), ob du ihn als hilfreich markiert, gespeichert, zu deinen Aufgaben hinzugefügt, verborgen oder gemeldet hast. Wir nutzen diese Signale zur Reihenfolge der Empfehlungen. Wir bewahren diese Events 180 Tage auf und löschen sie dann automatisch.
+- Nutzungsstatistik, nur wenn du sie einschaltest (bei der Registrierung oder später unter Einstellungen → Einwilligungen verwalten): welche Seiten der App du öffnest und wie lange du jeweils bleibst, dazu App-Version und Plattform. Daran sehen wir, welche Teile der App Menschen helfen und wo sie hängen bleiben. Wir speichern sie 180 Tage. Schaltest du sie aus, zeichnen wir nichts mehr auf und löschen, was wir haben.
 - Absturzberichte und einfache Diagnose-Logs zur Fehlerbehebung
 - IP-Adresse, kurzfristig für Sicherheitsprüfungen und Lokalisierung; wir führen kein Langzeit-Protokoll deiner IP-Adressen.
+- Der Standort deines Geräts beim Veröffentlichen eines Plaza-Beitrags, wenn du die Standortberechtigung erteilt hast: Die App rundet die Position auf etwa einen Kilometer und sendet sie einmalig, damit wir die Stadt benennen können, in der der Beitrag entstanden ist. Wir speichern die Stadt, nicht die Position. Ohne Berechtigung, oder wenn Text und markierte Orte die Stadt offenlassen, lassen wir ein KI-Modell den Beitrag lesen und die Stadt benennen, um die es geht.
 
 **Daten von Dritten**
 
@@ -320,7 +343,7 @@ Wir verwenden deine Daten, um Postervia zu betreiben und sicher zu halten. Konkr
 Wir stützen uns auf folgende Rechtsgrundlagen nach Artikel 6 DSGVO:
 
 - **Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO)** — für Kontoerstellung, Hosting deiner Beiträge und Chats, Abwicklung deines Abonnements und Bereitstellung gewünschter Funktionen.
-- **Einwilligung (Art. 6 Abs. 1 lit. a DSGVO)** — für optionale Marketing-E-Mails, optionale präzise Standortdaten sowie nicht notwendige Cookies oder Analysen. Du kannst die Einwilligung jederzeit ohne Auswirkung auf bisherige Verarbeitungen widerrufen.
+- **Einwilligung (Art. 6 Abs. 1 lit. a DSGVO)** — für optionale Marketing-E-Mails, optionale präzise Standortdaten, die optionale Nutzungsstatistik sowie nicht notwendige Cookies oder Analysen. Für die Nutzungsstatistik ist die Einwilligung zugleich unsere Grundlage nach § 25 Abs. 1 TDDDG. Du kannst die Einwilligung jederzeit ohne Auswirkung auf bisherige Verarbeitungen widerrufen.
 - **Berechtigtes Interesse (Art. 6 Abs. 1 lit. f DSGVO)** — zur Missbrauchsabwehr, Betrugsprävention, Empfehlungsqualität und aggregierten Analyse, soweit deine Grundrechte nicht überwiegen.
 - **Rechtliche Verpflichtung (Art. 6 Abs. 1 lit. c DSGVO)** — für Steuerunterlagen, behördliche Auskunftsersuchen und gesetzliche Aufbewahrungspflichten.
 
@@ -334,7 +357,9 @@ Wir verkaufen deine personenbezogenen Daten nicht. Wir geben sie nur in den folg
 
 - Anzeigename, Display-ID, Profilbild, Stadt, Identitäts-Tag, Bio und die von dir öffentlich gestellten Tabs sind für jeden sichtbar, der dein Profil in der App findet.
 - Von dir veröffentlichte Beiträge und Buddy-Posts sind für alle Nutzer der App sichtbar, vorbehaltlich deiner Sichtbarkeitseinstellungen.
+- Ein Plaza-Beitrag zeigt die Stadt, der er zugeordnet ist: den Ort, den du im Beitrag markiert hast, sonst die Stadt, in der dein Gerät beim Veröffentlichen war, sonst die Stadt, die der Text nennt.
 - Deine Kommentare und Reaktionen sind deinem Profil zugeordnet.
+- Name, Kategorie, Eröffnungsmonat, Adresse oder Website, Öffnungszeiten, Telefonnummer, Impressum-Link und Produkte eines Ladenkontos sind öffentlich, denn Läden sind auf Postervia, um gefunden zu werden.
 - In Einzel- oder Gruppenchats sehen die Teilnehmer deine Nachrichten.
 
 **Im offenen Web, wenn ein Beitrag geteilt wird (Teilen-Links)**
@@ -353,6 +378,7 @@ Wir verkaufen deine personenbezogenen Daten nicht. Wir geben sie nur in den folg
 - **DeepL** übersetzt Beiträge, Kommentare und Nachrichten auf Anforderung.
 - **Perplexity** und **Tavily** beantworten Anfragen, die aktuelle Informationen benötigen.
 - **Google Sign-In** und **Apple Sign-In** authentifizieren Nutzer, die diese Verfahren wählen.
+- **Google Maps Platform** (Places) findet die Orte, die du in Beiträgen markierst, und den Ort, den ein Laden auf der Karte auswählt, samt Öffnungszeiten, Telefonnummer und Website. Wir senden den Suchtext oder den gewählten Ort, nicht deine Kontoidentität.
 - Standard-Infrastrukturanbieter (Hosting, E-Mail-Zustellung, Fehler-Reporting, Push-Benachrichtigungen) auf Basis schriftlicher Auftragsverarbeitungsverträge.
 
 Wir verpflichten jeden Auftragsverarbeiter, deine Daten ausschließlich auf dokumentierte Weisung zu verarbeiten, angemessene Sicherheitsmaßnahmen anzuwenden und die Daten nach Vertragsende zu löschen.
@@ -376,6 +402,8 @@ Wir bewahren verschiedene Datenkategorien unterschiedlich lange auf:
 - **Kontoprofil** — solange dein Konto besteht. Nach der Löschung halten wir einen minimalen Datensatz (deine Display-ID und die Tatsache, dass ein Konto bestand) bis zu 30 Tage vor, um Anfragen abzuschließen, und löschen ihn dann endgültig.
 - **Beiträge, Kommentare und Chat-Nachrichten** — solange dein Konto besteht. Beim Löschen eines Beitrags, Kommentars oder einer Chat-Nachricht entfernen wir sie sofort aus der App; Backups, die sie enthalten, werden binnen 30 Tagen überschrieben.
 - **Empfehlungs-Events** (Impressionen, Verweildauer, Hilfreich-Markierungen, Saves, Verbergungen, Meldungen) — 180 Tage, dann automatische Löschung.
+- **Nutzungsstatistik** — 180 Tage oder bis du sie ausschaltest.
+- **Ladendaten und Produkte** — solange das Ladenkonto besteht.
 - **Autor-Trust-Score** — wird nächtlich aus einem 60-Tage-rollenden Ereignisfenster neu berechnet. Der aktuelle Wert bleibt bestehen, solange dein Konto besteht.
 - **Buddy-Posts** — aktive Posts verschwinden bei Ablauf (Zeitfenster oder Rückreisedatum überschritten) aus dem Feed. Der Datenbankeintrag bleibt zur Sicherheitsprüfung und Empfehlungslogik erhalten, sofern du keine Löschung verlangst.
 - **Zahlungsunterlagen** — Rechnungen und Steuerunterlagen werden für die nach deutschem und EU-Recht erforderliche Dauer aufbewahrt (derzeit 10 Jahre für umsatzsteuerrelevante Belege gemäß § 147 AO).
@@ -403,7 +431,7 @@ Auskunfts-, Übertragbarkeits-, Lösch-, Berichtigungs- und Einschränkungsrecht
 
 Postervia richtet sich an Nutzer ab 16 Jahren. Wir erheben wissentlich keine Daten von Personen unter 16 Jahren. Wenn du unter 16 bist, registriere dich bitte nicht und nutze die App nicht.
 
-Bei der Registrierung fragen wir dein Geburtsdatum ab. Erscheinst du unter 16 zu sein, legen wir kein Konto an. Erfahren wir später, dass ein registrierter Nutzer unter 16 ist, löschen wir das Konto und die zugehörigen Daten.
+Bei der Registrierung eines persönlichen Kontos fragen wir dein Geburtsdatum ab. Erscheinst du unter 16 zu sein, legen wir kein Konto an. Erfahren wir später, dass ein registrierter Nutzer unter 16 ist, löschen wir das Konto und die zugehörigen Daten. Ladenkonten sind für Personen ab 18 Jahren; wer einen Laden registriert, bestätigt das.
 
 ## Sicherheit
 

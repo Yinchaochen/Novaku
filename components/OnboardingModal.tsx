@@ -25,7 +25,7 @@ import {
   useResolveCityFromCoordinates,
   useUpdateProfile,
 } from '../features/auth/useAuth';
-import { isMerchant, useMerchantSignupStatus } from '../features/merchants/useMerchants';
+import { isMerchant, type ShopKind } from '../features/merchants/useMerchants';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { useAuthStore } from '../store/authStore';
 
@@ -33,7 +33,6 @@ import { useAuthStore } from '../store/authStore';
 type Step = 'city' | 'intent' | 'stage';
 // 'shop': an existing personal account turns into a shop, starting at the shop steps.
 type Mode = 'required' | 'edit' | 'shop';
-type Role = 'personal' | 'shop';
 
 type SelectedCity = {
   name: string;
@@ -92,16 +91,13 @@ export function OnboardingModal({
   const [locationSource, setLocationSource] = useState<'device' | 'manual' | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   // D-195: a first-time setup may start with "personal or shop", while the shop sign-up flag is on.
-  const [role, setRole] = useState<Role | null>(null);
-  const [roleChoice, setRoleChoice] = useState<Role>('personal');
-  const [shopStep, setShopStep] = useState<ShopSetupStep>('find');
-  const askRole = visible && mode === 'required' && !isMerchant(user);
-  const signupStatus = useMerchantSignupStatus(askRole);
-  const offerRole = askRole && signupStatus.data === true;
-  const roleUnknown = askRole && signupStatus.isLoading;
-  const showRoleStep = offerRole && role === null;
+  const [shopStep, setShopStep] = useState<ShopSetupStep>('kind');
+  const [shopKind, setShopKind] = useState<ShopKind | null>(null);
+  // "Person or shop" is asked at sign-up now (D-200): a shop that just signed up goes
+  // straight into the shop setup, everyone else into the personal welcome.
+  const pendingShop = Boolean(user?.signup_shop) && !isMerchant(user);
   const shopOnly = mode === 'shop';
-  const inShop = (offerRole && role === 'shop') || shopOnly;
+  const inShop = pendingShop || shopOnly;
 
   const debouncedCityQuery = useDebouncedValue(cityQuery.trim(), 350);
   const activeCityQuery = deepQuery || debouncedCityQuery;
@@ -135,13 +131,13 @@ export function OnboardingModal({
     setSelectedStage(user.arrival_stage ?? defaultArrivalStage(user.identity));
     setLocationSource(user.location_source ?? null);
     setFeedback(null);
-    setRole(null);
-    setRoleChoice('personal');
-    setShopStep('find');
+    setShopStep('kind');
+    setShopKind(null);
   }, [visible, user?.id, mode]);
 
   const suggestions = citySuggestions.data ?? [];
-  const canDismiss = mode !== 'required';
+  // Once the shop exists (last step) there is nothing left to cancel; its button finishes.
+  const canDismiss = mode !== 'required' && !(inShop && shopStep === 'next');
   const isBusy = updateProfile.isPending || resolveCity.isPending;
   const canContinueFromCity = Boolean(selectedCity?.name);
   const canContinueFromIntent = selectedIntents.length > 0;
@@ -252,26 +248,24 @@ export function OnboardingModal({
     router.replace('/(tabs)/profile');
   };
 
-  const progressSteps: string[] = offerRole
-    ? ['role', 'one', 'two', 'three']
-    : shopOnly
-      ? ['one', 'two', 'three']
-      : STEPS;
-  const progressCurrent = showRoleStep
-    ? 'role'
-    : inShop
-      ? ({ find: 'one', info: 'two', next: 'three' } as const)[shopStep]
-      : offerRole
-        ? ({ city: 'one', intent: 'two', stage: 'three' } as const)[step]
-        : step;
-  const headerTitle = showRoleStep ? t.merchant.role_title : inShop ? t.merchant.shop_title : t.onboarding.title;
-  const headerSubtitle = showRoleStep
-    ? t.merchant.role_subtitle
-    : inShop
-      ? { find: t.merchant.find_subtitle, info: t.merchant.info_subtitle, next: t.merchant.next_subtitle }[shopStep]
-      : step === 'city'
-        ? t.onboarding.city_step_title
-        : t.onboarding.persona_step_title;
+  const progressSteps: string[] = inShop
+    ? shopKind === 'online'
+      ? ['kind', 'online', 'next']
+      : ['kind', 'find', 'info', 'next']
+    : STEPS;
+  const progressCurrent = inShop ? shopStep : step;
+  const headerTitle = inShop ? t.merchant.shop_title : t.onboarding.title;
+  const headerSubtitle = inShop
+    ? {
+        kind: t.merchant.kind_title,
+        find: t.merchant.find_subtitle,
+        info: t.merchant.info_subtitle,
+        online: t.merchant.kind_online,
+        next: t.merchant.next_subtitle,
+      }[shopStep]
+    : step === 'city'
+      ? t.onboarding.city_step_title
+      : t.onboarding.persona_step_title;
 
   return (
     <Modal
@@ -311,60 +305,20 @@ export function OnboardingModal({
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            {roleUnknown ? (
-              <View className="items-center py-8">
-                <ActivityIndicator color="#FF9F6E" />
-              </View>
-            ) : null}
-
-            {showRoleStep ? (
-              <View>
-                <View className="gap-3">
-                  {(['personal', 'shop'] as const).map((item) => {
-                    const active = roleChoice === item;
-                    return (
-                      <Pressable
-                        key={item}
-                        testID={`onboarding.role.${item}`}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected: active }}
-                        onPress={() => setRoleChoice(item)}
-                        className={`flex-row items-center gap-3 rounded-3xl border-2 px-4 py-4 ${active ? 'border-primary bg-primary/10' : 'border-gray-200 bg-white'}`}
-                      >
-                        <View className="flex-1">
-                          <Text className="text-base font-bold text-gray-900">
-                            {item === 'personal' ? t.merchant.role_personal : t.merchant.role_shop}
-                          </Text>
-                          <Text className="mt-1 text-sm leading-5 text-gray-600">
-                            {item === 'personal' ? t.merchant.role_personal_hint : t.merchant.role_shop_hint}
-                          </Text>
-                        </View>
-                        <Ionicons name={active ? 'checkmark-circle' : 'ellipse-outline'} size={24} color={active ? '#FF9F6E' : '#D1D5DB'} />
-                      </Pressable>
-                    );
-                  })}
-                </View>
-                <Pressable
-                  testID="onboarding.role.continue"
-                  accessibilityRole="button"
-                  onPress={() => setRole(roleChoice)}
-                  className="mt-5 rounded-3xl bg-primary px-4 py-3"
-                >
-                  <Text className="text-center text-base font-bold text-white">{t.guide.continue_step}</Text>
-                </Pressable>
-              </View>
-            ) : null}
-
             {inShop ? (
               <ShopSetupSteps
                 step={shopStep}
                 onStepChange={setShopStep}
-                onBackToRole={shopOnly ? (onCancel ?? onDone) : () => setRole(null)}
+                kind={shopKind}
+                onKindChange={setShopKind}
+                signupShop={user?.signup_shop}
+                signupName={user?.display_name}
+                onExit={shopOnly ? (onCancel ?? onDone) : undefined}
                 onFinished={finishShop}
               />
             ) : null}
 
-            {!roleUnknown && !showRoleStep && !inShop && step === 'city' ? (
+            {!inShop && step === 'city' ? (
               <View>
                 <Text className="mb-2 text-base font-semibold text-gray-900">
                   {t.onboarding.city_prompt}
@@ -458,16 +412,6 @@ export function OnboardingModal({
                 </View>
 
                 <View className="mt-5 flex-row gap-3">
-                  {offerRole ? (
-                    <Pressable
-                      testID="onboarding.city.back"
-                      onPress={() => setRole(null)}
-                      accessibilityRole="button"
-                      className="flex-1 rounded-3xl bg-gray-100 px-4 py-3"
-                    >
-                      <Text className="text-center text-base font-semibold text-gray-600">{t.common.back}</Text>
-                    </Pressable>
-                  ) : null}
                   <Pressable
                     testID="onboarding.city.continue"
                     onPress={() => setStep('intent')}
@@ -486,7 +430,7 @@ export function OnboardingModal({
               </View>
             ) : null}
 
-            {!roleUnknown && !showRoleStep && !inShop && step === 'intent' ? (
+            {!inShop && step === 'intent' ? (
               <View>
                 <View className="mb-4 rounded-3xl bg-primary/5 px-4 py-3">
                   <Text className="text-xs font-bold uppercase tracking-[1px] text-primary/70">
@@ -553,7 +497,7 @@ export function OnboardingModal({
               </View>
             ) : null}
 
-            {!roleUnknown && !showRoleStep && !inShop && step === 'stage' ? (
+            {!inShop && step === 'stage' ? (
               <View>
                 <Text className="mb-2 text-base font-semibold text-gray-900">
                   {t.onboarding.stage_prompt}

@@ -13,7 +13,7 @@ import {
   useShopProducts,
 } from '../../features/merchants/useMerchants';
 import { openExternalUrl } from '../../lib/links';
-import { formatPrice, formatRanges } from '../../lib/merchantFormat';
+import { formatOpenedMonth, formatPrice, formatRanges } from '../../lib/merchantFormat';
 import { resolveMediaUrl } from '../../lib/media';
 import { colors } from '../../theme/tokens';
 
@@ -39,12 +39,27 @@ export function priceLabel(t: T, langCode: string, cents: number | null, currenc
 export function mapsUrl(shop: Pick<Merchant, 'latitude' | 'longitude' | 'place_id' | 'place_name'>): string {
   const query =
     shop.latitude !== null && shop.longitude !== null ? `${shop.latitude},${shop.longitude}` : shop.place_name;
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}&query_place_id=${encodeURIComponent(shop.place_id)}`;
+  const placeParam = shop.place_id ? `&query_place_id=${encodeURIComponent(shop.place_id)}` : '';
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}${placeParam}`;
 }
 
-/** "Bakery · Open now · today 07:00–18:00", the line under a shop's name. */
+/** "Open since March 2019", or null when the shop never gave its opening month. */
+export function openedSinceLabel(t: T, langCode: string, shop: Pick<Merchant, 'opened_year' | 'opened_month'>): string | null {
+  if (!shop.opened_year || !shop.opened_month) return null;
+  return t.merchant.opened_since.replace('{date}', formatOpenedMonth(shop.opened_year, shop.opened_month, langCode));
+}
+
+/** "Bakery · Open now · today 07:00–18:00", the line under a shop's name. An online
+ *  shop has no door to be open: "Bakery · Online shop". */
 export function ShopStatusLine({ shop, color = colors.textMuted }: { shop: Merchant; color?: string }) {
   const { t } = useLanguage();
+  if (shop.kind === 'online') {
+    return (
+      <Text style={{ fontSize: 13, color }} numberOfLines={2}>
+        {categoryLabel(t, shop.category, shop.category_other)} · {t.merchant.kind_online}
+      </Text>
+    );
+  }
   const today = shop.today_hours.length ? formatRanges(shop.today_hours) : t.merchant.hours_closed;
   return (
     <Text style={{ fontSize: 13, color }} numberOfLines={2}>
@@ -189,7 +204,7 @@ function InfoRow({ label, action, onPress }: { label: string; action?: string; o
 }
 
 export function ShopHoursPane({ userId, owner }: { userId: string; owner: boolean }) {
-  const { t } = useLanguage();
+  const { t, langCode } = useLanguage();
   const shop = useShop(userId);
   if (shop.isLoading) {
     return (
@@ -203,9 +218,11 @@ export function ShopHoursPane({ userId, owner }: { userId: string; owner: boolea
   }
   const data = shop.data;
   const today = todayWeekday();
+  const online = data.kind === 'online';
+  const openedSince = openedSinceLabel(t, langCode, data);
   return (
     <View testID="shop.hours" style={{ marginTop: 12 }}>
-      {WEEKDAYS.map((day) => {
+      {(online ? [] : WEEKDAYS).map((day) => {
         const ranges = data.opening_hours[day] ?? [];
         const isToday = day === today;
         return (
@@ -245,9 +262,17 @@ export function ShopHoursPane({ userId, owner }: { userId: string; owner: boolea
         );
       })}
       <View style={{ marginTop: 8 }}>
+        {online && data.website_url ? (
+          <InfoRow
+            label={hostOf(data.website_url)}
+            action={t.merchant.visit_website}
+            onPress={() => void openExternalUrl(data.website_url as string)}
+          />
+        ) : null}
         {data.address ? (
           <InfoRow label={data.address} action={t.merchant.directions} onPress={() => void openExternalUrl(mapsUrl(data))} />
         ) : null}
+        {openedSince ? <InfoRow label={openedSince} /> : null}
         {data.phone ? (
           <InfoRow label={data.phone} action={t.merchant.call} onPress={() => void openExternalUrl(`tel:${data.phone}`)} />
         ) : null}

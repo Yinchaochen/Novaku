@@ -20,8 +20,12 @@ import {
 import { z } from 'zod/v4';
 
 import { DatePicker } from '../../components/datetime/DatePicker';
+import { AccountTypeChoice, ShopSignupFields } from '../../components/auth/AccountTypeFields';
 import { useLanguage } from '../../context/LanguageContext';
 import { getApiErrorCode, useRegister } from '../../features/auth/useAuth';
+import { useMerchantSignupStatus } from '../../features/merchants/useMerchants';
+import { shopSignupPayload } from '../../lib/shopSignup';
+import { useSignupChoiceStore } from '../../store/signupChoiceStore';
 import { useAppleLogin, useGoogleLogin } from '../../features/auth/useOAuth';
 import { oauthErrorMessage } from '../../features/auth/oauthErrorMessage';
 import { tap } from '../../lib/haptics';
@@ -81,8 +85,19 @@ export default function RegisterScreen() {
   const [acceptTos, setAcceptTos] = useState(false);
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
   const [acceptMarketing, setAcceptMarketing] = useState(false);
+  const [acceptUsageStats, setAcceptUsageStats] = useState(false);
   const [consentError, setConsentError] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  // D-200: "person or shop" first; a shop gives its opening month instead of a birth date.
+  const shopSignupOpen = useMerchantSignupStatus(true).data === true;
+  const accountType = useSignupChoiceStore((s) => s.accountType);
+  const setAccountType = useSignupChoiceStore((s) => s.setAccountType);
+  const shopDraft = useSignupChoiceStore((s) => s.shopDraft);
+  const setShopDraft = useSignupChoiceStore((s) => s.setShopDraft);
+  const resetSignupChoice = useSignupChoiceStore((s) => s.reset);
+  const isShop = shopSignupOpen && accountType === 'shop';
+  const shopPayload = useMemo(() => shopSignupPayload(shopDraft), [shopDraft]);
+  const [shopError, setShopError] = useState(false);
 
   const age = useMemo(() => (birthDate ? calculateAge(birthDate) : null), [birthDate]);
   const isMinor = age !== null && age < MIN_AGE;
@@ -94,6 +109,11 @@ export default function RegisterScreen() {
       granted: acceptMarketing,
       document_version: CONSENT_DOCUMENT_VERSION,
     },
+    {
+      consent_type: 'cookies_analytics',
+      granted: acceptUsageStats,
+      document_version: CONSENT_DOCUMENT_VERSION,
+    },
   ];
 
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
@@ -101,8 +121,9 @@ export default function RegisterScreen() {
     defaultValues: { display_name: '', email: '', password: '' },
   });
 
+  // A shop can press the button with fields missing; the press says which ones.
   const canSubmit =
-    birthDate !== null && !isMinor && acceptTos && acceptPrivacy && !register.isPending;
+    (isShop || (birthDate !== null && !isMinor)) && acceptTos && acceptPrivacy && !register.isPending;
 
   const handleBirthDateChange = (date: Date | null) => {
     setBirthDate(date);
@@ -120,6 +141,29 @@ export default function RegisterScreen() {
   };
 
   const onSubmit = (data: FormData) => {
+    if (isShop) {
+      if (!shopPayload) {
+        setShopError(true);
+        return;
+      }
+      if (!acceptTos || !acceptPrivacy) {
+        setConsentError(true);
+        return;
+      }
+      setShopError(false);
+      setConsentError(false);
+      register.mutate(
+        {
+          ...data,
+          locale: langCode,
+          account_type: 'shop',
+          shop: shopPayload,
+          consents: buildConsents(),
+        },
+        { onSuccess: resetSignupChoice },
+      );
+      return;
+    }
     if (birthDate === null) {
       setBirthDateError(true);
       setConsentError(false);
@@ -199,6 +243,12 @@ export default function RegisterScreen() {
       }}
     >
       <StatusBar style="light" />
+
+        {shopSignupOpen ? (
+          <View style={{ marginBottom: 22 }}>
+            <AccountTypeChoice value={accountType} onChange={setAccountType} />
+          </View>
+        ) : null}
 
         <View>
           {Platform.OS === 'ios' ? (
@@ -338,27 +388,48 @@ export default function RegisterScreen() {
           <Text style={{ marginTop: 4, fontSize: 12, color: colors.danger }}>{fieldErrorText(t.validation, errors.email)}</Text>
         ) : null}
 
-        {/* The API validates the exact birthday and stores only the birth year. */}
-        <Text style={[labelStyle, { marginTop: 18 }]}>{t.auth.birth_year_label}</Text>
-        <DatePicker
-          testID="auth.register.birthDate"
-          value={birthDate}
-          onChange={handleBirthDateChange}
-          placeholder={t.auth.birth_year_placeholder}
-          minDate={MIN_BIRTH_DATE}
-          maxDate={new Date()}
-          initialViewDate={INITIAL_BIRTH_DATE}
-          open={birthDatePickerOpen}
-          onOpenChange={handleBirthDatePickerOpenChange}
-        />
-        <Text style={{ marginTop: 6, fontSize: 12, color: colors.textMuted, lineHeight: 17 }}>
-          {t.auth.birth_year_hint}
-        </Text>
-        {birthDateError && birthDate === null ? (
-          <Text style={{ marginTop: 6, fontSize: 12, color: colors.danger }}>
-            {t.auth.birth_year_placeholder}
-          </Text>
-        ) : null}
+        {isShop ? (
+          <View style={{ marginTop: 18 }}>
+            <ShopSignupFields
+              draft={shopDraft}
+              onChange={(draft) => {
+                setShopDraft(draft);
+                setShopError(false);
+              }}
+              labelStyle={labelStyle}
+              inputStyle={inputBoxStyle}
+            />
+            {shopError && !shopPayload ? (
+              <Text testID="auth.shop.incomplete" style={{ marginTop: 8, fontSize: 12, color: colors.danger }}>
+                {t.merchant.signup_incomplete}
+              </Text>
+            ) : null}
+          </View>
+        ) : (
+          <>
+            {/* The API validates the exact birthday and stores only the birth year. */}
+            <Text style={[labelStyle, { marginTop: 18 }]}>{t.auth.birth_year_label}</Text>
+            <DatePicker
+              testID="auth.register.birthDate"
+              value={birthDate}
+              onChange={handleBirthDateChange}
+              placeholder={t.auth.birth_year_placeholder}
+              minDate={MIN_BIRTH_DATE}
+              maxDate={new Date()}
+              initialViewDate={INITIAL_BIRTH_DATE}
+              open={birthDatePickerOpen}
+              onOpenChange={handleBirthDatePickerOpenChange}
+            />
+            <Text style={{ marginTop: 6, fontSize: 12, color: colors.textMuted, lineHeight: 17 }}>
+              {t.auth.birth_year_hint}
+            </Text>
+            {birthDateError && birthDate === null ? (
+              <Text style={{ marginTop: 6, fontSize: 12, color: colors.danger }}>
+                {t.auth.birth_year_placeholder}
+              </Text>
+            ) : null}
+          </>
+        )}
         {/* GDPR consent rows — kept (legal requirement) but compact */}
         <View style={{ marginTop: 22, gap: 10 }}>
           <ConsentRow
@@ -393,6 +464,16 @@ export default function RegisterScreen() {
           >
             <Text style={{ flex: 1, fontSize: 12.5, lineHeight: 18, color: colors.textMuted }}>
               {t.auth.consent_marketing_label}
+            </Text>
+          </ConsentRow>
+          <ConsentRow
+            testID="auth.register.consent.usage"
+            checked={acceptUsageStats}
+            onToggle={() => setAcceptUsageStats((v) => !v)}
+            label={t.auth.consent_usage_label}
+          >
+            <Text style={{ flex: 1, fontSize: 12.5, lineHeight: 18, color: colors.textMuted }}>
+              {t.auth.consent_usage_label}
             </Text>
           </ConsentRow>
         </View>

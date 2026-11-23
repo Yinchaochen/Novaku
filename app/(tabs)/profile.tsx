@@ -830,7 +830,12 @@ export default function ProfileScreen() {
     ? [
         { key: 'products', label: t.merchant.tab_products, locked: false, minWidth: 82 },
         { key: 'notes', label: t.merchant.tab_posts, locked: false, minWidth: 82 },
-        { key: 'hours', label: t.merchant.tab_hours, locked: false, minWidth: 104 },
+        {
+          key: 'hours',
+          label: ownShop.data?.kind === 'online' ? t.merchant.info_subtitle : t.merchant.tab_hours,
+          locked: false,
+          minWidth: 104,
+        },
       ]
     : [
         { key: 'notes', label: t.profile.tab_notes, locked: false, minWidth: 82 },

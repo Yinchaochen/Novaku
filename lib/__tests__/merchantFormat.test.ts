@@ -1,5 +1,6 @@
 import {
   defaultOpeningHours,
+  formatOpenedMonth,
   formatRanges,
   groupOpeningHours,
   hhmm,
@@ -67,5 +68,12 @@ describe('time helpers', () => {
     expect(hhmm(450)).toBe('07:30');
     expect(hhmm(2000)).toBe('24:00');
     expect(hhmm(-5)).toBe('00:00');
+  });
+});
+
+describe('formatOpenedMonth (D-200)', () => {
+  it('names the month and year in the reader language', () => {
+    expect(formatOpenedMonth(2019, 3, 'en')).toBe('March 2019');
+    expect(formatOpenedMonth(2019, 3, 'de')).toBe('März 2019');
   });
 });

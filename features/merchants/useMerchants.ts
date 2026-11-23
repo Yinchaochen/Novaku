@@ -4,20 +4,37 @@ import { api } from '../../lib/api';
 import { addSentryBreadcrumb } from '../../lib/sentry';
 import { useAuthStore } from '../../store/authStore';
 import type { AuthUser } from '../auth/useAuth';
-import type { BecomeMerchantInput, Merchant, Product, ProductCard, ProductInput } from './types';
+import type {
+  BecomeMerchantInput,
+  Merchant,
+  Product,
+  ProductCard,
+  ProductInput,
+  ShopPlacePrefill,
+} from './types';
 
 export * from './types';
 
+// Open to guests (D-200): the sign-up screen asks "person or shop" before there is an account.
 export function useMerchantSignupStatus(enabled: boolean) {
-  const user = useAuthStore((state) => state.user);
   return useQuery({
-    queryKey: ['merchant', 'signup-status', user?.id],
+    queryKey: ['merchant', 'signup-status'],
     queryFn: async () => {
       const res = await api.get('/merchants/signup-status');
       return Boolean(res.data.data.enabled);
     },
-    enabled: enabled && Boolean(user),
+    enabled,
     staleTime: 5 * 60_000,
+  });
+}
+
+// Hours, phone and website Google has for the shop the owner just picked on the map.
+export function useShopPlacePrefill() {
+  return useMutation({
+    mutationFn: async (placeId: string) => {
+      const res = await api.get(`/merchants/place-prefill/${encodeURIComponent(placeId)}`);
+      return res.data.data as ShopPlacePrefill;
+    },
   });
 }
 

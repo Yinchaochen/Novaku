@@ -6,14 +6,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { SettingsHeader } from '../../components/SettingsRow';
 import { useLanguage } from '../../context/LanguageContext';
 import { type ConsentType, useConsents, useSetConsent } from '../../features/compliance/useCompliance';
+import { consentGranted } from '../../lib/consents';
 
 export default function ConsentsScreen() {
   const { t } = useLanguage();
   const consentsQuery = useConsents();
   const setConsent = useSetConsent();
 
-  const isGranted = (type: ConsentType) =>
-    consentsQuery.data?.find((c) => c.consent_type === type)?.granted ?? false;
+  const isGranted = (type: ConsentType) => consentGranted(consentsQuery.data, type);
 
   // Required agreements — accepted at sign-up, withdrawable only by deleting
   // the account. Tapping opens the document.
@@ -53,6 +53,11 @@ export default function ConsentsScreen() {
       type: 'location_sharing',
       label: t.settings.consent_location_sharing_label,
       desc: t.settings.consent_location_sharing_desc,
+    },
+    {
+      type: 'cookies_analytics',
+      label: t.settings.consent_usage_stats_label,
+      desc: t.settings.consent_usage_stats_desc,
     },
   ];
 
