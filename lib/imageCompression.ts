@@ -26,7 +26,7 @@ function resizeAction(
   return [width >= height ? { resize: { width: maxEdge } } : { resize: { height: maxEdge } }];
 }
 
-async function readableSize(uri: string): Promise<number | null> {
+export async function readableSize(uri: string): Promise<number | null> {
   try {
     if (Platform.OS === 'web') {
       const response = await fetch(uri);

@@ -1,3 +1,6 @@
+import { File } from 'expo-file-system';
+import { Platform } from 'react-native';
+
 import { api } from './api';
 
 // D-033 presigned direct-to-R2 multipart upload. Video bytes go straight
@@ -28,7 +31,30 @@ function jitteredDelay(attempt: number): number {
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function putPart(url: string, body: Blob): Promise<string> {
+type PartBody = Blob | Uint8Array<ArrayBuffer>;
+
+interface PartReader {
+  read: (start: number, end: number) => PartBody;
+  close: () => void;
+}
+
+// Android's fetch(file).blob() loads the whole file into memory; native reads one part at a time.
+async function openParts(uri: string): Promise<PartReader> {
+  if (Platform.OS === 'web') {
+    const blob = await (await fetch(uri)).blob();
+    return { read: (start, end) => blob.slice(start, end), close: () => undefined };
+  }
+  const handle = new File(uri).open();
+  return {
+    read: (start, end) => {
+      handle.offset = start;
+      return handle.readBytes(end - start);
+    },
+    close: () => handle.close(),
+  };
+}
+
+async function putPart(url: string, body: PartBody): Promise<string> {
   let lastError: unknown;
   for (let attempt = 0; attempt < PART_MAX_ATTEMPTS; attempt += 1) {
     try {
@@ -64,27 +90,26 @@ export async function uploadVideoDirect({
   durationSeconds: number;
   onProgress?: (fraction: number) => void;
 }): Promise<UploadedVideoMedia> {
-  const fileResponse = await fetch(uri);
-  const blob = await fileResponse.blob();
-  const totalBytes = blob.size || sizeBytes;
-  const partCount = Math.max(1, Math.ceil(totalBytes / PART_SIZE));
+  const partCount = Math.max(1, Math.ceil(sizeBytes / PART_SIZE));
 
   const initiate = await api.post('/community/media/video-upload/initiate', {
     mime_type: mimeType,
-    size_bytes: totalBytes,
+    size_bytes: sizeBytes,
     duration_seconds: durationSeconds,
     part_count: partCount,
   });
   const { key, upload_id, part_urls } = initiate.data.data as InitiateResponse;
 
   const parts: Array<{ part_number: number; etag: string }> = [];
+  let reader: PartReader | null = null;
   try {
+    reader = await openParts(uri);
     for (let index = 0; index < partCount; index += 1) {
       const start = index * PART_SIZE;
-      const end = Math.min(start + PART_SIZE, totalBytes);
-      const etag = await putPart(part_urls[index], blob.slice(start, end));
+      const end = Math.min(start + PART_SIZE, sizeBytes);
+      const etag = await putPart(part_urls[index], reader.read(start, end));
       parts.push({ part_number: index + 1, etag });
-      onProgress?.(end / totalBytes);
+      onProgress?.(end / sizeBytes);
     }
 
     const complete = await api.post(
@@ -101,5 +126,7 @@ export async function uploadVideoDirect({
       .post('/community/media/video-upload/abort', { key, upload_id })
       .catch(() => undefined);
     throw error;
+  } finally {
+    reader?.close();
   }
 }

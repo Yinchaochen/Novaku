@@ -1,4 +1,4 @@
-import { compressImageForUpload } from '../../lib/imageCompression';
+import { compressImageForUpload, readableSize } from '../../lib/imageCompression';
 import { pickedVideoDurationMs, videoDurationSeconds } from '../../lib/videoDuration';
 import { UploadedVideoMedia, uploadVideoDirect } from '../../lib/videoUpload';
 import type { CommunityPostMedia } from './useCommunity';
@@ -67,12 +67,6 @@ async function compressIfAvailable(
   }
 }
 
-async function blobSize(uri: string): Promise<number> {
-  const response = await fetch(uri);
-  const blob = await response.blob();
-  return blob.size;
-}
-
 export async function processAndUploadVideo({
   asset,
   uploadImage,
@@ -101,7 +95,10 @@ export async function processAndUploadVideo({
   const compressedUri = await compressIfAvailable(asset.uri, (fraction) =>
     onPhase?.('compressing', fraction),
   );
-  const sizeBytes = await blobSize(compressedUri);
+  const sizeBytes = await readableSize(compressedUri);
+  if (sizeBytes === null) {
+    throw new Error('video_size_unavailable');
+  }
   if (sizeBytes > VIDEO_MAX_SIZE_BYTES) {
     throw new VideoValidationError('too_large');
   }
