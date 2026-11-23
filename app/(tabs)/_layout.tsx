@@ -6,7 +6,6 @@ import { Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppUpdateGate } from '../../components/appUpdate/AppUpdateGate';
-import { InterestPushNotice } from '../../components/InterestPushNotice';
 import { PlazaWelcomeSheet } from '../../components/PlazaWelcomeSheet';
 import { ChalkIcon, ChalkIconName } from '../../components/ChalkIcon';
 import { OnboardingModal } from '../../components/OnboardingModal';
@@ -284,8 +283,6 @@ export default function TabsLayout() {
       <PlazaWelcomeSheet
         allowed={!showOnboardingModal && !signInSheetOpen && pathname === '/plaza'}
       />
-      {/* D-170: what suggestion pushes are, once, before the first one. */}
-      {showOnboardingModal ? null : <InterestPushNotice />}
     </>
   );
 }

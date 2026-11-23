@@ -194,3 +194,47 @@ describe('a tap that launches the app (2026-10-25)', () => {
     expect(mockRouter.push).toHaveBeenCalledWith('/p/p9');
   });
 });
+
+describe('the token listener on Android (2026-11-23)', () => {
+  it('registers a fresh sign-in once, though fetching the token fires the listener', async () => {
+    // expo-notifications on Android calls onNewToken after every
+    // getDevicePushTokenAsync. The listener used to fetch the token again, which
+    // fired it again: 1,732 registrations in 74 s, and a frozen first-run screen.
+    let tokenListener: ((token: { type: string; data: string }) => void) | null = null;
+    (Notifications.addPushTokenListener as jest.Mock).mockImplementation((listener) => {
+      tokenListener = listener;
+      return { remove: jest.fn() };
+    });
+    let emitted = 0;
+    (Notifications.getDevicePushTokenAsync as jest.Mock).mockClear();
+    (Notifications.getDevicePushTokenAsync as jest.Mock).mockImplementation(async () => {
+      if (emitted++ < 50) tokenListener?.({ type: 'android', data: 'device-token-2' });
+      return { data: 'device-token-2' };
+    });
+    (api.post as jest.Mock).mockClear();
+    (useLanguage as jest.Mock).mockReturnValue({ t: { settings: { interest_push_channel: 'Suggestions' } } });
+    (useTrackCommunityEvents as jest.Mock).mockReturnValue({ mutate: jest.fn() });
+    useAuthStore.setState({ hasHydrated: true, isAuthenticated: true });
+
+    await renderHook(() => usePushNotifications());
+    await act(async () => {});
+    await act(async () => {});
+
+    expect(Notifications.getDevicePushTokenAsync).toHaveBeenCalledTimes(1);
+    expect(api.post).toHaveBeenCalledTimes(1);
+    expect(api.post).toHaveBeenCalledWith(
+      '/notifications/device-token',
+      expect.objectContaining({ token: 'device-token-2' }),
+    );
+
+    // A genuinely new token (rotation) is still sent.
+    await act(async () => {
+      tokenListener?.({ type: 'android', data: 'device-token-3' });
+    });
+    expect(api.post).toHaveBeenCalledTimes(2);
+    expect(api.post).toHaveBeenLastCalledWith(
+      '/notifications/device-token',
+      expect.objectContaining({ token: 'device-token-3' }),
+    );
+  });
+});

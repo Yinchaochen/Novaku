@@ -1,12 +1,15 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { Alert, ScrollView, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { OnboardingModal } from '../../components/OnboardingModal';
 import { SettingsHeader, SettingsRow, SettingsSection } from '../../components/SettingsRow';
 import { useLanguage } from '../../context/LanguageContext';
 import { useCreateDSR } from '../../features/compliance/useCompliance';
 import { WHATSAPP_GROUP_URL, openFeedback } from '../../features/feedback/useFeedback';
+import { useMerchantSignupStatus } from '../../features/merchants/useMerchants';
 import { openExternalUrl } from '../../lib/links';
 import { useProductGuide } from '../../features/guide/useProductGuide';
 import { useUpdateDeadlinePush, useUpdateInterestPush } from '../../features/social/useSocial';
@@ -17,6 +20,10 @@ export default function SettingsHubScreen() {
   const { restart: restartGuide } = useProductGuide();
   const version = Constants.expoConfig?.version ?? '0.1.0';
   const isStaff = useAuthStore((s) => s.user?.is_staff ?? false);
+  // A personal account can become a shop and keep its followers and posts.
+  const personalAccount = useAuthStore((s) => (s.user?.account_kind ?? 'human') === 'human');
+  const shopSignup = useMerchantSignupStatus(personalAccount);
+  const [shopSetupOpen, setShopSetupOpen] = useState(false);
   const deadlinePushEnabled = useAuthStore((s) => s.user?.deadline_push_enabled ?? true);
   const updateDeadlinePush = useUpdateDeadlinePush();
   const interestPushEnabled = useAuthStore((s) => s.user?.interest_push_enabled ?? true);
@@ -73,6 +80,14 @@ export default function SettingsHubScreen() {
             label={t.settings.account_edit_profile}
             onPress={() => router.push('/edit-bio' as never)}
           />
+          {personalAccount && shopSignup.data === true ? (
+            <SettingsRow
+              icon="storefront-outline"
+              label={t.merchant.shop_title}
+              hint={t.merchant.role_shop_hint}
+              onPress={() => setShopSetupOpen(true)}
+            />
+          ) : null}
           <SettingsRow
             icon="flag-outline"
             label={t.guide.settings_row_title}
@@ -293,6 +308,12 @@ export default function SettingsHubScreen() {
           </SettingsSection>
         ) : null}
       </ScrollView>
+      <OnboardingModal
+        visible={shopSetupOpen}
+        mode="shop"
+        onDone={() => setShopSetupOpen(false)}
+        onCancel={() => setShopSetupOpen(false)}
+      />
     </SafeAreaView>
   );
 }

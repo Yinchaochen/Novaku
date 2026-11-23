@@ -34,6 +34,8 @@ let lastRegisteredToken: string | null = null;
 // (travel, an app update) is worth one more registration.
 let lastRegisteredTimeZone: string | undefined;
 let lastRegisteredVersion: string | undefined;
+// The token being sent right now, so a second report of it does not send it again.
+let pendingToken: string | null = null;
 
 // Push types that open a post and teach the profile what was opened (D-073, D-170).
 const POST_PUSH_TYPES = new Set(['post_deadline', 'event_reminder', 'interest_pick']);
@@ -83,18 +85,27 @@ export async function registerForPushNotificationsAsync(
     // Native token (APNs hex on iOS, FCM token on Android) — NOT an Expo token,
     // since the backend talks to APNs/FCM directly.
     const { data: token } = await Notifications.getDevicePushTokenAsync();
-    const tokenStr = String(token);
-    const timezone = deviceTimeZone();
-    const appVersion = installedAppVersion();
-    if (
-      !tokenStr ||
-      (tokenStr === lastRegisteredToken &&
-        timezone === lastRegisteredTimeZone &&
-        appVersion === lastRegisteredVersion)
-    ) {
-      return;
-    }
+    await sendDeviceToken(String(token));
+  } catch (err) {
+    reportToSentry(err, { source: 'push.register' });
+  }
+}
 
+async function sendDeviceToken(tokenStr: string): Promise<void> {
+  const timezone = deviceTimeZone();
+  const appVersion = installedAppVersion();
+  if (
+    !tokenStr ||
+    tokenStr === pendingToken ||
+    (tokenStr === lastRegisteredToken &&
+      timezone === lastRegisteredTimeZone &&
+      appVersion === lastRegisteredVersion)
+  ) {
+    return;
+  }
+
+  pendingToken = tokenStr;
+  try {
     await api.post('/notifications/device-token', {
       token: tokenStr,
       platform: Platform.OS === 'ios' ? 'ios' : 'android',
@@ -106,8 +117,8 @@ export async function registerForPushNotificationsAsync(
     lastRegisteredToken = tokenStr;
     lastRegisteredTimeZone = timezone;
     lastRegisteredVersion = appVersion;
-  } catch (err) {
-    reportToSentry(err, { source: 'push.register' });
+  } finally {
+    pendingToken = null;
   }
 }
 
@@ -257,11 +268,15 @@ export function usePushNotifications(): void {
       })
       .catch(() => {});
     const responseSub = Notifications.addNotificationResponseReceivedListener(handle);
-    const tokenSub = Notifications.addPushTokenListener(() => {
-      if (useAuthStore.getState().isAuthenticated) {
-        lastRegisteredToken = null; // token rotated — re-register the new one
-        void registerForPushNotificationsAsync(channelNameRef.current, { askPermission: false });
-      }
+    // Android also fires this after every getDevicePushTokenAsync call, so it must
+    // not fetch the token itself: doing so looped, 1,732 registrations in 74 s
+    // on a fresh sign-in (2026-11-23). Send the token it was given; a new one is
+    // sent, a known one is not.
+    const tokenSub = Notifications.addPushTokenListener((devicePushToken) => {
+      if (!useAuthStore.getState().isAuthenticated) return;
+      void sendDeviceToken(String(devicePushToken.data)).catch((err) =>
+        reportToSentry(err, { source: 'push.register' }),
+      );
     });
     return () => {
       responseSub.remove();

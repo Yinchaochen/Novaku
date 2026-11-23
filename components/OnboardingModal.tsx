@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { FeedbackPressable } from './FeedbackPressable';
 import { ShopSetupSteps, type ShopSetupStep } from './merchant/ShopSetupSteps';
 import { useLanguage } from '../context/LanguageContext';
 import {
@@ -30,7 +31,8 @@ import { useAuthStore } from '../store/authStore';
 
 // One question per screen: where, why, how long.
 type Step = 'city' | 'intent' | 'stage';
-type Mode = 'required' | 'edit';
+// 'shop': an existing personal account turns into a shop, starting at the shop steps.
+type Mode = 'required' | 'edit' | 'shop';
 type Role = 'personal' | 'shop';
 
 type SelectedCity = {
@@ -73,6 +75,13 @@ export function OnboardingModal({
   const resolveCity = useResolveCityFromCoordinates();
 
   const [step, setStep] = useState<Step>('city');
+  const stepRef = useRef(step);
+  stepRef.current = step;
+  // Finding the phone's position can take seconds. One lookup at a time, and a
+  // lookup the reader has moved past (picked a city, left the page) is dropped:
+  // late answers used to pull people back from the last page to the second.
+  const [locating, setLocating] = useState(false);
+  const locationRequest = useRef(0);
   const [cityQuery, setCityQuery] = useState('');
   // Non-empty = the user explicitly asked for a deep (Nominatim) lookup via
   // the search button / return key; typing always resets to local typeahead.
@@ -91,7 +100,8 @@ export function OnboardingModal({
   const offerRole = askRole && signupStatus.data === true;
   const roleUnknown = askRole && signupStatus.isLoading;
   const showRoleStep = offerRole && role === null;
-  const inShop = offerRole && role === 'shop';
+  const shopOnly = mode === 'shop';
+  const inShop = (offerRole && role === 'shop') || shopOnly;
 
   const debouncedCityQuery = useDebouncedValue(cityQuery.trim(), 350);
   const activeCityQuery = deepQuery || debouncedCityQuery;
@@ -107,6 +117,8 @@ export function OnboardingModal({
     }
 
     setStep('city');
+    locationRequest.current += 1;
+    setLocating(false);
     setCityQuery(user.city ?? '');
     setDeepQuery('');
     setSelectedCity(
@@ -129,7 +141,7 @@ export function OnboardingModal({
   }, [visible, user?.id, mode]);
 
   const suggestions = citySuggestions.data ?? [];
-  const canDismiss = mode === 'edit';
+  const canDismiss = mode !== 'required';
   const isBusy = updateProfile.isPending || resolveCity.isPending;
   const canContinueFromCity = Boolean(selectedCity?.name);
   const canContinueFromIntent = selectedIntents.length > 0;
@@ -143,9 +155,14 @@ export function OnboardingModal({
   }, [selectedCity]);
 
   const handleUseLocation = async () => {
+    if (locating) return;
+    const request = ++locationRequest.current;
+    const stillWanted = () => request === locationRequest.current && stepRef.current === 'city';
     setFeedback(null);
+    setLocating(true);
     try {
       const permission = await Location.requestForegroundPermissionsAsync();
+      if (!stillWanted()) return;
       if (permission.status !== 'granted') {
         setLocationSource('manual');
         setFeedback(t.onboarding.location_denied);
@@ -155,10 +172,12 @@ export function OnboardingModal({
       const position = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
+      if (!stillWanted()) return;
       const city = await resolveCity.mutateAsync({
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
       });
+      if (!stillWanted()) return;
       setSelectedCity({
         name: city.name,
         subtitle: city.subtitle,
@@ -170,12 +189,18 @@ export function OnboardingModal({
       setLocationSource('device');
       setStep('intent');
     } catch {
+      if (!stillWanted()) return;
       setLocationSource('manual');
       setFeedback(t.onboarding.location_failed);
+    } finally {
+      if (request === locationRequest.current) setLocating(false);
     }
   };
 
   const handleSelectCity = (city: SelectedCity) => {
+    // A hand-picked city wins over a position lookup still in flight.
+    locationRequest.current += 1;
+    setLocating(false);
     setSelectedCity(city);
     setCityQuery(city.name);
     setDeepQuery('');
@@ -227,7 +252,11 @@ export function OnboardingModal({
     router.replace('/(tabs)/profile');
   };
 
-  const progressSteps: string[] = offerRole ? ['role', 'one', 'two', 'three'] : STEPS;
+  const progressSteps: string[] = offerRole
+    ? ['role', 'one', 'two', 'three']
+    : shopOnly
+      ? ['one', 'two', 'three']
+      : STEPS;
   const progressCurrent = showRoleStep
     ? 'role'
     : inShop
@@ -330,7 +359,7 @@ export function OnboardingModal({
               <ShopSetupSteps
                 step={shopStep}
                 onStepChange={setShopStep}
-                onBackToRole={() => setRole(null)}
+                onBackToRole={shopOnly ? (onCancel ?? onDone) : () => setRole(null)}
                 onFinished={finishShop}
               />
             ) : null}
@@ -374,22 +403,23 @@ export function OnboardingModal({
                   </Pressable>
                 </View>
 
-                <Pressable
+                <FeedbackPressable
                   onPress={handleUseLocation}
-                  disabled={isBusy}
+                  disabled={isBusy || locating}
                   className="mt-3 flex-row items-center justify-center rounded-3xl bg-primary/10 px-5 py-3.5"
+                  pressedStyle={{ opacity: 0.6, transform: [{ scale: 0.98 }] }}
                   accessibilityRole="button"
                   accessibilityLabel={t.onboarding.location_allow}
-                  accessibilityState={{ disabled: isBusy, busy: resolveCity.isPending }}
+                  accessibilityState={{ disabled: isBusy || locating, busy: locating }}
                 >
-                  {resolveCity.isPending ? (
+                  {locating ? (
                     <ActivityIndicator color="#FF9F6E" />
                   ) : (
                     <Text className="text-center text-base font-bold text-primary">
                       {`📍  ${t.onboarding.location_allow}`}
                     </Text>
                   )}
-                </Pressable>
+                </FeedbackPressable>
 
                 <View className="mt-4 gap-2">
                   {citySuggestions.isLoading ? (
