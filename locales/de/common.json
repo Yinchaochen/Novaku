@@ -1525,6 +1525,18 @@
     "body": "Postervia ist eine Online-Community. Leute, die gerade in eine neue Stadt gezogen sind, teilen hier ihre Schwierigkeiten oder ihre Erfahrung damit, wie sie eine Schwierigkeit gelöst haben, und Leute teilen hier auch, was sie in dieser Stadt entdecken. Wir helfen ihnen, diese Schwierigkeiten und Lebenserfahrungen weiterzugeben, um mehr Leuten zu helfen!",
     "ok": "Alles klar"
   },
+  "plaza_intro": {
+    "headline": "Postervia verbindet Neuankömmlinge und Einheimische",
+    "cue_life": "Lebenserfahrung von Leuten, die hier wohnen",
+    "cue_discover": "Teile, was du in deiner Stadt entdeckst",
+    "cue_feedback": "Bewerte Produkte von Läden in deiner Nähe",
+    "cue_chat": "Schreib mit Freunden",
+    "cue_account": "Verwalte dein Konto oder eröffne sogar deinen Laden",
+    "sound_on": "Ton an",
+    "sound_off": "Ton aus",
+    "hide": "Einführungsvideo ausblenden",
+    "watch_again": "Einführungsvideo ansehen"
+  },
   "interest_notice": {
     "eyebrow": "Benachrichtigungen",
     "title": "Höchstens drei Vorschläge am Tag",

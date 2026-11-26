@@ -1541,6 +1541,18 @@
     "body": "Postervia is an online community. People who have just moved to a new city share their struggle, or their experience of solving this struggle, and people also share their exploration of this city. We help them spread the struggle and life experience to help more people!",
     "ok": "Got it"
   },
+  "plaza_intro": {
+    "headline": "Postervia connects newcomers and locals",
+    "cue_life": "Life experience from people who live here",
+    "cue_discover": "Share your local discovery",
+    "cue_feedback": "Review products from local shops",
+    "cue_chat": "Chat with friends",
+    "cue_account": "Manage your account, even become a shop",
+    "sound_on": "Turn the sound on",
+    "sound_off": "Turn the sound off",
+    "hide": "Hide the intro video",
+    "watch_again": "Watch the intro video"
+  },
   "interest_notice": {
     "eyebrow": "Notifications",
     "title": "Up to three picks a day",

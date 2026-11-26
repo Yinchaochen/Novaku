@@ -1198,6 +1198,18 @@ export type Translations = {
     body: string;
     ok: string;
   };
+  plaza_intro: {
+    headline: string;
+    cue_life: string;
+    cue_discover: string;
+    cue_feedback: string;
+    cue_chat: string;
+    cue_account: string;
+    sound_on: string;
+    sound_off: string;
+    hide: string;
+    watch_again: string;
+  };
   interest_notice: {
     eyebrow: string;
     title: string;

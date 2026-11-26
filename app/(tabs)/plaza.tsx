@@ -6,16 +6,17 @@ import { requireSignIn } from '../../store/signInPromptStore';
 import { isCoverTemplateId, type CoverTemplateId } from '../../lib/postCover';
 import { CoverTemplatePicker } from '../../components/community/CoverTemplatePicker';
 import { MarkerSearchIcon, PaperSticker } from '../../components/PaperSticker';
+import { PlazaIntroCard } from '../../components/community/PlazaIntroCard';
 import { PostCover } from '../../components/community/PostCover';
 import { WIDE_LAYOUT_MIN_WIDTH } from '../../theme/layout';
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
-import { router, type Href } from 'expo-router';
+import { router, useFocusEffect, type Href } from 'expo-router';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, FieldErrors, useForm } from 'react-hook-form';
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 // Lazy-load the map-based picker so Expo Go doesn't try to mount
 // react-native-maps until the user actually opens it. In Expo Go the map
 // itself can't render (native module missing), but we don't even need to
@@ -53,6 +54,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { getPostingLocation, type PostingLocation } from '../../features/community/postingLocation';
 import { openFeedback } from '../../features/feedback/useFeedback';
 import { captureSentryMessage } from '../../lib/sentry';
+import { usePlazaIntroStore } from '../../store/plazaIntroStore';
 import { colors, shadows } from '../../theme/tokens';
 import { compressImageForUpload } from '../../lib/imageCompression';
 import { nextComposeButtonState } from '../../lib/composeButtonVisibility';
@@ -219,6 +221,24 @@ export default function PlazaScreen() {
   const feedFilter: CommunityFeedFilter = null;
   // The ? button opens a small menu: replay the walkthrough, or send feedback.
   const [helpMenuVisible, setHelpMenuVisible] = useState(false);
+  // The intro video at the top of the wall (2026-11-26). It plays only while this
+  // tab is in front and the card is on screen.
+  const introHydrated = usePlazaIntroStore((state) => state.hydrated);
+  const introHidden = usePlazaIntroStore((state) => state.hidden);
+  const [screenFocused, setScreenFocused] = useState(true);
+  const [introOnScreen, setIntroOnScreen] = useState(true);
+  const introOnScreenRef = useRef(true);
+  const feedListRef = useRef<FlashListRef<CommunityPost>>(null);
+  useEffect(() => {
+    void usePlazaIntroStore.getState().hydrate();
+  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      setScreenFocused(true);
+      return () => setScreenFocused(false);
+    }, []),
+  );
+  const introWidth = Math.max(0, Math.min((wallWidth || windowWidth) - grid.sidePadding * 2 - 6, grid.columnWidth * 2 - 6));
   const feedQuery = useCommunityFeed(feedFilter);
   const pages = feedQuery?.data?.pages;
   const data = dedupeFeedItems(
@@ -288,6 +308,13 @@ export default function PlazaScreen() {
   const lastScrollY = useRef(0);
   const guideActive = guide.step !== null;
   const handleFeedScroll = (event: { nativeEvent: { contentOffset: { y: number } } }) => {
+    // Past the intro card the video pauses; the card is about two thirds of the
+    // wall's width tall.
+    const introVisible = event.nativeEvent.contentOffset.y < introWidth * 0.85;
+    if (introVisible !== introOnScreenRef.current) {
+      introOnScreenRef.current = introVisible;
+      setIntroOnScreen(introVisible);
+    }
     const decision = nextComposeButtonState({
       y: event.nativeEvent.contentOffset.y,
       lastY: lastScrollY.current,
@@ -880,6 +907,14 @@ export default function PlazaScreen() {
             onPress: () => requireSignIn(() => guide.startWalkthrough({ composerOpen: false })),
           },
           {
+            label: t.plaza_intro.watch_again,
+            icon: 'play-circle-outline',
+            onPress: () => {
+              usePlazaIntroStore.getState().show();
+              feedListRef.current?.scrollToOffset({ offset: 0, animated: true });
+            },
+          },
+          {
             label: t.feedback.entry,
             icon: 'chatbubble-ellipses-outline',
             // Wait for the sheet to slide away so it is not in the screenshot.
@@ -918,6 +953,7 @@ export default function PlazaScreen() {
         onLayout={(event) => setWallWidth(event.nativeEvent.layout.width)}
       >
       <FlashList
+        ref={feedListRef}
         data={filteredPosts}
         masonry
         // FlashList measures its columns once; a window resized across a
@@ -946,8 +982,15 @@ export default function PlazaScreen() {
           paddingBottom: railed ? 48 : Math.max(insets.bottom + 180, 200),
         }}
         ListHeaderComponent={
-          showNewPill || localPoolEmpty ? (
+          (introHydrated && !introHidden) || showNewPill || localPoolEmpty ? (
             <View>
+              {introHydrated && !introHidden && introWidth > 0 ? (
+                <PlazaIntroCard
+                  width={introWidth}
+                  active={screenFocused && introOnScreen && !composerVisible && !selectedPost}
+                  onHide={() => usePlazaIntroStore.getState().hide()}
+                />
+              ) : null}
               {showNewPill ? (
                 <View
                   testID="plaza.new-posts-pill"
