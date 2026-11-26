@@ -14,6 +14,7 @@ import {
   OdysseyTaskLineCard,
   type OdysseyTaskLineTone,
 } from '../../components/recipes/OdysseyTaskLineCard';
+import { ODYSSEY_TASK_LINES_VISIBLE } from '../../lib/hiddenFeatures';
 import { SectionLabel } from '../../components/SectionLabel';
 import { Screen } from '../../components/Screen';
 import { StackedButton } from '../../components/StackedButton';
@@ -263,7 +264,7 @@ export default function TasksScreen() {
   return (
     <Screen background="default" contentStyle={{ paddingBottom: 0 }} testID="screen.tasks">
       {/* Yellow band hero — matches the YumQuick-style consistent header
-          shipped on auth pages and the Buddy tab. White title + LangPill on
+          shipped on auth pages and the Buddy tab. Ink title + LangPill on
           right; the cream background takes over below the curved 32px corner. */}
       <View
         style={{
@@ -281,7 +282,7 @@ export default function TasksScreen() {
               fontFamily: 'PlusJakartaSans_800ExtraBold',
               fontSize: 26,
               fontWeight: '800',
-              color: '#FFFFFF',
+              color: colors.textMain,
               letterSpacing: -0.3,
             }}
           >
@@ -346,6 +347,7 @@ export default function TasksScreen() {
           {!selectedLine ? (
             <>
               <OdysseyCalendarSection />
+              {ODYSSEY_TASK_LINES_VISIBLE ? (
               <View style={styles.ctaCardShell}>
                 <Pressable
                   onPress={() => router.push('/lane-creator' as never)}
@@ -387,6 +389,7 @@ export default function TasksScreen() {
                   </GlassCard>
                 </Pressable>
               </View>
+              ) : null}
             </>
           ) : null}
 
@@ -403,7 +406,7 @@ export default function TasksScreen() {
                 setCelebration({ visible: true, title: task.title, type: task.type });
               }}
             />
-          ) : (
+          ) : ODYSSEY_TASK_LINES_VISIBLE ? (
             <>
               <View style={{ marginTop: 18, marginBottom: 12 }}>
                 <SectionLabel tone="muted">{t.tasks.task_line_section}</SectionLabel>
@@ -449,7 +452,7 @@ export default function TasksScreen() {
                 </Pressable>
               </View>
             </>
-          )}
+          ) : null}
         </ScrollView>
       </View>
 

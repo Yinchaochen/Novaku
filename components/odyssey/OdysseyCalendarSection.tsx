@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useLanguage } from '../../context/LanguageContext';
 import { CalendarItem, dayKey, groupByDay } from '../../features/odyssey/calendarItems';
 import { useCalendarWithDevice } from '../../features/odyssey/useOdysseyCalendar';
+import { ODYSSEY_DEVICE_CALENDAR_VISIBLE } from '../../lib/hiddenFeatures';
 import { CalendarMonth } from '../datetime/CalendarMonth';
 
 /**
@@ -109,7 +110,7 @@ export function OdysseyCalendarSection({ preview }: { preview?: OdysseyCalendarP
         )}
       </View>
 
-      {device.supported && device.hydrated ? (
+      {device.supported && device.hydrated && (ODYSSEY_DEVICE_CALENDAR_VISIBLE || device.enabled) ? (
         <Pressable
           onPress={() => (device.enabled ? device.disconnect() : device.connect())}
           accessibilityRole="button"

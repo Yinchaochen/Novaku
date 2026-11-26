@@ -46,7 +46,7 @@ export function AuthHeader({
             style={{
               fontSize: 22,
               fontWeight: '700',
-              color: '#FFFFFF',
+              color: colors.textMain,
               letterSpacing: 0.3,
               textAlign: 'center',
               fontFamily: 'PlusJakartaSans_700Bold',

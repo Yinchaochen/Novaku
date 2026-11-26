@@ -1,5 +1,4 @@
-import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useLanguage } from '../context/LanguageContext';
@@ -7,14 +6,11 @@ import { api } from '../lib/api';
 import { Language } from '../lib/languages';
 import { reportToSentry } from '../lib/sentry';
 import { useAuthStore } from '../store/authStore';
-import { colors, gradients, shadows, typography } from '../theme/tokens';
+import { colors, typography } from '../theme/tokens';
+import { PaperSticker } from './PaperSticker';
 import { LanguagePicker } from './LanguagePicker';
 
-/**
- * Glass-style language pill. Sits in the top-right of every primary screen.
- * The earlier blue-purple "Duolingo stack" has been replaced with a soft
- * coral→peach gradient + glass border — matches the new brand language.
- */
+/** Language pill in the top-right of the yellow header bands, on a paper sticker. */
 export function LangPill() {
   const { langCode, setLangCode } = useLanguage();
   const { user, setUser } = useAuthStore();
@@ -34,34 +30,11 @@ export function LangPill() {
   };
 
   return (
-    <View
-      style={{
-        borderRadius: 999,
-        overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 200, 175, 0.65)',
-        ...shadows.iconButton,
-      }}
-    >
-      <LinearGradient
-        colors={gradients.brandCta as unknown as [string, string]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-      <View
-        style={{
-          pointerEvents: 'none',
-          position: 'absolute',
-          top: 0,
-          left: 12,
-          right: 12,
-          height: 1,
-          backgroundColor: 'rgba(255,255,255,0.55)',
-        }}
-      />
-      <LanguagePicker currentCode={langCode} onSelect={handleSelect} />
-    </View>
+    // Ink on a cream sticker: white text on the old coral gradient measured about
+    // 2.6:1 and was hard to find on the yellow bands (user feedback 2026-11-26).
+    <PaperSticker>
+      <LanguagePicker currentCode={langCode} onSelect={handleSelect} tone="ink" />
+    </PaperSticker>
   );
 }
 

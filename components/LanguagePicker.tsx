@@ -18,9 +18,11 @@ import { colors, fontFamily, radius, shadows, spacing } from '../theme/tokens';
 interface Props {
   currentCode: string;
   onSelect: (lang: Language) => void;
+  /** 'ink' for a light pill (dark text); the default suits a coloured background. */
+  tone?: 'onColor' | 'ink';
 }
 
-export function LanguagePicker({ currentCode, onSelect }: Props) {
+export function LanguagePicker({ currentCode, onSelect, tone = 'onColor' }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const { t } = useLanguage();
@@ -51,15 +53,19 @@ export function LanguagePicker({ currentCode, onSelect }: Props) {
       <TouchableOpacity
         testID={`language.trigger.${current.code}`}
         onPress={() => setOpen(true)}
-        className="flex-row items-center gap-1 px-3 py-1.5 rounded-xl bg-white/20 border border-white/30"
+        className={
+          tone === 'ink'
+            ? 'flex-row items-center gap-1 px-3 py-1.5 rounded-xl'
+            : 'flex-row items-center gap-1 px-3 py-1.5 rounded-xl bg-white/20 border border-white/30'
+        }
         activeOpacity={0.7}
       >
-        <Text className="text-sm font-semibold text-white">
+        <Text className="text-sm font-semibold" style={{ color: tone === 'ink' ? colors.textMain : '#FFFFFF' }}>
           {current.nativeName.length > 8
             ? current.nativeName.slice(0, 8) + '...'
             : current.nativeName}
         </Text>
-        <Ionicons name="chevron-down" size={13} color="rgba(255,255,255,0.82)" />
+        <Ionicons name="chevron-down" size={13} color={tone === 'ink' ? colors.textMain : 'rgba(255,255,255,0.82)'} />
       </TouchableOpacity>
 
       <Modal

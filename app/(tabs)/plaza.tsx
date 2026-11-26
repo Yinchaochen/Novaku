@@ -5,6 +5,7 @@ import { feedGrid } from '../../lib/feedGrid';
 import { requireSignIn } from '../../store/signInPromptStore';
 import { isCoverTemplateId, type CoverTemplateId } from '../../lib/postCover';
 import { CoverTemplatePicker } from '../../components/community/CoverTemplatePicker';
+import { MarkerSearchIcon, PaperSticker } from '../../components/PaperSticker';
 import { PostCover } from '../../components/community/PostCover';
 import { WIDE_LAYOUT_MIN_WIDTH } from '../../theme/layout';
 import { FlashList } from '@shopify/flash-list';
@@ -831,7 +832,7 @@ export default function PlazaScreen() {
               fontFamily: 'PlusJakartaSans_800ExtraBold',
               fontSize: 26,
               fontWeight: '800',
-              color: '#FFFFFF',
+              color: colors.textMain,
               letterSpacing: -0.3,
             }}
           >
@@ -844,34 +845,24 @@ export default function PlazaScreen() {
               accessibilityLabel={t.guide.take_the_tour}
               testID="plaza.guide-entry"
               hitSlop={8}
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: 17,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: 'rgba(255, 255, 255, 0.22)',
-              }}
               pressedStyle={{ opacity: 0.7 }}
             >
-              <Ionicons name="help" size={18} color="#FFFFFF" />
+              <PaperSticker width={36}>
+                <Text style={{ fontFamily: 'Kalam_700Bold', fontSize: 22, lineHeight: 26, marginTop: 3, color: colors.textMain }}>
+                  ?
+                </Text>
+              </PaperSticker>
             </FeedbackPressable>
             <FeedbackPressable
               onPress={() => router.push('/plaza/search' as unknown as Href)}
               accessibilityLabel={t.plaza.search_entry_a11y}
               testID="plaza.search-entry"
               hitSlop={8}
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: 17,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: 'rgba(255, 255, 255, 0.22)',
-              }}
               pressedStyle={{ opacity: 0.7 }}
             >
-              <Ionicons name="search" size={18} color="#FFFFFF" />
+              <PaperSticker width={36}>
+                <MarkerSearchIcon />
+              </PaperSticker>
             </FeedbackPressable>
             <LangPill />
           </View>
